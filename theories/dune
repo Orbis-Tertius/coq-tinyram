@@ -1,0 +1,4 @@
+(coq.theory
+    (name vnTinyRAM)
+    (modules Types Instructions)
+    (synopsis "Von Neumann (as opposed to Harvard) TinyRAM architecture. https://www.scipr-lab.org/doc/TinyRAM-spec-2.000.pdf"))
