@@ -59,8 +59,6 @@ Fixpoint offst (n : nat) : t bit n :=
 Compute forallb (fun b => b =? off) (map2 band w1 w2).
 Compute offst eights.wordSize.
 
-
-
 Definition andBits {m : Type -> Type} `{Monad m} `{HasMachineState m} (r1 r2 : Register) (ior : ImmediateOrRegister) : m unit :=
   a' <- getImmediateRegister ior ;;
   r2' <- getRegisterValue r2 ;;
@@ -68,11 +66,10 @@ Definition andBits {m : Type -> Type} `{Monad m} `{HasMachineState m} (r1 r2 : R
   | Some a'', Some r2'' =>
     let y := map2 band a'' r2'' in
     _ <- setRegisterValue r1 y ;;
-    setConditionFlag (conditionToFlag (forallb (fun b => b =? off) y)) ;;
+    _ <- setConditionFlag (conditionToFlag (forallb (fun b => b =? off) y)) ;;
     ret tt
   | _, _ => ret tt
   end.
-
 
 Definition orBits {m : Type -> Type} `{Monad m} `{HasMachineState m} (r1 r2 : Register) (ior : ImmediateOrRegister) : m unit :=
   a' <- getImmediateRegister ior ;;
@@ -81,7 +78,14 @@ Definition orBits {m : Type -> Type} `{Monad m} `{HasMachineState m} (r1 r2 : Re
   | Some a'', Some r2'' =>
     let y := map2 bor a'' r2'' in
     _ <- setRegisterValue r1 y ;;
-    setConditionFlag (conditionToFlag (forallb (fun b => b =? off) y)) ;;
+    _ <- setConditionFlag (conditionToFlag (forallb (fun b => b =? off) y)) ;;
     ret tt
   | _, _ => ret tt
+  end.
+
+Definition jump {m : Type -> Type} `{Monad m} `{HasMachineState m} (ior : ImmediateOrRegister) : m unit :=
+  ior' <- getImmediateRegister ior ;;
+  match ior' with
+  | Some ior'' => setProgramCounter (mkProgramCounter ior'')
+  | None => ret tt
   end.

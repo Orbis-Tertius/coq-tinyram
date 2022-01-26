@@ -48,7 +48,10 @@ Module vnTinyRAMTypes (params : Params).
        unInputTape : list Word;
      }.
 
-  Definition ProgramCounter : Type := nat.
+  Record ProgramCounter : Type :=
+    mkProgramCounter {
+        unProgramCounter : Word
+      }.
 
   Record MachineState : Type :=
     mkMachineState {
