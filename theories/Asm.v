@@ -32,6 +32,8 @@ Import MonadNotation.
 Local Open Scope monad_scope.
 Definition compose {A B C : Type} (f : B -> C) (g : A -> B) : A -> C := fun (x : A) => f (g x).
 Definition fin (n : nat) : Type := { x : nat | x < n }.
+Lemma lt_0_succ (n : nat) : 0 < S n. Proof. lia. Qed.
+Definition f0 {n : nat} : fin (S n) := exist (fun x => x < S n) 0 (lt_0_succ n).
 Fixpoint forallb {A : Type} {n : nat} (f : A -> bool) (v : Vector.t A n) : bool :=
   match v with
   | Vector.nil _ => true
@@ -115,7 +117,7 @@ Section vnTinyRAM.
         unProgramCounter : nat
       }.
 
-  Record MachineState : Type :=
+(*  Record MachineState : Type :=
     mkMachineState {
         programCounter : ProgramCounter;
         registerValues : alist Register Word;
@@ -124,7 +126,7 @@ Section vnTinyRAM.
         primaryInput : InputTape primary;
         auxiliaryInput : InputTape auxiliary;
       }.
-
+*)
   Variant Operand : Type :=
   | Oimm (_ : Word)
   | Oreg (_ : Register).
@@ -222,13 +224,16 @@ Section vnTinyRAM.
   Definition exit {E A} `{Exit -< E} : itree E A :=
     vis Done (fun v => match v : void with end).
 
-  Inductive PC : Type -> Type :=
-  | SetPc (p : ProgramCounter) : PC unit
-  | GetPc : PC ProgramCounter.
-
   Definition increment_pc (p : ProgramCounter) : ProgramCounter :=
     let p' := unProgramCounter p in
     mkProgramCounter (Nat.modulo (p' + incrAmount) modulus).
+
+  Inductive PC : Type -> Type :=
+  | IncPc (f : ProgramCounter -> ProgramCounter) : PC unit
+  | SetPc (p : ProgramCounter) : PC unit
+  | GetPc : PC ProgramCounter.
+
+  Definition MachineState (E : Type -> Type) : Type -> Type := Reg +' Memory +' FFlag +' PC +' E.
 
   Section Denote.
 
@@ -256,7 +261,8 @@ Section vnTinyRAM.
       | on, on => off
       end.
 
-    Context {E : Type -> Type}.
+    Context {E' : Type -> Type}.
+    Notation E := (MachineState E').
     Context {HasReg : Reg -< E}.
     Context {HasMemory : Memory -< E}.
     Context {HasExit : Exit -< E}.
@@ -269,45 +275,46 @@ Section vnTinyRAM.
       | Oreg v => trigger (GetReg v)
       end.
 
-    Definition denote_binop (pc : ProgramCounter) (op : Word -> Word -> Word) (ri rj : Register) (o : Operand) : itree E unit :=
+    Definition denote_binop (op : Word -> Word -> Word) (ri rj : Register) (o : Operand) : itree E unit :=
       lv <- trigger (GetReg rj) ;;
       rv <- denote_operand o ;;
       let res := op lv rv in
       trigger (SetReg ri res) ;;
       trigger (SetFlag (if iszeroWord res then tru else fls)) ;;
-      trigger (SetPc (increment_pc pc)).
+      trigger (IncPc increment_pc).
 
-    Definition denote_andb (p : ProgramCounter) : Register -> Register -> Operand -> itree E unit :=
-      denote_binop p (Vector.map2 andb).
+    Definition denote_andb : Register -> Register -> Operand -> itree E unit :=
+      denote_binop (Vector.map2 andb).
 
-    Definition denote_orb (p : ProgramCounter) : Register -> Register -> Operand -> itree E unit :=
-      denote_binop p (Vector.map2 orb).
+    Definition denote_orb : Register -> Register -> Operand -> itree E unit :=
+      denote_binop (Vector.map2 orb).
 
-    Definition denote_xorb (p : ProgramCounter) : Register -> Register -> Operand -> itree E unit :=
-      denote_binop p (Vector.map2 xorb).
+    Definition denote_xorb : Register -> Register -> Operand -> itree E unit :=
+      denote_binop (Vector.map2 xorb).
 
-    Definition denote_not (p : ProgramCounter) (ri : Register) (o : Operand) : itree E unit :=
+    Definition denote_not (ri : Register) (o : Operand) : itree E unit :=
       rv <- denote_operand o ;;
       let res := Vector.map flipb rv in
       trigger (SetReg ri res) ;;
       trigger (SetFlag (if iszeroWord res then tru else fls)) ;;
-      trigger (SetPc (increment_pc p)).
+      trigger (IncPc increment_pc).
 
-    Definition denote_cmpe (p : ProgramCounter) (ri : Register) (o : Operand) : itree E unit :=
+    Definition denote_cmpe (ri : Register) (o : Operand) : itree E unit :=
       lv <- trigger (GetReg ri) ;;
       rv <- denote_operand o ;;
       let flag := forallb (Bool.eqb true) (Vector.map2 bit_eqb lv rv) in
-      trigger (SetFlag (conditionToFlag flag)).
+      trigger (SetFlag (conditionToFlag flag)) ;;
+      trigger (IncPc increment_pc).
 
-    Definition denote_instr (p : ProgramCounter) (i : Instruction) : itree E unit :=
+    Definition denote_instr (i : Instruction) : itree E unit :=
       let ri' := ri i in
       let rj' := rj i in
       let a' := a i in
       match opcode i with
-      | exist _ 0 _ => denote_andb p ri' rj' a'
-      | exist _ 1 _ => denote_orb p ri' rj' a'
-      | exist _ 2 _ => denote_xorb p ri' rj' a'
-      | exist _ 3 _ => denote_not p ri' a'
+      | exist _ 0 _ => denote_andb ri' rj' a'
+      | exist _ 1 _ => denote_orb ri' rj' a'
+      | exist _ 2 _ => denote_xorb ri' rj' a'
+      | exist _ 3 _ => denote_not ri' a'
       | exist _ 4 _ => Ret tt (* TODO: add *)
       | exist _ 5 _ => Ret tt (* TODO: sub *)
       | exist _ 6 _ => Ret tt (* TODO: mull *)
@@ -317,7 +324,7 @@ Section vnTinyRAM.
       | exist _ 10 _ => Ret tt (* TODO: umod *)
       | exist _ 11 _ => Ret tt (* TODO: shl *)
       | exist _ 12 _ => Ret tt (* TODO: shr *)
-      | exist _ 13 _ => denote_cmpe p ri' a'
+      | exist _ 13 _ => denote_cmpe ri' a'
       | exist _ 14 _ => Ret tt (* TODO: cmpa *)
       | exist _ 15 _ => Ret tt (* TODO: cmpae *)
       | exist _ 16 _ => Ret tt (* TODO: cmpg *)
@@ -386,25 +393,24 @@ Section vnTinyRAM.
       | Bhalt => exit
       end.
 
-    Fixpoint denote_bk {L : Type} (p : ProgramCounter) (b : @block L) : itree E L :=
+    Fixpoint denote_bk {L : Type} (b : @block L) : itree E L :=
       match b with
-      | bbi i b' => denote_instr p i ;; denote_bk p b'
+      | bbi i b' => denote_instr i ;; denote_bk b'
       | bbb b' => denote_br b'
       end.
 
-    Definition denote_bks {a b : nat} (p : ProgramCounter) (bs : bks a b) : fin a -> itree E (fin b) :=
-      fun x => denote_bk p (bs x).
+    Definition denote_bks {a b : nat} (bs : bks a b) : fin a -> itree E (fin b) :=
+      fun x => denote_bk (bs x).
 
     Definition sub_ktree_fin : nat -> nat -> Type := sub (ktree E) fin.
-    Check Case (sub (ktree E) fin) Nat.add.
 
     Context `{Case_bif : Case nat (sub (ktree E) fin) Nat.add}.
     Context `{Inl_bif : Inl nat (sub (ktree E) fin) Nat.add}.
     Context `{Inr_bif : Inr nat (sub (ktree E) fin) Nat.add}.
     Context `{Iter_bif : Iter nat (sub (ktree E) fin) Nat.add}.
 
-    Definition denote_asm {a b : nat} (p : ProgramCounter) : asm a b -> sub (ktree E) fin a b :=
-      fun s => loop (denote_bks p (code s)).
+    Definition denote_asm {a b : nat} : asm a b -> sub (ktree E) fin a b :=
+      fun s => loop (denote_bks (code s)).
 
   End Denote.
 
@@ -429,6 +435,9 @@ Section vnTinyRAM.
     exact (Nat.eqb x x0).
   Qed.
 
+  Instance RelDec_fin1 : RelDec (@eq (fin 1)) :=
+    { rel_dec := fun s1 s2 => true }.
+
   Definition h_reg {E : Type -> Type} `{mapE Register (offst wordSize) -< E} : Reg ~> itree E :=
     fun _ e =>
       match e with
@@ -443,31 +452,53 @@ Section vnTinyRAM.
       | Store x v => insert x v
       end.
 
+  Definition h_programcounter {E : Type -> Type} `{mapE (fin 1) (mkProgramCounter 0) -< E} : PC ~> itree E :=
+    fun _ e =>
+      match e with
+      | IncPc f => x <- lookup_def f0 ;; insert f0 (f x)
+      | SetPc x => insert f0 x
+      | GetPc => lookup_def f0
+      end.
+
+  Definition h_flag {E : Type -> Type} `{mapE (fin 1) fls -< E} : FFlag ~> itree E :=
+    fun _ e =>
+      match e with
+      | ReadFlag => lookup_def f0
+      | SetFlag x => insert f0 x
+      end.
+
   Definition registers : Type := alist Register Word.
   Definition memory : Type := alist Address Word.
+  (* by convention 0 is the key of the counter, which will mutate *)
+  Definition counter : Type := alist (fin 1) ProgramCounter.
+  Definition flag : Type := alist (fin 1) Flag.
 
-  Check @denote_asm.
-
-  Locate "+'".
-  Check sum1.
-  Set Typeclasses Depth 6.
-
-  Check interp.
-  Definition interp_asm {E A} (t : itree (Reg +' Memory +' FFlag +' PC +' E) A)
-    : memory -> registers -> itree E (memory * (registers * A)) :=
-    let h := bimap h_reg (bimap h_memory (id_ _)) in
+  Definition interp_asm {E : Type -> Type} {A : Type} (t : itree (MachineState E) A)
+    : counter -> flag -> memory -> registers -> itree E (counter * (flag * (memory * (registers * A)))) :=
+    (*let h := bimap (bimap (bimap (bimap h_reg h_memory) h_flag) h_programcounter) (id_ _) in *)
+    let h := bimap h_reg (bimap h_memory (bimap h_flag (bimap h_programcounter (id_ _)))) in
     let t' := interp h t in
-    fun mem regs => interp_map (interp_map t' regs) mem.
-
-  
+    fun count flg mem regs => interp_map (interp_map (interp_map (interp_map t' regs) mem) flg) count.
 
 
+  Context {E' : Type -> Type}.
+  Notation E := (MachineState E').
+  Context {HasReg : Reg -< E}.
+  Context {HasMemory : Memory -< E}.
+  Context {HasExit : Exit -< E}.
+  Context {HasFFlag : FFlag -< E}.
+  Context {HasPC : PC -< E}.
+  Context `{Case_bif : Case nat (sub (ktree E) fin) Nat.add}.
+  Context `{Inl_bif : Inl nat (sub (ktree E) fin) Nat.add}.
+  Context `{Inr_bif : Inr nat (sub (ktree E) fin) Nat.add}.
+  Context `{Iter_bif : Iter nat (sub (ktree E) fin) Nat.add}.
+  Context `{Initial_al_fin1 : Initial Type alist (fin 1)}.
+  Context `{Initial_al_Register : Initial Type alist Register}.
+  Context `{Initial_al_Address : Initial Type alist Address}.
+  Variable (p : asm 10 10).
+  Check denote_asm p f0.
+  Check interp_asm _ empty empty empty empty.
 
-(*)
-  Definition getImmediateRegister {m : Type -> Type} `{Monad m} `{HasMachineState m} (ior : ImmediateOrRegister) : m (option Word) :=
-    match ior with
-    | IsImmediate w => ret (Some w)
-    | IsRegister r => getRegisterValue r
-    end.
-*)
+  Definition run_asm (p : asm 1 0) := interp_asm (denote_asm p f0) empty empty empty empty.
+
 End vnTinyRAM.
