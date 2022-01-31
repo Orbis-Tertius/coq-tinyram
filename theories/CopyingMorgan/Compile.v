@@ -2,8 +2,8 @@ From ITree Require Import
      ITree.
 From ExtLib Require Import
      Monads.
-From vnTinyRAM Require Import
-     Types
+From TinyRAM.CopyingMorgan Require Import
+     CMTypes
      Instructions.
 
 Module eights <: Params.

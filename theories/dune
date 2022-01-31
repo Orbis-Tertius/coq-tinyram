@@ -1,5 +1,5 @@
+(include_subdirs qualified)
 (coq.theory
- (name vnTinyRAM)
- (modules Asm
-          CopyingMorgan.Types CopyingMorgan.Instructions)
- (synopsis "Von Neumann (as opposed to Harvard) TinyRAM architecture. https://www.scipr-lab.org/doc/TinyRAM-spec-2.000.pdf"))
+ (name TinyRAM)
+ (synopsis "https://www.scipr-lab.org/doc/TinyRAM-spec-2.000.pdf")
+ (package coq-tinyram))

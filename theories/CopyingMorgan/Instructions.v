@@ -1,5 +1,5 @@
-From vnTinyRAM Require Import
-     Types.
+From TinyRAM.CopyingMorgan Require Import
+     CMTypes.
 From ExtLib Require Import
      Monad.
 Import MonadNotation.
@@ -55,10 +55,10 @@ Fixpoint offst (n : nat) : t bit n :=
   | S n' => cons _ off _ (offst n')
   end.
 
-(* sanitychecks *)
+(* sanitychecks
 Compute forallb (fun b => b =? off) (map2 band w1 w2).
 Compute offst eights.wordSize.
-
+*)
 Definition andBits {m : Type -> Type} `{Monad m} `{HasMachineState m} (r1 r2 : Register) (ior : ImmediateOrRegister) : m unit :=
   a' <- getImmediateRegister ior ;;
   r2' <- getRegisterValue r2 ;;

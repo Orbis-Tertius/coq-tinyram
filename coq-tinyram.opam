@@ -1,0 +1,28 @@
+opam-version: "2.0"
+name: "coq-tinyram"
+version: "dev"
+maintainer: "Quinn Dougherty <quinn.dougherty@platonic.systems>"
+synopsis: "https://www.scipr-lab.org/doc/TinyRAM-spec-2.000.pdf"
+
+homepage: "https://github.com/Orb-Labs/coq-tinyram"
+dev-repo: "git+https://github.com/Orb-Labs/coq-tinyram"
+bug-reports: "https://github.com/Orb-Labs/coq-tinyram/issues"
+
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "build" "--root=." "-j" jobs] {with-test}
+  ["dune" "runtest" "--root=." "-j" jobs] {with-test}
+]
+
+depends: [
+  "ocaml"
+  "coq" {>= "8.12"}
+  "coq-itree"
+  "dune" {>= "2.6"}
+]
+authors: [
+  "Quinn Dougherty <quinn.dougherty@platonic.systems"
+]
+
+tags: "org:orbis"
