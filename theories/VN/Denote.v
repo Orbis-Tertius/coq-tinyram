@@ -6,6 +6,8 @@ From ITree.Basics Require Import
      CategorySub.
 From TinyRAM Require Import
      Types.
+From TinyRAM.Utils Require Import
+     Fin.
 Import Monads.
 Import MonadNotation.
 

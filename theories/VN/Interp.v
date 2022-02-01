@@ -1,25 +1,27 @@
 (* This approach is based on https://github.com/DeepSpec/InteractionTrees/blob/master/tutorial/Asm.v *)
 From Coq Require Import
-     String
-     Lia.
-From Coq.Vectors Require Import
-     Fin.
-From Coq Require
+     Morphisms.
+(*From Coq Require
      List
-     Vector.
+     Vector.*)
 From ExtLib Require Import
      Monad.
 From ExtLib.Data Require Import
      Map.FMapAList.
 From ITree Require Import
-     ITree.
+     ITree
+     ITreeFacts.
 From ITree.Basics Require Import
-     Monad
+     (*Monad*)
+     Category
+     CategoryKleisli
      CategorySub.
 From ITree.Events Require Import
      MapDefault.
 From TinyRAM Require Import
      Types.
+From TinyRAM.Utils Require Import
+     Fin.
 From TinyRAM.VN Require Import
      Denote.
 
@@ -83,6 +85,50 @@ Section Interp.
   Context `{Initial_al_Register : Initial Type alist Register}.
   Context `{Initial_al_Address : Initial Type alist Address}.
 
-  Definition run_asm (p : asm 1 0) : itree E' (counter * (flag * (memory * (registers * fin 0)))) := interp_asm (denote_asm p f0) empty empty empty empty.
+  Definition run_asm (p : asm 1 0) : itree E' (counter * (flag * (memory * (registers * fin 0)))) :=
+    interp_asm (denote_asm p f0) empty empty empty empty.
 
+  Definition eq_asm_denotations {A B : Type} (t1 t2 : Kleisli (itree E) A B) : Prop :=
+    forall a count flg mem regs, interp_asm (t1 a) count flg mem regs ≈ interp_asm (t2 a) count flg mem regs.
+
+  Definition eq_asm {A B} (p1 p2 : asm A B) : Prop :=
+    eq_asm_denotations (denote_asm p1) (denote_asm p2).
+
+  Section InterpProperties.
+
+    (** This interpreter is compatible with the equivalence-up-to-tau. *)
+    Global Instance eutt_interp_asm {A} :
+      Proper (@eutt E A A (@eq A) ==>
+                    (@eq counter) ==>
+                    (@eq flag) ==>
+                    (@eq memory) ==>
+                    (@eq registers) ==>
+                    @eutt E' (prod counter (prod flag (prod memory (prod registers A)))) (prod _ (prod _ (prod _ (prod _ A)))) eq)
+             interp_asm.
+    Proof.
+      repeat intro.
+      subst.
+      (* TODO *)
+    Admitted.
+
+    (** [interp_asm] commutes with [Ret]. *)
+    Lemma interp_asm_ret: forall {R} (r: R) (regs : registers) (mem: memory) (flg : flag) (count : counter),
+        @eutt E' _ _ eq (interp_asm (ret r) count flg mem regs)
+              (ret (count, (flg, (mem, (regs, r))))).
+    Proof.
+      unfold interp_asm, interp_map.
+      repeat intro.
+      unfold ret at 1, Monad_itree.
+      (* TODO *)
+    Admitted.
+
+    (** [interp_asm] commutes with [bind]. *)
+    Lemma interp_asm_bind: forall {R S} (t: itree E R) (k: R -> itree _ S) (regs : registers) (mem: memory) (flg : flag) (count : counter),
+        @eutt E' _ _ eq (interp_asm (ITree.bind t k) count flg mem regs)
+              (ITree.bind (interp_asm t count flg mem regs) (fun '(count', (flg', (mem', (regs', x)))) => interp_asm (k x) count' flg' mem' regs')).
+    Proof.
+      (* TODO *)
+    Admitted.
+
+  End InterpProperties.
 End Interp.

@@ -8,15 +8,22 @@ From ExtLib.Data Require Import
      Map.FMapAList.
 From ITree Require Import
      ITree.
+From TinyRAM.Utils Require Import
+     Fin.
 Definition compose {A B C : Type} (f : B -> C) (g : A -> B) : A -> C := fun (x : A) => f (g x).
-Definition fin (n : nat) : Type := { x : nat | x < n }.
-Lemma lt_0_succ (n : nat) : 0 < S n. Proof. lia. Qed.
-Definition f0 {n : nat} : fin (S n) := exist _ 0 (lt_0_succ n).
 Fixpoint forallb {A : Type} {n : nat} (f : A -> bool) (v : Vector.t A n) : bool :=
   match v with
   | Vector.nil _ => true
   | Vector.cons _ x _ xs => andb (f x) (forallb f xs)
   end.
+
+Module Type Params.
+  Parameter (wordSize registerCount : nat).
+  Axiom (H0 : exists k, wordSize = 4 * k).
+  Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
+  Definition modulus : nat := Nat.pow 2 wordSize.
+  Definition incrAmount : nat := Nat.div wordSize 4.
+End Params.
 
 Section TinyRAMTypes.
   Parameter (wordSize registerCount : nat).
