@@ -17,20 +17,17 @@ Fixpoint forallb {A : Type} {n : nat} (f : A -> bool) (v : Vector.t A n) : bool 
   | Vector.cons _ x _ xs => andb (f x) (forallb f xs)
   end.
 
-Module Type Params.
+Module Type TinyRAMParameters.
   Parameter (wordSize registerCount : nat).
   Axiom (H0 : exists k, wordSize = 4 * k).
   Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
   Definition modulus : nat := Nat.pow 2 wordSize.
   Definition incrAmount : nat := Nat.div wordSize 4.
-End Params.
+End TinyRAMParameters.
 
-Section TinyRAMTypes.
-  Parameter (wordSize registerCount : nat).
-  Variable (H0 : exists k, wordSize = 4 * k).
-  Variable (H1 : 6 + 2 * Nat.log2 registerCount <= wordSize).
-  Definition modulus : nat := Nat.pow 2 wordSize.
-  Definition incrAmount : nat := Nat.div wordSize 4.
+Module TinyRAMTypes (Params : TinyRAMParameters).
+  Import Params.
+  Export Params.
 
   Inductive bit : Type :=
   | off

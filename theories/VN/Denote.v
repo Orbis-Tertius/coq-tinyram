@@ -11,7 +11,10 @@ From TinyRAM.Utils Require Import
 Import Monads.
 Import MonadNotation.
 
-Section Denote.
+Module Denote (Params : TinyRAMParameters).
+  Module TRTypes := TinyRAMTypes Params.
+  Import TRTypes.
+
   Local Open Scope monad_scope.
 
   Context {E' : Type -> Type}.
