@@ -1,5 +1,5 @@
 {
-  description = "shaunsingh's doom emacs configuration";
+  description = "Write coq in doom for the coq-tinyram project";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -14,6 +14,8 @@
     , emacs
     , flake-utils
     , nix-doom-emacs
+    , ocaml
+    , dune_2
     }:
     flake-utils.lib.eachDefaultSystem (system:
       let
