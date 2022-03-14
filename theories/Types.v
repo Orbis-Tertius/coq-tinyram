@@ -21,6 +21,8 @@ Module Type TinyRAMParameters.
   Parameter (wordSize registerCount : nat).
   Axiom (H0 : exists k, wordSize = 4 * k).
   Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
+  Axiom H2 : 0 < wordSize. (* for MSB *)
+  Axiom H3 : wordSize - 1 < wordSize. (* for LSB *)
   Definition modulus : nat := Nat.pow 2 wordSize.
   Definition incrAmount : nat := Nat.div wordSize 4.
 End TinyRAMParameters.

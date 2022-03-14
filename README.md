@@ -22,7 +22,6 @@ nix build
 ## Compile `.v` files
 
 ```sh
-nix shell # ? 
 dune build
 ```
 

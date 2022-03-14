@@ -22,6 +22,8 @@ Module TwelveEight <: Types.TinyRAMParameters.
     simpl.
     lia.
   Defined.
+  Lemma H2 : 0 < wordSize. Proof. lia. Defined.
+  Lemma H3 : wordSize - 1 < wordSize. Proof. lia. Defined.
   Definition modulus : nat := Nat.pow 2 wordSize.
   Definition incrAmount : nat := Nat.div wordSize 4.
 End TwelveEight.
