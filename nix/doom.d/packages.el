@@ -3,3 +3,4 @@
 (package! direnv)
 (package! pdf-tools)
 (package! all-the-icons)
+(package! manegarm-theme)
