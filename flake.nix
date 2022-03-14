@@ -24,7 +24,10 @@
       in
       with pkgs;
       {
-        defaultPackage = nix-doom-emacs.package.${system} { doomPrivateDir = ./nix/doom.d; };
+        defaultPackage = nix-doom-emacs.package.${system} {
+          doomPrivateDir = ./nix/doom.d;
+          emacsPackages = emacsOverlay.emacsPackagesFor emacs;
+        };
       }
     );
 }
