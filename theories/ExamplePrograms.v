@@ -54,8 +54,10 @@ Definition Inot : instr := mkInstruction (mkOpcode 3 threelt29).
 Definition Icmpe : instr := mkInstruction (mkOpcode 13 thirteenlt29).
 
 Section Examples.
-
+(*
   Definition p1 : list Instruction :=
     [
       (Inot )
     ]
+ *)
+End Examples.

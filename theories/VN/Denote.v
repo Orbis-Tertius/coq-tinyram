@@ -62,6 +62,35 @@ Module Denote (Params : TinyRAMParameters).
     trigger (SetFlag (conditionToFlag flag)) ;;
     trigger (IncPc increment_pc).
 
+  Set Typeclasses Depth 4.
+
+  Variable o : Operand.
+  Variable ri : Register.
+  Check Store.
+  (*Check rv <- denote_operand o ;; lv <- trigger (GetReg ri) ;; trigger (SetReg rv lv) ;; trigger NullipotentFlag ;; trigger (IncPc increment_pc).*)
+
+  Definition denote_store_b (o : Operand) (ri : Register) : itree E unit :=
+    rv <- denote_operand o ;;
+    lv <- trigger (GetReg ri) ;;
+    let lsb := Vector.nth_order lv Params.H2 in
+    (* TODO: interpret a the word rv as an address (a fin of a large number) *)
+    trigger NullipotentFlag ;;
+    trigger (IncPc increment_pc).
+
+  Definition denote_load_b (ri : Register) (o : Operand) : itree E unit :=
+    rv <- trigger (GetReg ri) ;;
+    lv <- denote_operand o ;;
+    trigger (SetReg rv lv) ;;
+    trigger NullipotentFlag ;;
+    trigger (IncPc increment_pc).
+  (*
+  Definition denote_store_w (o : Operand) (ri : Register) : itree E unit :=
+    rv <- denote_operand o ;;
+    lv <- trigger (GetReg ri) ;;
+    trigger (SetReg lv rv) ;;
+    trigger NullipotentFlag ;;
+    trigger (IncPc increment_pc).
+  *)
   Definition denote_instr (i : Instruction) : itree E unit :=
     let ri' := ri i in
     let rj' := rj i in
@@ -90,9 +119,9 @@ Module Denote (Params : TinyRAMParameters).
     | exist _ 20 _ => Ret tt (* TODO: jmp *)
     | exist _ 21 _ => Ret tt (* TODO: cjmp *)
     | exist _ 22 _ => Ret tt (* TODO: cnjmp *)
-    | exist _ 23 _ => Ret tt (* TODO: store.b *)
-    | exist _ 24 _ => Ret tt (* TODO: load.b *)
-    | exist _ 25 _ => Ret tt (* TODO: store.w *)
+    | exist _ 23 _ => denote_store_b a' ri' (* TODO: store.b *)
+    | exist _ 24 _ => denote_load_b ri' a'
+    | exist _ 25 _ => Ret tt (*denote_store_w a' ri'*) (* TODO: store.w *)
     | exist _ 26 _ => Ret tt (* TODO: load.w *)
     | exist _ 27 _ => Ret tt (* TODO: read *)
     | exist _ 28 _ => Ret tt (* TODO: answer *)

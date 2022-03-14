@@ -81,6 +81,9 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
 
   Definition flipb (b : bit) : bit := match b with | off => on | on => off end.
 
+  Definition Byte : Type := Vector.t bit 8.
+  Definition zerobyte : Byte := bit_offs_t 8.
+
   Definition Word : Type := Vector.t bit wordSize.
   Definition zeroword : Word := bit_offs_t wordSize.
   Definition iszeroWord (w : Word) : bool := forallb (fun x => bit_eqb x off) w.
@@ -89,12 +92,9 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
 
   Definition Register : Type := fin registerCount.
 
-  (*Definition Address : Type := string.*)
-
   Definition memorySize : nat := Nat.pow 2 wordSize.
   Definition Address : Type := fin memorySize.
-  Definition Byte : Type := Vector.t bit 8.
-  Definition zerobyte : Byte := bit_offs_t 8.
+
   (*Definition Memory : Type := Vector.t (Vector.t bit 8) memorySize.
   Definition MemoryIdx : Type := t memorySize.
 
@@ -229,7 +229,8 @@ Variant instr : Type :=
 
   Inductive FFlag : Type -> Type :=
   | ReadFlag : FFlag Flag
-  | SetFlag (f : Flag) : FFlag unit.
+  | SetFlag (f : Flag) : FFlag unit
+  | NullipotentFlag : FFlag unit.
 
   Inductive Mem : Type -> Type :=
   | Load (r : Address) : Mem Byte

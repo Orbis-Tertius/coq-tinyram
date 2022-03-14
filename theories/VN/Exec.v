@@ -1,6 +1,6 @@
 From TinyRAM Require
      Types.
-From TinyRAM Require Import
+From TinyRAM.VN Require Import
      Combinators.
 
 Module Exec (Params : Types.TinyRAMParameters).

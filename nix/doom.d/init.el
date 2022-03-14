@@ -1,0 +1,4 @@
+(doom!
+ :lang
+ coq
+ ocaml)
