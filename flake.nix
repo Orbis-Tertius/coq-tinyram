@@ -26,7 +26,6 @@
       {
         defaultPackage = nix-doom-emacs.package.${system} {
           doomPrivateDir = ./nix/doom.d;
-          emacsPackages = emacsOverlay.emacsPackagesFor emacs;
         };
       }
     );
