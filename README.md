@@ -26,3 +26,6 @@ nix shell # ?
 dune build
 ```
 
+## Mess around
+
+Open up one of `theories/*.v` and type `C-c C-ENTER` to start the interactive session. Recall that `C-` is emacs-speak for holding the `CTRL` key. 
