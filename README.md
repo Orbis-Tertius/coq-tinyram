@@ -1,4 +1,4 @@
-# Goal: Compiling C to vnTinyRAM
+# `coq-tinyram`
 
 Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it later. 
 
@@ -6,41 +6,23 @@ Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it
 
 The implementation relies **heavily** on Xia et. al. 2020. Some code is plagiarized [see here](https://github.com/DeepSpec/InteractionTrees/blob/master/tutorial/Asm.v).
 
-## Ready your machine
+## Build and launch emacs for interactive session 
 
-using `home-manager` and `nix-direnv`: 
-1. you need `doom.d/` seed contents, with two important properties
-   - `(doom! ... :lang ... coq)` in `doom.d/init.el`
-   - `(custom-set-variables <backtick>(coq-prog-name "coqtop"))` in `doom.d/config.el`, where the backtick is the standard backtick I can't type because markdown. 
-     - Note: typically `coq-prog-name` deals in absolute paths, but we're going to get emacs talking to `nix-direnv` later so it all works out this way. 
-2. [`nix-doom-emacs`](https://github.com/vlaci/nix-doom-emacs#getting-started). `Doom` is a vim-based emacs build/config that let's you declaratively install `proof general`, which is the interactive frontend to `coq`. 
-3. install `nix-direnv`. 
-4. `ocaml` and `dune_2` in `home.nix` packages. 
-5. the following file `coq.nix` 
-```nix
-{ pkgs ? import <nixpkgs> {} }:
-pkgs.mkShell {
-  buildInputs = with pkgs.coqPackages; [
-    coq
-    coq-ext-lib
-    ITree
-  ];
-}
+We proceed by `nix` flakes and rely on `nix-direnv`. 
+
+0. [Install `nix`](https://nixos.org/download.html)
+1. [Install `nix-direnv`](https://github.com/nix-community/nix-direnv)
+
+```sh
+direnv allow
+nix build
+./result/bin/emacs
 ```
-6. the following file `.envrc`
-```
-use nix coq.nix
-```
-7. (uncertain) `(package! envrc)` in `doom.d/packages.el` 
 
-Do your `home-manager switch`. 
+## Compile `.v` files
 
-## Build
-
-``` sh
+```sh
+nix shell # ? 
 dune build
 ```
 
-## Fire it up
-
-Open up one of the `theories/*.v` files, type `C-c C-ENTER`, and cross your fingers. 
