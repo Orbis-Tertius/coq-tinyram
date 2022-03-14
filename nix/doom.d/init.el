@@ -6,6 +6,8 @@
  doom-dashboard
  doom-quit
  hl_todo
+ :editor
+ (evil +everywhere)
  :tools
  direnv
  magit
