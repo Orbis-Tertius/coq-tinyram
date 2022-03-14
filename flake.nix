@@ -27,6 +27,7 @@
         defaultPackage = nix-doom-emacs.package.${system} {
           doomPrivateDir = ./nix/doom.d;
         };
+        shell = ./nix/coq.nix;
       }
     );
 }
