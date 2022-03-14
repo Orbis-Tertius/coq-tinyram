@@ -1,4 +1,22 @@
 (doom!
+ :completion
+ company
+ :ui
+ doom
+ doom-dashboard
+ doom-quit
+ hl_todo
+ :tools
+ direnv
+ magit
+ make
+ :emacs
+ dired
  :lang
  coq
- ocaml)
+ ocaml
+ nix
+ markdown
+ latex
+ sh
+)
