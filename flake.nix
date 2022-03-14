@@ -14,8 +14,6 @@
     , emacs
     , flake-utils
     , nix-doom-emacs
-    , ocaml
-    , dune_2
     }:
     flake-utils.lib.eachDefaultSystem (system:
       let
