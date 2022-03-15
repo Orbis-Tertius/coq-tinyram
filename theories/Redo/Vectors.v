@@ -1,6 +1,31 @@
 From Coq Require Import
   Lia.
 
+Definition vector_length_coerce : forall {A n m},
+    n = m ->
+    Vector.t A n ->
+    Vector.t A m.
+  intros A n m eq v. rewrite <- eq. assumption. Defined.
+
+Theorem vector_length_coerce_inv : forall {A n m}
+    (eq : n = m) (v : Vector.t A n),
+    (vector_length_coerce (eq_sym eq) (vector_length_coerce eq v)) = v.
+Proof.
+  intros A n m eq v.
+  destruct eq.
+  reflexivity.
+Qed.
+
+Theorem vector_length_coerce_inv2 : forall {A n m}
+    (eq : m = n) (v : Vector.t A n),
+    (vector_length_coerce eq (vector_length_coerce (eq_sym eq) v)) = v.
+Proof.
+  intros A n m eq v.
+  destruct eq.
+  reflexivity.
+Qed.
+
+
 Definition vector_concat : forall {A n m},
     Vector.t (Vector.t A n) m -> Vector.t A (m * n).
   intros A n m v.
@@ -67,9 +92,3 @@ Definition vector_concat : forall {A n m},
   apply vector_concat.
   assumption.
   Defined.
-
-  Definition vector_length_coerce : forall {A n m},
-    n = m ->
-    Vector.t A n ->
-    Vector.t A m.
-  intros A n m eq v. rewrite <- eq. assumption. Defined.
