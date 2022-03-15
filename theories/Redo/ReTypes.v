@@ -54,6 +54,18 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
 
   Definition Byte := Vector.t bool 8.
 
+  Definition zeroByte : Byte :=
+    Vector.const false 8.
+
+  Definition oneByte : Byte :=
+    Vector.const true 8.
+
+  Definition zeroRegister : Register := 
+    Vector.const false _.
+
+  Definition oneRegister : Register := 
+    Vector.const true _.
+
   (*Registers can be cleanly split into bytes.*) 
   Definition RegisterBytes :
     forall (r:Register), 
@@ -158,56 +170,57 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   We say that a block is aligned to the A-th byte if its
   least-significant byte is at address A.
   """*)
+  Definition Memory_Block_Load_Store
+    (m : Memory)
+    (idx : nat) (lip : idx < Nat.pow 2 wordSize)
+    (blksz : nat) (lbp : blksz < Nat.pow 2 wordSize)
+    (block : Vector.t Byte blksz) :
+    Vector.t Byte blksz * Memory.
+  unfold Memory in m.
+  unfold Memory.
+  destruct (Memory_Block_Lem _ _ _ lip lbp) as 
+    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite eq in m.
+    destruct (Vector.splitat _ m) as [m' m3].
+    destruct (Vector.splitat _ m') as [m1 m2].
+    split.
+    { exact m2. }
+    rewrite eq.
+    exact (Vector.append (Vector.append m1 block) m3).
+  - rewrite eq3 in m.
+    destruct (Vector.splitat _ m) as [m' m3].
+    destruct (Vector.splitat _ m') as [m1 m2].
+    split.
+    + apply (vector_length_coerce eq1).
+      (* Note: m1 is an overflow, so it's
+              bits are more significant than m3. *)
+      rewrite add_comm.
+      apply (Vector.append m3 m1).
+    + rewrite <- eq1 in block.
+      destruct (Vector.splitat _ block) as [block1 block2].
+      rewrite eq3.
+      (* Note: The overflow means block2 should go at
+              the begining of memory, and block 1 at the end. *)
+      assert (blk1 + idx2 + blk2 = blk2 + idx2 + blk1) as OvrEq.
+      { lia. }
+      rewrite OvrEq.
+      exact (Vector.append (Vector.append block2 m2) block1).
+  Defined.
+
   Definition Memory_Block_Load
     (m : Memory)
     (idx : nat) (lip : idx < Nat.pow 2 wordSize)
     (blksz : nat) (lbp : blksz < Nat.pow 2 wordSize) :
-    Vector.t Byte blksz.
-  unfold Memory in m.
-  destruct (Memory_Block_Lem _ _ _ lip lbp) as 
-    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
-  - rewrite eq in m.
-    destruct (vector_unappend m) as [m' _].
-    destruct (vector_unappend m') as [_ m''].
-    exact m''.
-  - rewrite eq3 in m.
-    destruct (vector_unappend m) as [m' m3].
-    destruct (vector_unappend m') as [m1 _].
-    apply (vector_length_coerce eq1).
-    (* Note: m1 is an overflow, so it's
-             bits are more significant than m3. *)
-    rewrite add_comm.
-    apply (Vector.append m3 m1).
-  Defined.
+    Vector.t Byte blksz :=
+  fst (Memory_Block_Load_Store m _ lip _ lbp (Vector.const zeroByte _)).
    
   Definition Memory_Block_Store 
     (m : Memory)
     (idx : nat) (lip : idx < Nat.pow 2 wordSize)
     (blksz : nat) (lbp : blksz < Nat.pow 2 wordSize)
     (block : Vector.t Byte blksz) :
-    Memory.
-  unfold Memory.
-  unfold Memory in m.
-  destruct (Memory_Block_Lem _ _ _ lip lbp) as 
-    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
-  - rewrite eq in m.
-    destruct (vector_unappend m) as [m' m3].
-    destruct (vector_unappend m') as [m1 _].
-    rewrite eq.
-    exact (Vector.append (Vector.append m1 block) m3).
-  - rewrite eq3 in m.
-    destruct (vector_unappend m) as [m' _].
-    destruct (vector_unappend m') as [_ m2].
-    rewrite <- eq1 in block.
-    destruct (vector_unappend block) as [block1 block2].
-    rewrite eq3.
-    (* Note: The overflow means block2 should go at
-             the begining of memory, and block 1 at the end. *)
-    assert (blk1 + idx2 + blk2 = blk2 + idx2 + blk1) as OvrEq.
-    { lia. }
-    rewrite OvrEq.
-    exact (Vector.append (Vector.append block2 m2) block1).
-  Defined.
+    Memory :=
+  snd (Memory_Block_Load_Store m _ lip _ lbp block).
 
   (* Since a register is a memory block, it can be stored as well. *)
   Definition Memory_Register_Store 
@@ -252,6 +265,6 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
         (*primaryInput : InputTape primary;*)
         (*auxiliaryInput : InputTape auxiliary;*)
 
-
+End TinyRAMTypes.
 
 
