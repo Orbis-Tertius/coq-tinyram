@@ -32,14 +32,14 @@ Module Type TinyRAMParameters.
   """*)
   Parameter (wordSizeLength wordSizeEighth : nat).
   Axiom wordSizeDiv8 : wordSize = wordSizeEighth * 8.
-  Axiom wordSizePow2 : wordSize = Nat.pow 2 wordSizeLength.
+  Axiom wordSizePow2 : wordSize = 2 ^ wordSizeLength.
 
   (* ??? *)
   Axiom wordSizePos : 0 < wordSize. (* for MSB *)
 
   (*Axiom (H0 : exists k, wordSize = 4 * k).
   Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
-  Definition memorySize : nat := Nat.pow 2 wordSize.
+  Definition memorySize : nat := 2 ^ wordSize.
   Definition incrAmount : nat := Nat.div wordSize 4.*)
 End TinyRAMParameters.
 
@@ -81,7 +81,7 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   (*"""
   Memory, which is a linear array of 2^[wordSize] bytes.
   """*)
-  Definition Memory := Vector.t Byte (Nat.pow 2 wordSize).
+  Definition Memory := Vector.t Byte (2 ^ wordSize).
 
   Definition lt_sub:
   forall {n m}, n < m -> {p : nat | m = p + n /\ 0 < p}.
@@ -172,8 +172,8 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   """*)
   Definition Memory_Block_Load_Store
     (m : Memory)
-    (idx : nat) (lip : idx < Nat.pow 2 wordSize)
-    (blksz : nat) (lbp : blksz < Nat.pow 2 wordSize)
+    (idx : nat) (lip : idx < 2 ^ wordSize)
+    (blksz : nat) (lbp : blksz < 2 ^ wordSize)
     (block : Vector.t Byte blksz) :
     Vector.t Byte blksz * Memory.
   unfold Memory in m.
@@ -209,15 +209,15 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
 
   Definition Memory_Block_Load
     (m : Memory)
-    (idx : nat) (lip : idx < Nat.pow 2 wordSize)
-    (blksz : nat) (lbp : blksz < Nat.pow 2 wordSize) :
+    (idx : nat) (lip : idx < 2 ^ wordSize)
+    (blksz : nat) (lbp : blksz < 2 ^ wordSize) :
     Vector.t Byte blksz :=
   fst (Memory_Block_Load_Store m _ lip _ lbp (Vector.const zeroByte _)).
    
   Definition Memory_Block_Store 
     (m : Memory)
-    (idx : nat) (lip : idx < Nat.pow 2 wordSize)
-    (blksz : nat) (lbp : blksz < Nat.pow 2 wordSize)
+    (idx : nat) (lip : idx < 2 ^ wordSize)
+    (blksz : nat) (lbp : blksz < 2 ^ wordSize)
     (block : Vector.t Byte blksz) :
     Memory :=
   snd (Memory_Block_Load_Store m _ lip _ lbp block).
