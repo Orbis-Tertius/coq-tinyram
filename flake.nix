@@ -29,7 +29,7 @@
           ];
         };
 
-	      codium = stdenv.mkDerivation {
+        codium = stdenv.mkDerivation {
                 pname = "codium";
                 version = "1.0";
                 phases = ["installPhase"];
