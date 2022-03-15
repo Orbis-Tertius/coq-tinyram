@@ -16,7 +16,9 @@ We proceed by `nix` flakes and rely on `nix-direnv`.
 ```sh
 direnv allow
 nix build
-./result/bin/emacs
+nix-shell nix/coq.nix
+dune build
+./result/bin/codium
 ```
 
 ## Compile `.v` files
