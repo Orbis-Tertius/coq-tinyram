@@ -14,7 +14,6 @@ We proceed by `nix` flakes and rely on `nix-direnv`.
 1. [Install `nix-direnv`](https://github.com/nix-community/nix-direnv)
 
 ```sh
-direnv allow
 nix build
 nix-shell nix/coq.nix
 dune build
