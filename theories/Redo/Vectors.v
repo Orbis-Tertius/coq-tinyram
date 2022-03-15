@@ -37,7 +37,7 @@ Definition vector_concat : forall {A n m},
     + apply IHv.
   Defined.
 
-  Definition vector_unappend : forall {A n m},
+Definition vector_unappend : forall {A n m},
     Vector.t A (n + m) -> Vector.t A n * Vector.t A m.
   intros A n m v.
   induction n as [|n IHn].
@@ -53,17 +53,17 @@ Definition vector_concat : forall {A n m},
     + apply rv.
   Defined.
 
-  Theorem vector_append_inv1 : forall {A n m}
+Theorem vector_append_inv1 : forall {A n m}
     (v : Vector.t A (n + m)),
     uncurry Vector.append (vector_unappend v) = v.
   Admitted.
 
-  Theorem vector_append_inv2 : forall {A n m}
+Theorem vector_append_inv2 : forall {A n m}
     (v1 : Vector.t A n) (v2 : Vector.t A m),
     vector_unappend (Vector.append v1 v2) = (v1, v2).
   Admitted.
 
-  Definition vector_unconcat : forall {A n m},
+Definition vector_unconcat : forall {A n m},
     Vector.t A (m * n) -> Vector.t (Vector.t A n) m.
   intros A n m v.
   induction m as [|m IHm].
@@ -75,17 +75,17 @@ Definition vector_concat : forall {A n m},
       apply vvtl.
   Defined.
 
-  Theorem vector_concat_inv1 : forall {A n m}
+Theorem vector_concat_inv1 : forall {A n m}
     (v : Vector.t A (n * m)),
     vector_concat (vector_unconcat v) = v.
   Admitted.
 
-  Theorem vector_concat_inv2 : forall {A n m}
+Theorem vector_concat_inv2 : forall {A n m}
     (v : Vector.t (Vector.t A n) m),
     vector_unconcat (vector_concat v) = v.
   Admitted.
 
-  Definition vector_concat_2 : forall {A n m},
+Definition vector_concat_2 : forall {A n m},
     Vector.t (Vector.t A n) m -> Vector.t A (n * m).
   intros A n m v.
   rewrite PeanoNat.Nat.mul_comm.
