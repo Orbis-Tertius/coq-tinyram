@@ -83,49 +83,58 @@ Definition fin_mod : forall n m,
   assumption.
 Defined.
 
+Fixpoint fin_bitvector_fun (n m : nat) : Vector.t bool n :=
+  match n with
+  | 0 => Vector.nil bool
+  | S n => 
+    Vector.cons _ (negb (m mod 2 =? 0)) _ (fin_bitvector_fun n (m / 2))
+  end.
+
 Definition fin_bitvector : forall {n},
   fin (2 ^ n) -> Vector.t bool n.
-  intro n.
-  induction n as [|n IHn].
-  - intro.
-    apply Vector.nil.
-  - intro f.
-    destruct f as [f fpr].
-    assert (f = 2 * (f / 2) + f mod 2).
-    { apply div_mod. lia. }
-    destruct (f mod 2 =? 0) eqn:fmod.
-    + rewrite eqb_eq in fmod.
-      rewrite fmod, add_0_r in H.
-      apply (Vector.cons _ false).
-      apply IHn.
-      exists (f / 2).
-      rewrite (mul_lt_mono_pos_l 2).
-      2: { lia. }
-      rewrite <- H.
-      exact fpr.
-    + apply (Vector.cons _ true).
-      apply IHn.
-      exists (f / 2).
-      rewrite (mul_lt_mono_pos_l 2).
-      2: { lia. }
-      transitivity f.
-      2: { exact fpr. }
-      rewrite H at 2.
-      apply lt_add_pos_r.
-      rewrite eqb_neq, neq_0_lt_0 in fmod.
-      assumption.
-Defined.
+  intros n [f _].
+  apply (fin_bitvector_fun n f).
+  Defined.
 
 Theorem bitvector_fin_inv_lem_true : forall {n} (f : fin (2 ^ n)),
   fin_bitvector (bitvector_fin_double_S f : fin (2 ^ (S n))) =
-  Vector.cons bool true _ (fin_bitvector f).
-Admitted.
-
+  Vector.cons _ true _ (fin_bitvector f).
+Proof.
+  intros n.
+  destruct n as [|n]; intros [f fprp].
+  - rewrite unique_f0 at 1.
+    reflexivity.
+  - simpl bitvector_fin_double_S.
+    unfold fin_bitvector.
+    unfold fin_bitvector_fun.
+    replace (S (f + (f + 0))) with (1 + f * 2).
+    2: { lia. }
+    replace (((1 + f * 2)) mod 2) with 1.
+    2: { rewrite mod_add. { reflexivity. } { lia. } }
+    replace ((1 + f * 2) / 2) with f.
+    2: { rewrite div_add. { reflexivity. } { lia. } }
+    reflexivity.
+Qed.
 
 Theorem bitvector_fin_inv_lem_false : forall {n} (f : fin (2 ^ n)),
   fin_bitvector (bitvector_fin_double f : fin (2 ^ (S n))) =
   Vector.cons bool false _ (fin_bitvector f).
-Admitted.
+Proof.
+  intros n.
+  destruct n as [|n]; intros [f fprp].
+  - rewrite unique_f0 at 1.
+    reflexivity.
+  - simpl bitvector_fin_double.
+    unfold fin_bitvector.
+    unfold fin_bitvector_fun.
+    replace (f + (f + 0)) with (f * 2).
+    2: { lia. }
+    replace (f * 2 / 2) with f.
+    2: { rewrite div_mul. { reflexivity. } { lia. } }
+    replace ((f * 2) mod 2) with 0.
+    2: { symmetry. rewrite (mod_mul f 2). { reflexivity. } { lia. } } 
+    reflexivity.
+Qed.
 
 Theorem bitvector_fin_inv : forall {n} (v : Vector.t bool n),
   fin_bitvector (bitvector_fin v) = v.
@@ -141,9 +150,6 @@ Proof.
       rewrite IHv.
       reflexivity.
 Qed.
-
-
-
 
 Theorem fin_bitvector_inv : forall {n} (f : fin (2 ^ n)),
   bitvector_fin (fin_bitvector f) = f.
