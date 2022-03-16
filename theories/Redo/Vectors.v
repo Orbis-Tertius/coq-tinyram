@@ -47,6 +47,14 @@ Definition vector_concat : forall {A n m},
     + apply IHv.
   Defined.
 
+Theorem vector_cons_split : forall {A n}
+  (v : Vector.t A (S n)), 
+  (exists (x:A) (vtl:Vector.t A n), v = Vector.cons A x n vtl).
+Proof.
+  intros A n v.
+  exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
+Qed.
+
 Theorem vector_append_inv1 : forall {A n m}
     (v : Vector.t A (n + m)),
     uncurry Vector.append (Vector.splitat _ v) = v.
@@ -57,9 +65,7 @@ Proof.
   - intro; reflexivity.
   - intro v.
     simpl in v.
-    assert (exists (x:A) (vtl:Vector.t A (n + m)), v=Vector.cons A x (n + m) vtl).
-    { exists (Vector.hd v). exists (Vector.tl v). apply Vector.eta. }
-    destruct H as [x [vtl eq]].
+    destruct (vector_cons_split v) as [x [vtl eq]].
     rewrite eq.
     assert (uncurry Vector.append (Vector.splitat n vtl) = vtl).
     { apply IHn. }
@@ -80,9 +86,7 @@ Theorem vector_append_inv2 : forall {A n m}
             (Vector.append v1 v2) = (v1, v2))).
     reflexivity.    
   - intros v1 v2.
-    assert (exists (x:A) (vtl:Vector.t A n), v1=Vector.cons A x n vtl).
-    { exists (Vector.hd v1). exists (Vector.tl v1). apply Vector.eta. }
-    destruct H as [x [vtl eq]].
+    destruct (vector_cons_split v1) as [x [vtl eq]].
     rewrite eq.
     assert (Vector.splitat n (Vector.append vtl v2) = (vtl, v2)).
     { apply IHn. }
@@ -105,14 +109,74 @@ Definition vector_unconcat : forall {A n m},
       apply vvtl.
   Defined.
 
+Theorem vector_append_split : forall {A n m}
+  (v : Vector.t A (n + m)), 
+  (exists (vhd : Vector.t A n) (vtl : Vector.t A m),
+  v = Vector.append vhd vtl).
+Proof.
+  intros A n m v.
+  rewrite <- (vector_append_inv1 v).
+  destruct (Vector.splitat n v) as [v1 v2].
+  exists v1, v2.
+  reflexivity.
+Qed.
+
+Theorem vector_concat_inv1_lem : forall {A n m}
+  (v : Vector.t A (n * m))
+  (u : Vector.t A m),
+  vector_unconcat (Vector.append u v : Vector.t A (S n * m)) =
+  Vector.cons _ u _ (vector_unconcat v).
+Proof.
+  intros A n m.
+  generalize dependent n.
+  induction m as [|m IHm].
+  - intros n v u.
+Admitted.
+
 Theorem vector_concat_inv1 : forall {A n m}
-    (v : Vector.t A (n * m)),
-    vector_concat (vector_unconcat v) = v.
-  Admitted.
+  (v : Vector.t A (n * m)),
+  vector_concat (vector_unconcat v) = v.
+Proof.
+  intros A n.
+  induction n as [|n IHn];
+  intros m v.
+  - simpl.
+    apply (Vector.case0 (fun v => Vector.nil A = v)).
+    reflexivity.
+  - simpl in v.
+    destruct (vector_append_split v) as [vhd [vtl eq]].
+    rewrite eq.
+    rewrite vector_concat_inv1_lem.
+    simpl.
+    rewrite IHn.
+    reflexivity.
+Qed.
 
 Theorem vector_concat_inv2 : forall {A n m}
     (v : Vector.t (Vector.t A n) m),
     vector_unconcat (vector_concat v) = v.
+  intros A n.
+  induction n as [|n IHn].
+  - intros m v.
+    induction m as [|n IHm].
+    + simpl. 
+      apply (Vector.case0 (fun v => 
+                Vector.nil (Vector.t A 0) = v)).
+      reflexivity.
+    + destruct (vector_cons_split v) as [x [vtl eq]].
+      rewrite eq.
+      simpl.
+      f_equal.
+      * apply (Vector.case0 (fun x => 
+               Vector.nil A = x)).
+        reflexivity.
+      * 
+(*
+      rewrite (vector_concat_inv1_lem (vector_concat vtl) x :
+          vector_unconcat (Vector.append x (vector_concat vtl))
+                = Vector.cons _ x _ (vector_unconcat (vector_concat vtl))
+        ).
+*)
   Admitted.
 
 Definition vector_concat_2 : forall {A n m},
