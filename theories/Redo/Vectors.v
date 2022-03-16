@@ -46,21 +46,19 @@ Proof.
   exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
 Qed.
 
-Definition bitvector_fin_plus_S : forall {n},
-  fin n -> fin n -> fin (2 * n).
-  intros n a b.
+Definition bitvector_fin_double_S : forall {n},
+  fin n -> fin (2 * n).
+  intros n a.
   destruct a as [a afin].
-  destruct b as [b bfin].
-  exists (S (a + b)).
+  exists (S (2 * a)).
   lia.
   Defined.
 
-Definition bitvector_fin_plus : forall {n},
-  fin n -> fin n -> fin (2 * n).
-  intros n a b.
+Definition bitvector_fin_double : forall {n},
+  fin n -> fin (2 * n).
+  intros n a.
   destruct a as [a afin].
-  destruct b as [b bfin].
-  exists (a + b).
+  exists (2 * a).
   lia.
   Defined.
 
@@ -72,8 +70,17 @@ Definition bitvector_fin : forall {n},
     simpl.
     lia.
   - destruct h eqn:hdef.
-    + apply (bitvector_fin_plus_S IHv IHv).
-    + apply (bitvector_fin_plus IHv IHv).
+    + apply (bitvector_fin_double_S IHv).
+    + apply (bitvector_fin_double IHv).
+Defined.
+
+Definition fin_mod : forall n m,
+  n <> 0 -> fin (m * n) -> fin n.
+  intros n m meq f.
+  destruct f as [f fprp].
+  exists (f mod n).
+  apply mod_upper_bound.
+  assumption.
 Defined.
 
 Definition fin_bitvector : forall {n},
@@ -84,23 +91,58 @@ Definition fin_bitvector : forall {n},
     apply Vector.nil.
   - intro f.
     destruct f as [f fpr].
-    destruct (f <? 2 ^ n) eqn:fprop2.
-    + apply (Vector.cons _ false).
+    assert (f = 2 * (f / 2) + f mod 2).
+    { apply div_mod. lia. }
+    destruct (f mod 2 =? 0) eqn:fmod.
+    + rewrite eqb_eq in fmod.
+      rewrite fmod, add_0_r in H.
+      apply (Vector.cons _ false).
       apply IHn.
-      exists f.
-      rewrite <- ltb_lt.
-      assumption.
+      exists (f / 2).
+      rewrite (mul_lt_mono_pos_l 2).
+      2: { lia. }
+      rewrite <- H.
+      exact fpr.
     + apply (Vector.cons _ true).
       apply IHn.
-      exists (f mod (2 ^ n)).
-      apply mod_upper_bound.
-      apply pow_nonzero.
-      lia.
+      exists (f / 2).
+      rewrite (mul_lt_mono_pos_l 2).
+      2: { lia. }
+      transitivity f.
+      2: { exact fpr. }
+      rewrite H at 2.
+      apply lt_add_pos_r.
+      rewrite eqb_neq, neq_0_lt_0 in fmod.
+      assumption.
 Defined.
+
+Theorem bitvector_fin_inv_lem_true : forall {n} (f : fin (2 ^ n)),
+  fin_bitvector (bitvector_fin_double_S f : fin (2 ^ (S n))) =
+  Vector.cons bool true _ (fin_bitvector f).
+Admitted.
+
+
+Theorem bitvector_fin_inv_lem_false : forall {n} (f : fin (2 ^ n)),
+  fin_bitvector (bitvector_fin_double f : fin (2 ^ (S n))) =
+  Vector.cons bool false _ (fin_bitvector f).
+Admitted.
 
 Theorem bitvector_fin_inv : forall {n} (v : Vector.t bool n),
   fin_bitvector (bitvector_fin v) = v.
-  Admitted.
+Proof.
+  intros n v.
+  induction v.
+  - reflexivity.
+  - destruct h; simpl bitvector_fin.
+    + rewrite bitvector_fin_inv_lem_true.
+      rewrite IHv.
+      reflexivity.
+    + rewrite bitvector_fin_inv_lem_false.
+      rewrite IHv.
+      reflexivity.
+Qed.
+
+
 
 
 Theorem fin_bitvector_inv : forall {n} (f : fin (2 ^ n)),
