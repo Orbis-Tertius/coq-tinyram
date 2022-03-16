@@ -160,36 +160,14 @@ Qed.
 Theorem vector_concat_inv2 : forall {A n m}
     (v : Vector.t (Vector.t A n) m),
     vector_unconcat (vector_concat v) = v.
-  intros A n.
-  induction n as [|n IHn].
-  - intros m v.
-
-    induction m as [|n IHm].
-    + simpl. 
-      apply (Vector.case0 (fun v => 
-                Vector.nil (Vector.t A 0) = v)).
-      reflexivity.
-    + destruct (vector_cons_split v) as [x [vtl eq]].
-      rewrite eq.
-      simpl.
-      f_equal.
-      * apply (Vector.case0 (fun x => 
-               Vector.nil A = x)).
-        reflexivity.
-      * remember (vector_concat vtl) as vctl.
-        rewrite (vector_concat_inv1_lem (vctl : Vector.t A (S n * 0)) x).
-
-        replace (n * 0) with (S n * 0) in vctl.
-        2: { reflexivity. }
-
-
-(*
-      rewrite (vector_concat_inv1_lem vctl x :
-          vector_unconcat (Vector.append x (vector_concat vtl))
-                = Vector.cons _ x _ (vector_unconcat (vector_concat vtl))
-        ).
-*)
-  Admitted.
+  intros A n m.
+  induction v.
+  - reflexivity.
+  - simpl.
+    rewrite vector_append_inv2.
+    rewrite IHv.
+    reflexivity.
+Qed.
 
 Definition vector_concat_2 : forall {A n m},
     Vector.t (Vector.t A n) m -> Vector.t A (n * m).
