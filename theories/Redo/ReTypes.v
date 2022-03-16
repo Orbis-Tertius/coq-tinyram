@@ -213,7 +213,30 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
     (blksz : nat) (lbp : blksz < 2 ^ wordSize) :
     Vector.t Byte blksz :=
   fst (Memory_Block_Load_Store m _ lip _ lbp (Vector.const zeroByte _)).
-   
+
+(* Memory_Block_Load w/o rebuilding memory. *)
+Definition Memory_Block_Load_2
+    (m : Memory)
+    (idx : nat) (lip : idx < 2 ^ wordSize)
+    (blksz : nat) (lbp : blksz < 2 ^ wordSize) :
+    Vector.t Byte blksz.
+  unfold Memory in m.
+  destruct (Memory_Block_Lem _ _ _ lip lbp) as 
+    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite eq in m.
+    destruct (Vector.splitat _ m) as [m' _].
+    destruct (Vector.splitat _ m') as [_ m2].
+    exact m2.
+  - rewrite eq3 in m.
+    destruct (Vector.splitat _ m) as [m' m3].
+    destruct (Vector.splitat _ m') as [m1 _].
+    apply (vector_length_coerce eq1).
+    (* Note: m1 is an overflow, so it's
+              bits are more significant than m3. *)
+    rewrite add_comm.
+    apply (Vector.append m3 m1).
+  Defined.
+
   Definition Memory_Block_Store 
     (m : Memory)
     (idx : nat) (lip : idx < 2 ^ wordSize)
