@@ -23,9 +23,9 @@ Import PeanoNat.Nat.
 Module Type TinyRAMParameters.
   (*"""  
   TinyRAM [...] is parametrized by two integers: the word size [...]
-  and the number of Words [...]
+  and the number of registers [...]
   """*)
-  Parameter (wordSize WordCount : nat).
+  Parameter (wordSize registerCount : nat).
 
   (*"""  
   the word size [is] required to be a power of 2 and divisible by 8.
@@ -38,7 +38,7 @@ Module Type TinyRAMParameters.
   Axiom wordSizePos : 0 < wordSize. (* for MSB *)
 
   (*Axiom (H0 : exists k, wordSize = 4 * k).
-  Axiom H1 : 6 + 2 * Nat.log2 WordCount <= wordSize.
+  Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
   Definition memorySize : nat := 2 ^ wordSize.
   Definition incrAmount : nat := Nat.div wordSize 4.*)
 End TinyRAMParameters.
@@ -60,14 +60,14 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   Definition oneByte : Byte :=
     Vector.const true 8.
 
-  Definition zeroWord : Word := 
+  Definition zeroRegister : Word := 
     Vector.const false _.
 
-  Definition oneWord : Word := 
+  Definition oneRegister : Word := 
     Vector.const true _.
 
-  (*Words can be cleanly split into bytes.*) 
-  Definition WordBytes :
+  (*Registers can be cleanly split into bytes.*) 
+  Definition RegisterBytes :
     forall (r:Word), 
     { v : Vector.t Byte wordSizeEighth | 
     vector_length_coerce wordSizeDiv8 r = vector_concat v }.
@@ -223,12 +223,12 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   snd (Memory_Block_Load_Store m _ lip _ lbp block).
 
   (* Since a Word is a memory block, it can be stored as well. *)
-  Definition Memory_Word_Store 
+  Definition Memory_Register_Store 
     (m : Memory)
     (idx : nat) (lip : idx < 2 ^ wordSize)
     (reg : Word) :
     Memory.
-  destruct (WordBytes reg) as [block eq].
+  destruct (RegisterBytes reg) as [block eq].
   assert (0 < wordSizeEighth * 8).
   { rewrite <- wordSizeDiv8. apply wordSizePos. }
   assert (0 < wordSizeEighth).
@@ -249,9 +249,9 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
         """*)
         programCounter : Word;
         (*"""
-        [WordCount] general-purpose Words, [...]
+        [registerCount] general-purpose registers, [...]
         """*)
-        WordValues : Vector.t Word WordCount;
+        registerValues : Vector.t Word registerCount;
         (*"""
         The (condition) flag [...]; it consists of a single bit.
         """*)
