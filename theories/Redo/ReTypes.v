@@ -245,7 +245,7 @@ Definition Memory_Block_Load_2
     Memory :=
   snd (Memory_Block_Load_Store m _ lip _ lbp block).
 
-  Theorem Memory_Register_Lem_1 :
+  Theorem Memory_Register_Lem :
     wordSizeEighth < 2 ^ wordSize.
   Proof.
     assert (0 < wordSizeEighth * 8).
@@ -254,14 +254,6 @@ Definition Memory_Block_Load_2
     { lia. }
     rewrite <- wordSizeDiv8.
     apply pow_gt_lin_r.
-    lia.
-  Qed.
-
-  Theorem Memory_Register_Lem_2 :
-    0 < wordSizeEighth.
-  Proof.
-    assert (0 < wordSizeEighth * 8).
-    { rewrite <- wordSizeDiv8. apply wordSizePos. }
     lia.
   Qed.
 
@@ -274,7 +266,7 @@ Definition Memory_Block_Load_2
   rewrite wordSizeDiv8.
   apply vector_concat.
   apply (Memory_Block_Load m idx lip wordSizeEighth).
-  apply Memory_Register_Lem_1.
+  apply Memory_Register_Lem.
   Defined.
 
   (* Since a Word is a memory block, it can be stored as well. *)
@@ -283,7 +275,7 @@ Definition Memory_Block_Load_2
     (idx : nat) (lip : idx < 2 ^ wordSize)
     (reg : Word) :
     Memory.
-  apply (Memory_Block_Store m idx lip wordSizeEighth Memory_Register_Lem_1).
+  apply (Memory_Block_Store m idx lip wordSizeEighth Memory_Register_Lem).
   apply vector_unconcat.
   rewrite <- wordSizeDiv8.
   apply reg.
