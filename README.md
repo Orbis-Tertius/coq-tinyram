@@ -6,18 +6,16 @@ Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it
 
 The implementation relies **heavily** on Xia et. al. 2020. Some code is plagiarized [see here](https://github.com/DeepSpec/InteractionTrees/blob/master/tutorial/Asm.v).
 
-## Build and launch emacs for interactive session 
+## Build and launch emacs or vscodium with coq available, for an interactive session
 
-We proceed by `nix` flakes and rely on `nix-direnv`. 
+1. [Install `nix`](https://nixos.org/download.html)
+2. `nix develop .#emacs` or `nix develop .#vscodium`
+3. Run `vscodium` or `emacs` from your terminal, either will now be available in
+   your environment, for the duration of the shell.
 
-0. [Install `nix`](https://nixos.org/download.html)
-1. [Install `nix-direnv`](https://github.com/nix-community/nix-direnv)
+## Get a development environment in a shell, without using emacs or vscodium
 
-```sh
-direnv allow
-nix build
-./result/bin/emacs
-```
+1. `nix develop`
 
 ## Compile `.v` files
 
