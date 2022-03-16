@@ -30,12 +30,15 @@
     in
     {
       overlay = final: prev: { };
+      # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
         in
         {
+          # In case we don't want to provide an editor, this defaultShell will
+          # provide only coq packages we need.
           defaultShell = pkgs.mkShell {
             buildInputs = with pkgs; [
               ocaml
@@ -45,6 +48,8 @@
               coqPackages.ITree
             ];
           };
+          # This is the defaultShell, but overriden to add one additional buildInput,
+          # vscodium!
           vscodium = self.devShells.${system}.defaultShell.overrideAttrs (old: {
             buildInputs =
               let
@@ -65,6 +70,8 @@
                 vscodeWithCoq
               ];
           });
+          # This is the defaultShell, but overriden to add one additional buildInput,
+          # emacs!
           emacs = self.devShells.${system}.defaultShell.overrideAttrs (old: {
             buildInputs =
               let
