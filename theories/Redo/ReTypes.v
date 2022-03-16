@@ -245,24 +245,48 @@ Definition Memory_Block_Load_2
     Memory :=
   snd (Memory_Block_Load_Store m _ lip _ lbp block).
 
+  Theorem Memory_Register_Lem_1 :
+    wordSizeEighth < 2 ^ wordSize.
+  Proof.
+    assert (0 < wordSizeEighth * 8).
+    { rewrite <- wordSizeDiv8. apply wordSizePos. }
+    transitivity (wordSizeEighth * 8).
+    { lia. }
+    rewrite <- wordSizeDiv8.
+    apply pow_gt_lin_r.
+    lia.
+  Qed.
+
+  Theorem Memory_Register_Lem_2 :
+    0 < wordSizeEighth.
+  Proof.
+    assert (0 < wordSizeEighth * 8).
+    { rewrite <- wordSizeDiv8. apply wordSizePos. }
+    lia.
+  Qed.
+
+  (* Since a Word is a memory block, it can be loaded as well. *)
+  Definition Memory_Register_Load
+    (m : Memory)
+    (idx : nat) (lip : idx < 2 ^ wordSize) :
+    Word.
+  unfold Word.
+  rewrite wordSizeDiv8.
+  apply vector_concat.
+  apply (Memory_Block_Load m idx lip wordSizeEighth).
+  apply Memory_Register_Lem_1.
+  Defined.
+
   (* Since a Word is a memory block, it can be stored as well. *)
   Definition Memory_Register_Store 
     (m : Memory)
     (idx : nat) (lip : idx < 2 ^ wordSize)
     (reg : Word) :
     Memory.
-  destruct (RegisterBytes reg) as [block eq].
-  assert (0 < wordSizeEighth * 8).
-  { rewrite <- wordSizeDiv8. apply wordSizePos. }
-  assert (0 < wordSizeEighth).
-  { lia. }   
-  apply (Memory_Block_Store m idx lip wordSizeEighth).
-  2: { exact block. }
-  rewrite wordSizeDiv8.
-  transitivity (wordSizeEighth * 8).
-  { lia. }
-  apply pow_gt_lin_r.
-  lia.
+  apply (Memory_Block_Store m idx lip wordSizeEighth Memory_Register_Lem_1).
+  apply vector_unconcat.
+  rewrite <- wordSizeDiv8.
+  apply reg.
   Defined.
 
   Record MachineState : Type :=
