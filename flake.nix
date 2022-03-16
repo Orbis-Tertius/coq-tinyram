@@ -30,6 +30,7 @@
     in
     {
       overlay = final: prev: { };
+      devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
