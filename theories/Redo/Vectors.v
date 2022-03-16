@@ -82,8 +82,8 @@ Theorem vector_append_inv2 : forall {A n m}
   induction n as [|n IHn];
   intros m.
   - intros v1 v2.
-    apply (Vector.case0 (fun v1 => Vector.splitat 0
-            (Vector.append v1 v2) = (v1, v2))).
+    apply (Vector.case0 (fun v1 => 
+            Vector.splitat 0 (Vector.append v1 v2) = (v1, v2))).
     reflexivity.    
   - intros v1 v2.
     destruct (vector_cons_split v1) as [x [vtl eq]].
@@ -127,11 +127,16 @@ Theorem vector_concat_inv1_lem : forall {A n m}
   vector_unconcat (Vector.append u v : Vector.t A (S n * m)) =
   Vector.cons _ u _ (vector_unconcat v).
 Proof.
-  intros A n m.
-  generalize dependent n.
-  induction m as [|m IHm].
-  - intros n v u.
-Admitted.
+  intros A n m v u.
+  generalize dependent v.
+  induction u.
+  - reflexivity.
+  - intros v.
+    simpl Vector.append.
+    simpl vector_unconcat.
+    rewrite vector_append_inv2.
+    reflexivity.
+Qed.
 
 Theorem vector_concat_inv1 : forall {A n m}
   (v : Vector.t A (n * m)),
@@ -158,6 +163,7 @@ Theorem vector_concat_inv2 : forall {A n m}
   intros A n.
   induction n as [|n IHn].
   - intros m v.
+
     induction m as [|n IHm].
     + simpl. 
       apply (Vector.case0 (fun v => 
@@ -170,9 +176,15 @@ Theorem vector_concat_inv2 : forall {A n m}
       * apply (Vector.case0 (fun x => 
                Vector.nil A = x)).
         reflexivity.
-      * 
+      * remember (vector_concat vtl) as vctl.
+        rewrite (vector_concat_inv1_lem (vctl : Vector.t A (S n * 0)) x).
+
+        replace (n * 0) with (S n * 0) in vctl.
+        2: { reflexivity. }
+
+
 (*
-      rewrite (vector_concat_inv1_lem (vector_concat vtl) x :
+      rewrite (vector_concat_inv1_lem vctl x :
           vector_unconcat (Vector.append x (vector_concat vtl))
                 = Vector.cons _ x _ (vector_unconcat (vector_concat vtl))
         ).
