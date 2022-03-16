@@ -78,22 +78,13 @@ Qed.
 Theorem vector_append_inv2 : forall {A n m}
     (v1 : Vector.t A n) (v2 : Vector.t A m),
     Vector.splitat _ (Vector.append v1 v2) = (v1, v2).
-  intros A n.
-  induction n as [|n IHn];
-  intros m.
-  - intros v1 v2.
-    apply (Vector.case0 (fun v1 => 
-            Vector.splitat 0 (Vector.append v1 v2) = (v1, v2))).
-    reflexivity.    
-  - intros v1 v2.
-    destruct (vector_cons_split v1) as [x [vtl eq]].
-    rewrite eq.
-    assert (Vector.splitat n (Vector.append vtl v2) = (vtl, v2)).
-    { apply IHn. }
-    simpl.
-    destruct (Vector.splitat n (Vector.append vtl v2)) as [vo1 vo2].
-    injection H; intros H1 H2.
-    rewrite H1, H2.
+  intros A n m v.
+  generalize dependent m.
+  induction v.
+  - reflexivity.
+  - simpl.
+    intros m vs.
+    rewrite IHv.
     reflexivity.
 Qed.
 
