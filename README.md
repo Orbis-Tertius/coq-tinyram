@@ -10,7 +10,7 @@ The implementation relies **heavily** on Xia et. al. 2020. Some code is plagiari
 
 1. [Install `nix`](https://nixos.org/download.html)
 2. `nix develop .#emacs` or `nix develop .#vscodium`
-3. Run `vscodium` or `emacs` from your terminal, either will now be available in
+3. Run `emacs` or `codium` from your terminal, either will now be available in
    your environment, for the duration of the shell.
 
 ## Get a development environment in a shell, without using emacs or vscodium
