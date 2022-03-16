@@ -1,6 +1,6 @@
 # `coq-tinyram`
 
-Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it later. 
+Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it later.
 
 `vnTinyRam` description: `papers/TinyRAM-spec-2.000.pdf`
 
@@ -29,4 +29,4 @@ Open up one of `theories/*.v` and type `C-c C-ENTER` to start the interactive se
 
 ## Customize
 
-Explore `nix/doom.d/*` to get a feel for what tools you've been given and things you might want to change, disable, or add. 
+Explore `nix/doom.d/*` to get a feel for what tools you've been given and things you might want to change, disable, or add.
