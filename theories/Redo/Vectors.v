@@ -1,5 +1,8 @@
 From Coq Require Import
   Lia.
+From TinyRAM.Utils Require Import
+  Fin.
+Import PeanoNat.Nat.
 
 Definition vector_length_coerce : forall {A n m},
     n = m ->
@@ -13,8 +16,7 @@ Theorem vector_length_coerce_trans : forall {A n m}
     = (vector_length_coerce (eq_trans eq1 eq2) v).
 Proof.
   intros A n m eq1 eq2 v.
-  destruct eq1.
-  rewrite eq_trans_refl_l.
+  destruct eq2.
   reflexivity.
 Qed.
 
@@ -36,17 +38,6 @@ Proof.
   reflexivity.
 Qed.
 
-Definition vector_concat : forall {A n m},
-    Vector.t (Vector.t A n) m -> Vector.t A (m * n).
-  intros A n m v.
-  induction v.
-  - apply Vector.nil.
-  - simpl.
-    apply Vector.append.
-    + apply h.
-    + apply IHv.
-  Defined.
-
 Theorem vector_cons_split : forall {A n}
   (v : Vector.t A (S n)), 
   (exists (x:A) (vtl:Vector.t A n), v = Vector.cons A x n vtl).
@@ -54,6 +45,67 @@ Proof.
   intros A n v.
   exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
 Qed.
+
+Definition bitvector_fin_plus_S : forall {n},
+  fin n -> fin n -> fin (2 * n).
+  intros n a b.
+  destruct a as [a afin].
+  destruct b as [b bfin].
+  exists (S (a + b)).
+  lia.
+  Defined.
+
+Definition bitvector_fin_plus : forall {n},
+  fin n -> fin n -> fin (2 * n).
+  intros n a b.
+  destruct a as [a afin].
+  destruct b as [b bfin].
+  exists (a + b).
+  lia.
+  Defined.
+
+Definition bitvector_fin : forall {n},
+  Vector.t bool n -> fin (2 ^ n).
+  intros n v.
+  induction v.
+  - exists 0.
+    simpl.
+    lia.
+  - destruct h eqn:hdef.
+    + apply (bitvector_fin_plus_S IHv IHv).
+    + apply (bitvector_fin_plus IHv IHv).
+Defined.
+
+Definition fin_bitvector : forall {n},
+  fin (2 ^ n) -> Vector.t bool n.
+  intro n.
+  induction n as [|n IHn].
+  - intro.
+    apply Vector.nil.
+  - intro f.
+    destruct f as [f fpr].
+    destruct (f <? 2 ^ n) eqn:fprop2.
+    + apply (Vector.cons _ false).
+      apply IHn.
+      exists f.
+      rewrite <- ltb_lt.
+      assumption.
+    + apply (Vector.cons _ true).
+      apply IHn.
+      exists (f mod (2 ^ n)).
+      apply mod_upper_bound.
+      apply pow_nonzero.
+      lia.
+Defined.
+
+Theorem bitvector_fin_inv : forall {n} (v : Vector.t bool n),
+  fin_bitvector (bitvector_fin v) = v.
+  Admitted.
+
+
+Theorem fin_bitvector_inv : forall {n} (f : fin (2 ^ n)),
+  bitvector_fin (fin_bitvector f) = f.
+  Admitted.
 
 Theorem vector_append_inv1 : forall {A n m}
     (v : Vector.t A (n + m)),
@@ -88,18 +140,6 @@ Theorem vector_append_inv2 : forall {A n m}
     reflexivity.
 Qed.
 
-Definition vector_unconcat : forall {A n m},
-    Vector.t A (m * n) -> Vector.t (Vector.t A n) m.
-  intros A n m v.
-  induction m as [|m IHm].
-  - apply Vector.nil.
-  - simpl in v; destruct (Vector.splitat _ v) as [vv1 vvtl].
-    apply Vector.cons.
-    + apply vv1.
-    + apply IHm.
-      apply vvtl.
-  Defined.
-
 Theorem vector_append_split : forall {A n m}
   (v : Vector.t A (n + m)), 
   (exists (vhd : Vector.t A n) (vtl : Vector.t A m),
@@ -111,6 +151,29 @@ Proof.
   exists v1, v2.
   reflexivity.
 Qed.
+
+Definition vector_concat : forall {A n m},
+    Vector.t (Vector.t A n) m -> Vector.t A (m * n).
+  intros A n m v.
+  induction v.
+  - apply Vector.nil.
+  - simpl.
+    apply Vector.append.
+    + apply h.
+    + apply IHv.
+  Defined.
+
+Definition vector_unconcat : forall {A n m},
+    Vector.t A (m * n) -> Vector.t (Vector.t A n) m.
+  intros A n m v.
+  induction m as [|m IHm].
+  - apply Vector.nil.
+  - simpl in v; destruct (Vector.splitat _ v) as [vv1 vvtl].
+    apply Vector.cons.
+    + apply vv1.
+    + apply IHm.
+      apply vvtl.
+  Defined.
 
 Theorem vector_concat_inv1_lem : forall {A n m}
   (v : Vector.t A (n * m))
