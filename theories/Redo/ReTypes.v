@@ -23,9 +23,9 @@ Import PeanoNat.Nat.
 Module Type TinyRAMParameters.
   (*"""  
   TinyRAM [...] is parametrized by two integers: the word size [...]
-  and the number of registers [...]
+  and the number of Words [...]
   """*)
-  Parameter (wordSize registerCount : nat).
+  Parameter (wordSize WordCount : nat).
 
   (*"""  
   the word size [is] required to be a power of 2 and divisible by 8.
@@ -38,7 +38,7 @@ Module Type TinyRAMParameters.
   Axiom wordSizePos : 0 < wordSize. (* for MSB *)
 
   (*Axiom (H0 : exists k, wordSize = 4 * k).
-  Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
+  Axiom H1 : 6 + 2 * Nat.log2 WordCount <= wordSize.
   Definition memorySize : nat := 2 ^ wordSize.
   Definition incrAmount : nat := Nat.div wordSize 4.*)
 End TinyRAMParameters.
@@ -48,9 +48,9 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   Export Params.
 
   (*"""
-  each register consists of [wordSize] bits
+  each Word consists of [wordSize] bits
   """*)
-  Definition Register := Vector.t bool wordSize.
+  Definition Word := Vector.t bool wordSize.
 
   Definition Byte := Vector.t bool 8.
 
@@ -60,15 +60,15 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   Definition oneByte : Byte :=
     Vector.const true 8.
 
-  Definition zeroRegister : Register := 
+  Definition zeroWord : Word := 
     Vector.const false _.
 
-  Definition oneRegister : Register := 
+  Definition oneWord : Word := 
     Vector.const true _.
 
-  (*Registers can be cleanly split into bytes.*) 
-  Definition RegisterBytes :
-    forall (r:Register), 
+  (*Words can be cleanly split into bytes.*) 
+  Definition WordBytes :
+    forall (r:Word), 
     { v : Vector.t Byte wordSizeEighth | 
     vector_length_coerce wordSizeDiv8 r = vector_concat v }.
   intros r.
@@ -222,13 +222,13 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
     Memory :=
   snd (Memory_Block_Load_Store m _ lip _ lbp block).
 
-  (* Since a register is a memory block, it can be stored as well. *)
-  Definition Memory_Register_Store 
+  (* Since a Word is a memory block, it can be stored as well. *)
+  Definition Memory_Word_Store 
     (m : Memory)
     (idx : nat) (lip : idx < 2 ^ wordSize)
-    (reg : Register) :
+    (reg : Word) :
     Memory.
-  destruct (RegisterBytes reg) as [block eq].
+  destruct (WordBytes reg) as [block eq].
   assert (0 < wordSizeEighth * 8).
   { rewrite <- wordSizeDiv8. apply wordSizePos. }
   assert (0 < wordSizeEighth).
@@ -247,11 +247,11 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
         (*"""
         The program counter, denoted pc; it consists of [wordSize] bits.
         """*)
-        programCounter : Register;
+        programCounter : Word;
         (*"""
-        [registerCount] general-purpose registers, [...]
+        [WordCount] general-purpose Words, [...]
         """*)
-        registerValues : Vector.t Register registerCount;
+        WordValues : Vector.t Word WordCount;
         (*"""
         The (condition) flag [...]; it consists of a single bit.
         """*)
