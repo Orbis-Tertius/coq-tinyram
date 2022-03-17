@@ -1,47 +1,99 @@
 {
-  description = "A flake for building vscodium with vscoq";
+  description = "A Flake for building coq and providing devShells for the coq-tinyram project";
 
-  inputs.nixpkgs.url = "nixpkgs";
-  inputs.flake-utils.url = "github:numtide/flake-utils";
-
-  outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.simpleFlake {
-    inherit self nixpkgs;
-    name = "vsc";
-    preOverlays = [  ];
-    systems = [ "x86_64-linux" "x86_64-darwin" ];
-    config = {
-      allowUnsupportedSystem = true;
+  inputs = {
+    flake-compat-ci.url = "github:hercules-ci/flake-compat-ci";
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
     };
-    overlay = final: prev: {
-      vsc = with final; rec {
-        env = [ ];
-
-        wrapper = vscode-with-extensions.override {
-          vscode = vscodium;
-          vscodeExtensions = with vscode-extensions; 
-            vscode-utils.extensionsFromVscodeMarketplace [
-            {
-              name = "VSCoq";
-              publisher = "maximedenes";
-              version = "0.3.6";
-              sha256 = "sha256-b0gCaEzt5yAj53oLFZSXSD3bum9J1fYes/uf9+OlUek=";
-            }
-          ];
-        };
-
-        codium = stdenv.mkDerivation {
-                pname = "codium";
-                version = "1.0";
-                phases = ["installPhase"];
-                installPhase = ''
-                  mkdir -p $out/bin;
-                  makeWrapper ${wrapper}/bin/codium $out/bin/codium --prefix PATH : ${lib.makeBinPath env}
-                '';
-                buildInputs = [ makeWrapper ];
-              };
-
-        defaultPackage = codium;
-      };
-    };
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nix-doom-emacs.url = "github:nix-community/nix-doom-emacs";
+    emacs.url = "github:cmacrae/emacs";
   };
+
+  outputs =
+    { self
+    , nixpkgs
+    , emacs
+    , nix-doom-emacs
+    , flake-compat
+    , flake-compat-ci
+    }:
+    let
+      # Generate a user-friendly version number.
+      version = builtins.substring 0 8 self.lastModifiedDate;
+      # System types to support.
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      # Helper function to generate an attrset '{ x86_64-linux = f "x86_64-linux"; ... }'.
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      # Nixpkgs instantiated for supported system types.
+      nixpkgsFor = forAllSystems (system:
+        import nixpkgs {
+          inherit system;
+          overlays = [ self.overlay ];
+        });
+    in
+    {
+      ciNix = flake-compat-ci.lib.recurseIntoFlakeWith {
+        flake = self;
+        systems = [ "x86_64-linux" ];
+      };
+      overlay = final: prev: { };
+      # the default devShell used when running `nix develop`
+      devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
+      devShells = forAllSystems (system:
+        let
+          pkgs = nixpkgsFor."${system}";
+        in
+        {
+          # In case we don't want to provide an editor, this defaultShell will
+          # provide only coq packages we need.
+          defaultShell = pkgs.mkShell {
+            buildInputs = with pkgs; [
+              ocaml
+              dune_2
+              coqPackages.coq
+              coqPackages.coq-ext-lib
+              coqPackages.ITree
+            ];
+          };
+          # This is the defaultShell, but overriden to add one additional buildInput,
+          # vscodium!
+          vscodium = self.devShells.${system}.defaultShell.overrideAttrs (old: {
+            buildInputs =
+              let
+                vscodeWithCoq = pkgs.vscode-with-extensions.override {
+                  vscode = pkgs.vscodium;
+                  vscodeExtensions = pkgs.vscode-utils.extensionsFromVscodeMarketplace [
+                    {
+                      name = "VSCoq";
+                      publisher = "maximedenes";
+                      version = "0.3.6";
+                      sha256 = "sha256-b0gCaEzt5yAj53oLFZSXSD3bum9J1fYes/uf9+OlUek=";
+                    }
+                  ];
+                };
+              in
+              old.buildInputs
+              ++ [
+                vscodeWithCoq
+              ];
+          });
+          # This is the defaultShell, but overriden to add one additional buildInput,
+          # emacs!
+          emacs = self.devShells.${system}.defaultShell.overrideAttrs (old: {
+            buildInputs =
+              let
+                doom-emacsWithCoq = nix-doom-emacs.package.${system} {
+                  doomPrivateDir = ./nix/doom.d;
+                };
+              in
+              old.buildInputs
+              ++ [
+                doom-emacsWithCoq
+              ];
+          });
+        });
+    };
 }
