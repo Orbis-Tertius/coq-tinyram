@@ -39,13 +39,12 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem vector_cons_split : forall {A n}
+Definition vector_cons_split : forall {A n}
   (v : Vector.t A (S n)), 
-  (exists (x:A) (vtl:Vector.t A n), v = Vector.cons A x n vtl).
-Proof.
+  { x : A & { vtl : Vector.t A n | v = Vector.cons A x n vtl } }.
   intros A n v.
   exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
-Qed.
+Defined.
 
 Definition bitvector_fin_double_S : forall {n},
   fin n -> fin (2 * n).

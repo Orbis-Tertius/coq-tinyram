@@ -28,6 +28,15 @@ Module Type TinyRAMParameters.
   (* ??? *)
   Axiom wordSizePos : 0 < wordSize. (* for MSB *)
 
+  Theorem wordSizeEighthPos : 0 < wordSizeEighth.
+  Proof.
+    assert (0 < wordSizeEighth * 8).
+    { rewrite <- wordSizeDiv8. apply wordSizePos. }
+    lia.
+  Qed.
+
+  Definition pcIncrement : nat := wordSize / 4.
+
   (*Axiom (H0 : exists k, wordSize = 4 * k).
   Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
   Definition memorySize : nat := 2 ^ wordSize.
@@ -303,7 +312,56 @@ Definition Memory_Block_Load_2 : forall
         memory : Memory;
       }.
 
-  (* All opcodes which operate putely on state. *)
+  Definition bv_add : forall {n} (b1 b2 : Vector.t bool n), Vector.t bool n.
+    intros n b1 b2.
+    apply fin_bitvector; apply bitvector_fin in b1, b2.
+    destruct b1 as [b1 b1prp]; destruct b2 as [b2 b2prp].
+    exists ((b1 + b2) mod (2 ^ n)).
+    apply mod_upper_bound.
+    lia.
+  Defined.
+
+  Definition bv_incr : forall {n}, Vector.t bool n -> nat -> Vector.t bool n.
+    intros n b i.
+    apply fin_bitvector; apply bitvector_fin in b.
+    destruct b as [b bprp].
+    exists ((b + i) mod (2 ^ n)).
+    apply mod_upper_bound.
+    lia.
+  Defined.
+
+Definition replace :
+  forall {A n} (v : Vector.t A n) (p: fin n) (a : A), Vector.t A n.
+  intros A n; induction n as [|n IHn]; intros v [p pprp] a.
+  - apply Vector.nil.
+  - destruct (vector_cons_split v) as [vhd [vtl _]].
+    destruct p.
+    + apply Vector.cons.
+      * exact a.
+      * exact vtl.
+    + apply Vector.cons.
+      * exact vhd.
+      * apply (fun x => IHn vtl x a).
+        exists p.
+        lia.
+Defined. 
+
+Definition nth :
+  forall {A n} (v : Vector.t A n) (p: fin n), A.
+  intros A n; induction n as [|n IHn]; intros v [p pprp].
+  - destruct (nlt_0_r _ pprp).
+  - destruct (vector_cons_split v) as [vhd [vtl _]].
+    destruct p.
+    + exact vhd.
+    + apply (IHn vtl).
+      exists p.
+      lia.
+Defined.
+     
+
+(* TODO: Verify basic properties of replace!!! *)
+
+  (* All opcodes which operate purely on state. *)
 
   (*"""
   and ri rj A compute bitwise AND of [rj] and [A] and store result in ri result is 0W
@@ -492,7 +550,22 @@ Definition Memory_Block_Load_2 : forall
   """*)
   Definition pureOp_store_b (A : Word) (ri : fin registerCount) :
     MachineState -> MachineState.
-  Admitted.
+  intro ms; destruct ms.
+  split.
+  + exact (bv_incr programCounter0 pcIncrement).
+  + exact registerValues0.
+  + exact conditionFlag0.
+  + apply (replace memory0).
+    (*" at the [A]u-th byte "*)
+    - apply bitvector_fin.
+      exact A.
+    (*" the least-significant byte of [ri] "*)
+    - apply (fun x => nth x ri) in registerValues0 as regi.
+      apply RegisterBytes in regi.
+      apply (nth regi).
+      exists 0.
+      apply wordSizeEighthPos.
+  Qed.
 
 
   (*"""
