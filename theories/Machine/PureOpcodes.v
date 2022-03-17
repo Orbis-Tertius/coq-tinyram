@@ -53,14 +53,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
   *)
 
   (*"""
-  compute bitwise AND of [rj] and [A] and store result in ri result is 0W
+  compute bitwise AND of [rj] and [A] and store result in ri
+  [flag:] result is 0W
   """*)
   Definition pureOp_and (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
   Admitted.
 
   (*"""
-  compute bitwise OR of [rj] and [A] and store result in ri result is 0W
+  compute bitwise OR of [rj] and [A] and store result in ri
+  [flag:] result is 0W
   """*)
   Definition pureOp_or (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -68,7 +70,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute bitwise XOR of [rj] and [A] and store result in ri result is 0W
+  compute bitwise XOR of [rj] and [A] and store result in ri
+  [flag:] result is 0W
   """*)
   Definition pureOp_xor (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -76,14 +79,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute bitwise NOT of [A] and store result in ri result is 0W
+  compute bitwise NOT of [A] and store result in ri
+  [flag:] result is 0W
   """*)
   Definition pureOp_not (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
   Admitted.
 
   (*"""
-  compute [rj]u + [A]u and store result in ri overflow
+  compute [rj]u + [A]u and store result in ri
+  [flag:] overflow
   """*)
   Definition pureOp_add (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -91,7 +96,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]u − [A]u and store result in ri borrow
+  compute [rj]u − [A]u and store result in ri
+  [flag:] borrow
   """*)
   Definition pureOp_sub (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -99,7 +105,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]u × [A]u and store least significant bits of result in ri overflow
+  compute [rj]u × [A]u and store least significant bits of result in ri
+  [flag:] overflow
   """*)
   Definition pureOp_mull (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -107,7 +114,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]u × [A]u and store most significant bits of result in ri overflow
+  compute [rj]u × [A]u and store most significant bits of result in ri
+  [flag:] overflow
   """*)
   Definition pureOp_umulh (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -115,7 +123,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]s × [A]s and store most significant bits of result in ri over/underflow
+  compute [rj]s × [A]s and store most significant bits of result in ri
+  [flag:] over/underflow
   """*)
   Definition pureOp_smulh (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -123,7 +132,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute quotient of [rj]u/[A]u and store result in ri [A]u = 0
+  compute quotient of [rj]u/[A]u and store result in ri
+  [flag:] [A]u = 0
   """*)
   Definition pureOp_udiv (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -131,7 +141,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute remainder of [rj]u/[A]u and store result in ri [A]u = 0
+  compute remainder of [rj]u/[A]u and store result in ri
+  [flag:] [A]u = 0
   """*)
   Definition pureOp_umod (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -139,7 +150,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  shift [rj] by [A]u bits to the left and store result in ri MSB of [rj]
+  shift [rj] by [A]u bits to the left and store result in ri
+  [flag:] MSB of [rj]
   """*)
   Definition pureOp_shl (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -147,7 +159,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  shift [rj] by [A]u bits to the right and store result in ri LSB of [rj]
+  shift [rj] by [A]u bits to the right and store result in ri
+  [flag:] LSB of [rj]
   """*)
   Definition pureOp_shr (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -155,7 +168,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  “compare equal” [ri] = [A]
+  “compare equal”
+  [flag:] [ri] = [A]
   """*)
   Definition pureOp_cmpe (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -163,7 +177,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  “compare above”, unsigned [ri]u > [A]u
+  “compare above”, unsigned
+  [flag:] [ri]u > [A]u
   """*)
   Definition pureOp_cmpa (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -171,7 +186,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  “compare above or equal”, unsigned [ri]u ≥ [A]u
+  “compare above or equal”, unsigned
+  [flag:] [ri]u ≥ [A]u
   """*)
   Definition pureOp_cmpae (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -179,7 +195,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  “compare greater”, signed [ri]s > [A]s
+  “compare greater”, signed
+  [flag:] [ri]s > [A]s
   """*)
   Definition pureOp_cmpg (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -187,7 +204,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  “compare greater or equal”, signed [ri]s ≥ [A]s
+  “compare greater or equal”, signed
+  [flag:] [ri]s ≥ [A]s
   """*)
   Definition pureOp_cmpge (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
