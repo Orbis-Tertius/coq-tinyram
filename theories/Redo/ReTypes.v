@@ -71,15 +71,28 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
     Vector.t Byte wordSizeEighth :=
     vector_unconcat (vector_length_coerce wordSizeDiv8 r).
 
-  Theorem RegisterBytesConserv :
+  Definition BytesRegister (v : Vector.t Byte wordSizeEighth) : Word 
+    := vector_length_coerce (eq_sym wordSizeDiv8) (vector_concat v).
+
+  Theorem RegisterBytesIso1 :
     forall (r : Word), 
-    vector_length_coerce (eq_sym wordSizeDiv8)
-      (vector_concat (RegisterBytes r)) = r.
+    BytesRegister (RegisterBytes r) = r.
   Proof.
     intros r.
-    unfold RegisterBytes.
+    unfold RegisterBytes, BytesRegister.
     rewrite vector_concat_inv1.
     rewrite vector_length_coerce_inv.
+    reflexivity.
+  Qed.
+
+  Theorem RegisterBytesIso2 :
+    forall (v : Vector.t Byte wordSizeEighth), 
+    RegisterBytes (BytesRegister v) = v.
+  Proof.
+    intros r.
+    unfold RegisterBytes, BytesRegister.
+    rewrite vector_length_coerce_inv2.
+    rewrite vector_concat_inv2.
     reflexivity.
   Qed.
 
@@ -573,8 +586,27 @@ Defined.
   """*)
   Definition pureOp_load_b (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    split.
+    + exact (bv_incr programCounter0 pcIncrement).
+    + apply (replace registerValues0 ri).
+      apply BytesRegister.
+      (*" (with zero-padding in front) "*)
+      replace wordSizeEighth with (Nat.pred wordSizeEighth + 1).
+      2: { assert (Nat.pred wordSizeEighth < wordSizeEighth).
+          { apply Lt.lt_pred_n_n. apply wordSizeEighthPos. }
+          lia. }
+      apply Vector.append.
+      (*" zero-padding "*)
+      - apply (Vector.const zeroByte).
+      (*" [A]u-th byte in memory "*)
+      - apply (fun x => Vector.cons _ x _ (Vector.nil _)).
+        apply (nth memory0).
+        apply bitvector_fin.
+        exact A.
+    + exact conditionFlag0.
+    + exact memory0.
+  Defined.
 
   (*"""
   store.w A ri store [ri] at the word in memory that is aligned to the [A]w-th byte
