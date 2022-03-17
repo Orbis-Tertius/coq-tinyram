@@ -3,6 +3,9 @@ From Coq Require Import
 From TinyRAM.Utils Require Import
   Fin.
 Import PeanoNat.Nat.
+Require Import ProofIrrelevance.
+Require Import FunctionalExtensionality.
+Require Import Logic.EqdepFacts.
 
 Definition vector_length_coerce : forall {A n m},
     n = m ->
@@ -132,7 +135,7 @@ Proof.
     replace (f * 2 / 2) with f.
     2: { rewrite div_mul. { reflexivity. } { lia. } }
     replace ((f * 2) mod 2) with 0.
-    2: { symmetry. rewrite (mod_mul f 2). { reflexivity. } { lia. } } 
+    2: { symmetry. rewrite mod_mul. { reflexivity. } { lia. } } 
     reflexivity.
 Qed.
 
@@ -151,9 +154,53 @@ Proof.
       reflexivity.
 Qed.
 
+Theorem mod_2_0or1 : forall n, (n mod 2 = 0) \/ (n mod 2 = 1).
+Proof.
+  intro.
+  induction n as [|n IHn].
+  - auto.
+  - replace (S n) with (1 + n). 2: { reflexivity. }
+    rewrite add_mod. 2: { lia. }
+    destruct IHn.
+    + right.
+      rewrite H.
+      reflexivity.
+    + left.
+      rewrite H.
+      reflexivity.
+Qed.
+
 Theorem fin_bitvector_inv : forall {n} (f : fin (2 ^ n)),
   bitvector_fin (fin_bitvector f) = f.
-  Admitted.
+  intro n.
+  induction n as [|n IHn]; intros [f fprp].
+  + simpl.
+    rewrite unique_f0.
+    apply subset_eq_compat.
+    reflexivity.
+  + unfold fin_bitvector.
+    replace (fin_bitvector_fun (S n) f)
+       with (Vector.cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_fun n (f / 2))).
+    2: { reflexivity. }
+    assert (f = (2 * (f / 2) + f mod 2)) as fsplit.
+    { rewrite <- div_mod. { reflexivity. } { lia. } }
+    assert (f/2 < 2 ^ n) as fhprp.
+    { apply div_lt_upper_bound. { lia. } exact fprp. } 
+    assert (bitvector_fin (fin_bitvector (exist _ (f/2) fhprp)) = (exist _ (f/2) fhprp)).
+    { apply IHn. } clear IHn. simpl in H.
+    destruct (f mod 2 =? 0) eqn:fmod;
+    simpl; rewrite H; clear H; simpl;
+    apply subset_eq_compat;
+    replace (fst (divmod f 1 0 1)) with (f / 2); try reflexivity.
+    - rewrite eqb_eq in fmod.
+      rewrite fmod, add_0_r in fsplit.
+      lia.
+    - replace (f mod 2) with 1 in fsplit.
+      { lia. }  
+      rewrite eqb_neq in fmod.
+      destruct (mod_2_0or1 f). { destruct (fmod H). }
+      symmetry; assumption.
+Qed.
 
 Theorem vector_append_inv1 : forall {A n m}
     (v : Vector.t A (n + m)),
