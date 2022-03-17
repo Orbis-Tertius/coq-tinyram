@@ -627,7 +627,7 @@ Defined.
   Defined.
 
   (*"""
-  store.w A ri store [ri] at the word in memory that is aligned to the [A]w-th byte
+  store [ri] at the word in memory that is aligned to the [A]w-th byte
   """*)
   Definition pureOp_store_w (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
@@ -648,11 +648,22 @@ Defined.
 
 
   (*"""
-  load.w ri A store into ri the word in memory that is aligned to the [A]w-th byte
+  store into ri the word in memory that is aligned to the [A]w-th byte
   """*)
   Definition pureOp_load_w (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms; split.
+    (* PC *)
+    + exact (bv_incr programCounter0 pcIncrement).
+    (* Registers *)
+    + apply (replace registerValues0 ri).
+      apply (Memory_Register_Load_from_Reg memory0).
+      exact A.
+    (* Flag *)
+    + exact conditionFlag0. 
+    (* Memory *)
+    + exact memory0.
+  Defined.
 
 
 
