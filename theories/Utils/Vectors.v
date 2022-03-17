@@ -2,6 +2,8 @@ From Coq Require Import
   Lia.
 From TinyRAM.Utils Require Import
   Fin.
+From TinyRAM.Utils Require Import
+  Arith.
 Import PeanoNat.Nat.
 Require Import ProofIrrelevance.
 
@@ -46,13 +48,42 @@ Definition vector_cons_split : forall {A n}
   exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
 Defined.
 
+
+Definition replace :
+  forall {A n} (v : Vector.t A n) (p: fin n) (a : A), Vector.t A n.
+  intros A n; induction n as [|n IHn]; intros v [p pprp] a.
+  - apply Vector.nil.
+  - destruct (vector_cons_split v) as [vhd [vtl _]].
+    destruct p.
+    + apply Vector.cons.
+      * exact a.
+      * exact vtl.
+    + apply Vector.cons.
+      * exact vhd.
+      * apply (fun x => IHn vtl x a).
+        exists p.
+        lia.
+Defined. 
+
+Definition nth :
+  forall {A n} (v : Vector.t A n) (p: fin n), A.
+  intros A n; induction n as [|n IHn]; intros v [p pprp].
+  - destruct (nlt_0_r _ pprp).
+  - destruct (vector_cons_split v) as [vhd [vtl _]].
+    destruct p.
+    + exact vhd.
+    + apply (IHn vtl).
+      exists p.
+      lia.
+Defined.
+
 Definition bitvector_fin_double_S : forall {n},
   fin n -> fin (2 * n).
   intros n a.
   destruct a as [a afin].
   exists (S (2 * a)).
   lia.
-  Defined.
+Defined.
 
 Definition bitvector_fin_double : forall {n},
   fin n -> fin (2 * n).
@@ -60,7 +91,7 @@ Definition bitvector_fin_double : forall {n},
   destruct a as [a afin].
   exists (2 * a).
   lia.
-  Defined.
+Defined.
 
 Definition bitvector_fin : forall {n},
   Vector.t bool n -> fin (2 ^ n).
@@ -94,7 +125,7 @@ Definition fin_bitvector : forall {n},
   fin (2 ^ n) -> Vector.t bool n.
   intros n [f _].
   apply (fin_bitvector_fun n f).
-  Defined.
+Defined.
 
 Theorem bitvector_fin_inv_lem_true : forall {n} (f : fin (2 ^ n)),
   fin_bitvector (bitvector_fin_double_S f : fin (2 ^ (S n))) =
@@ -253,7 +284,7 @@ Definition vector_concat : forall {A n m},
     apply Vector.append.
     + apply h.
     + apply IHv.
-  Defined.
+Defined.
 
 Definition vector_unconcat : forall {A n m},
     Vector.t A (m * n) -> Vector.t (Vector.t A n) m.
@@ -265,7 +296,7 @@ Definition vector_unconcat : forall {A n m},
     + apply vv1.
     + apply IHm.
       apply vvtl.
-  Defined.
+Defined.
 
 Theorem vector_concat_inv1_lem : forall {A n m}
   (v : Vector.t A (n * m))
@@ -321,4 +352,103 @@ Definition vector_concat_2 : forall {A n m},
   rewrite PeanoNat.Nat.mul_comm.
   apply vector_concat.
   assumption.
-  Defined.
+Defined.
+
+Definition Block_Lem : forall idx blksz memsz,
+    (idx < memsz) -> (blksz < memsz) ->
+    { tl | memsz = idx + blksz + tl } + 
+    { blk1 & { blk2 & { idx2 |
+      blk1 + blk2 = blksz /\
+      blk1 + idx2 = idx /\
+      memsz = blk1 + idx2 + blk2 }}}.
+    intros idx blksz memsz lim lbm.
+    remember (memsz <? idx + blksz) as lm_ib.
+    destruct lm_ib.
+    - symmetry in Heqlm_ib.
+      rewrite ltb_lt in Heqlm_ib.
+      destruct (lt_sub Heqlm_ib) as [blk1 [Heq1 l0blk1]].
+      right.
+      exists blk1.
+      destruct (lt_sub lim) as [blk2 [Heq2 l0blk2]].
+      exists blk2.
+      assert (blk1 < idx) as lb1_i.
+      { lia. }
+      destruct (lt_sub lb1_i) as [idx2 [Heqi l0idx2]].
+      exists idx2.
+      lia.
+    - left.
+      assert (not (memsz < idx + blksz)).
+      { intro. rewrite <- ltb_lt in H.
+        rewrite H in Heqlm_ib. discriminate Heqlm_ib. }
+      clear Heqlm_ib.
+      assert (memsz >= idx + blksz).
+      { apply Compare_dec.not_lt. assumption. }
+      destruct (le_sub H0) as [tl [Heq leotl]].
+      exists tl.
+      lia.
+Defined.
+
+Definition Block_Load_Store : forall {B memsz}
+    (m : Vector.t B memsz)
+    (idx blksz: fin memsz)
+    (block : Vector.t B (proj1_sig blksz)),
+    Vector.t B (proj1_sig blksz) * Vector.t B memsz.
+  intros B memsz m [idx lip] [blksz lbp] block.
+  destruct (Block_Lem _ _ _ lip lbp) as 
+    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite eq in m.
+    destruct (Vector.splitat _ m) as [m' m3].
+    destruct (Vector.splitat _ m') as [m1 m2].
+    split.
+    { exact m2. }
+    rewrite eq.
+    exact (Vector.append (Vector.append m1 block) m3).
+  - rewrite eq3 in m.
+    destruct (Vector.splitat _ m) as [m' m3].
+    destruct (Vector.splitat _ m') as [m1 m2].
+    split.
+    + apply (vector_length_coerce eq1).
+      (* Note: m1 is an overflow, so it's
+              bits are more significant than m3. *)
+      rewrite add_comm.
+      apply (Vector.append m3 m1).
+    + rewrite <- eq1 in block.
+      destruct (Vector.splitat _ block) as [block1 block2].
+      rewrite eq3.
+      (* Note: The overflow means block2 should go at
+              the begining of memory, and block 1 at the end. *)
+      assert (blk1 + idx2 + blk2 = blk2 + idx2 + blk1) as OvrEq.
+      { lia. }
+      rewrite OvrEq.
+      exact (Vector.append (Vector.append block2 m2) block1).
+Defined.
+
+(* Memory_Block_Load w/o rebuilding memory. *)
+Definition Block_Load : forall {B memsz}
+    (m : Vector.t B memsz)
+    (idx blksz: fin memsz),
+    Vector.t B (proj1_sig blksz).
+  intros B memsz m [idx lip] [blksz lbp].
+  destruct (Block_Lem _ _ _ lip lbp) as 
+    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite eq in m.
+    destruct (Vector.splitat _ m) as [m' _].
+    destruct (Vector.splitat _ m') as [_ m2].
+    exact m2.
+  - rewrite eq3 in m.
+    destruct (Vector.splitat _ m) as [m' m3].
+    destruct (Vector.splitat _ m') as [m1 _].
+    apply (vector_length_coerce eq1).
+    (* Note: m1 is an overflow, so it's
+              bits are more significant than m3. *)
+    rewrite add_comm.
+    apply (Vector.append m3 m1).
+Defined.
+
+Definition Block_Store {B memsz}
+    (m : Vector.t B memsz)
+    (idx blksz: fin memsz)
+    (block : Vector.t B (proj1_sig blksz)) :
+    Vector.t B memsz :=
+  snd (Block_Load_Store m idx blksz block).
+
