@@ -4,8 +4,6 @@ From TinyRAM.Utils Require Import
   Fin.
 Import PeanoNat.Nat.
 Require Import ProofIrrelevance.
-Require Import FunctionalExtensionality.
-Require Import Logic.EqdepFacts.
 
 Definition vector_length_coerce : forall {A n m},
     n = m ->
