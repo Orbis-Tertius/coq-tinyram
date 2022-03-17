@@ -14,7 +14,6 @@ From TinyRAM.Utils Require Import
   Fin.
 Import PeanoNat.Nat.
 
-
 (* 
   Note: Text between triple quotes are
   direct quotes from the TinyRAM 2.000 spec.
@@ -67,16 +66,21 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
     Vector.const true _.
 
   (*Registers can be cleanly split into bytes.*) 
-  Definition RegisterBytes :
-    forall (r:Word), 
-    { v : Vector.t Byte wordSizeEighth | 
-    vector_length_coerce wordSizeDiv8 r = vector_concat v }.
-  intros r.
-  remember (vector_length_coerce wordSizeDiv8 r) as r8.
-  exists (vector_unconcat r8).
-  rewrite vector_concat_inv1.
-  reflexivity.
-  Defined.
+  Definition RegisterBytes (r : Word) : 
+    Vector.t Byte wordSizeEighth :=
+    vector_unconcat (vector_length_coerce wordSizeDiv8 r).
+
+  Theorem RegisterBytesConserv :
+    forall (r : Word), 
+    vector_length_coerce (eq_sym wordSizeDiv8)
+      (vector_concat (RegisterBytes r)) = r.
+  Proof.
+    intros r.
+    unfold RegisterBytes.
+    rewrite vector_concat_inv1.
+    rewrite vector_length_coerce_inv.
+    reflexivity.
+  Qed.
 
   (*"""
   Memory, which is a linear array of 2^[wordSize] bytes.
@@ -170,12 +174,12 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
   We say that a block is aligned to the A-th byte if its
   least-significant byte is at address A.
   """*)
-  Definition Memory_Block_Load_Store
+  Definition Memory_Block_Load_Store : forall
     (m : Memory)
-    (idx : nat) (lip : idx < 2 ^ wordSize)
-    (blksz : nat) (lbp : blksz < 2 ^ wordSize)
-    (block : Vector.t Byte blksz) :
-    Vector.t Byte blksz * Memory.
+    (idx blksz: fin (2 ^ wordSize))
+    (block : Vector.t Byte (proj1_sig blksz)),
+    Vector.t Byte (proj1_sig blksz) * Memory.
+  intros m [idx lip] [blksz lbp] block.
   unfold Memory in m.
   unfold Memory.
   destruct (Memory_Block_Lem _ _ _ lip lbp) as 
@@ -209,17 +213,16 @@ Module TinyRAMTypes (Params : TinyRAMParameters).
 
   Definition Memory_Block_Load
     (m : Memory)
-    (idx : nat) (lip : idx < 2 ^ wordSize)
-    (blksz : nat) (lbp : blksz < 2 ^ wordSize) :
-    Vector.t Byte blksz :=
-  fst (Memory_Block_Load_Store m _ lip _ lbp (Vector.const zeroByte _)).
+    (idx blksz : fin (2 ^ wordSize)) :
+    Vector.t Byte (proj1_sig blksz) :=
+  fst (Memory_Block_Load_Store m idx blksz (Vector.const zeroByte _)).
 
 (* Memory_Block_Load w/o rebuilding memory. *)
-Definition Memory_Block_Load_2
+Definition Memory_Block_Load_2 : forall
     (m : Memory)
-    (idx : nat) (lip : idx < 2 ^ wordSize)
-    (blksz : nat) (lbp : blksz < 2 ^ wordSize) :
-    Vector.t Byte blksz.
+    (idx blksz: fin (2 ^ wordSize)),
+    Vector.t Byte (proj1_sig blksz).
+  intros m [idx lip] [blksz lbp].
   unfold Memory in m.
   destruct (Memory_Block_Lem _ _ _ lip lbp) as 
     [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
@@ -239,15 +242,13 @@ Definition Memory_Block_Load_2
 
   Definition Memory_Block_Store 
     (m : Memory)
-    (idx : nat) (lip : idx < 2 ^ wordSize)
-    (blksz : nat) (lbp : blksz < 2 ^ wordSize)
-    (block : Vector.t Byte blksz) :
+    (idx blksz : fin (2 ^ wordSize))
+    (block : Vector.t Byte (proj1_sig blksz)) :
     Memory :=
-  snd (Memory_Block_Load_Store m _ lip _ lbp block).
+  snd (Memory_Block_Load_Store m idx blksz block).
 
-  Theorem Memory_Register_Lem :
-    wordSizeEighth < 2 ^ wordSize.
-  Proof.
+  Definition wordSizeEighthFin : fin (2 ^ wordSize).
+    exists wordSizeEighth.
     assert (0 < wordSizeEighth * 8).
     { rewrite <- wordSizeDiv8. apply wordSizePos. }
     transitivity (wordSizeEighth * 8).
@@ -255,28 +256,28 @@ Definition Memory_Block_Load_2
     rewrite <- wordSizeDiv8.
     apply pow_gt_lin_r.
     lia.
-  Qed.
+  Defined.
 
   (* Since a Word is a memory block, it can be loaded as well. *)
   Definition Memory_Register_Load
     (m : Memory)
-    (idx : nat) (lip : idx < 2 ^ wordSize) :
+    (idx : fin (2 ^ wordSize)) :
     Word.
   unfold Word.
   rewrite wordSizeDiv8.
   apply vector_concat.
-  apply (Memory_Block_Load m idx lip wordSizeEighth).
-  apply Memory_Register_Lem.
+  apply (Memory_Block_Load_2 m idx wordSizeEighthFin).
   Defined.
 
   (* Since a Word is a memory block, it can be stored as well. *)
   Definition Memory_Register_Store 
     (m : Memory)
-    (idx : nat) (lip : idx < 2 ^ wordSize)
+    (idx : fin (2 ^ wordSize))
     (reg : Word) :
     Memory.
-  apply (Memory_Block_Store m idx lip wordSizeEighth Memory_Register_Lem).
+  apply (Memory_Block_Store m idx wordSizeEighthFin).
   apply vector_unconcat.
+  simpl.
   rewrite <- wordSizeDiv8.
   apply reg.
   Defined.
