@@ -15,6 +15,7 @@ The implementation relies **heavily** on Xia et. al. 2020. Some code is plagiari
 
 ## Get a development environment in a shell, without using emacs or vscodium
 
+
 1. `nix develop`
 
 ## Compile `.v` files
