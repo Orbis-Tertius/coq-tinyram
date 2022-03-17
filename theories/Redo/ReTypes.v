@@ -308,136 +308,215 @@ Definition Memory_Block_Load_2 : forall
   (*"""
   and ri rj A compute bitwise AND of [rj] and [A] and store result in ri result is 0W
   """*)
-
+  Definition pureOp_and (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
   (*"""
   or ri rj A compute bitwise OR of [rj] and [A] and store result in ri result is 0W
   """*)
+  Definition pureOp_or (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   xor ri rj A compute bitwise XOR of [rj] and [A] and store result in ri result is 0W
   """*)
+  Definition pureOp_xor (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   not ri A compute bitwise NOT of [A] and store result in ri result is 0W
   """*)
-
+  Definition pureOp_not (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
   (*"""
   add ri rj A compute [rj]u + [A]u and store result in ri overflow
   """*)
+  Definition pureOp_add (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   sub ri rj A compute [rj]u − [A]u and store result in ri borrow
   """*)
+  Definition pureOp_sub (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   mull ri rj A compute [rj]u × [A]u and store least significant bits of result in ri overflow
   """*)
+  Definition pureOp_mull (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   umulh ri rj A compute [rj]u × [A]u and store most significant bits of result in ri overflow
   """*)
+  Definition pureOp_umulh (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   smulh ri rj A compute [rj]s × [A]s and store most significant bits of result in ri over/underflow
   """*)
+  Definition pureOp_smulh (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   udiv ri rj A compute quotient of [rj]u/[A]u and store result in ri [A]u = 0
   """*)
+  Definition pureOp_udiv (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   umod ri rj A compute remainder of [rj]u/[A]u and store result in ri [A]u = 0
   """*)
+  Definition pureOp_umod (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   shl ri rj A shift [rj] by [A]u bits to the left and store result in ri MSB of [rj]
   """*)
+  Definition pureOp_shl (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   shr ri rj A shift [rj] by [A]u bits to the right and store result in ri LSB of [rj]
   """*)
+  Definition pureOp_shr (ri rj : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cmpe ri A none (“compare equal”) [ri] = [A]
   """*)
+  Definition pureOp_cmpe (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cmpa ri A none (“compare above”, unsigned) [ri]u > [A]u
   """*)
+  Definition pureOp_cmpa (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cmpae ri A none (“compare above or equal”, unsigned) [ri]u ≥ [A]u
   """*)
+  Definition pureOp_cmpae (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cmpg ri A none (“compare greater”, signed) [ri]s > [A]s
   """*)
+  Definition pureOp_cmpg (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cmpge ri A none (“compare greater or equal”, signed) [ri]s ≥ [A]s
   """*)
+  Definition pureOp_cmpge (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   mov ri A store [A] in ri
   """*)
+  Definition pureOp_mov (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cmov ri A if flag = 1, store [A] in ri
   """*)
+  Definition pureOp_cmov (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   jmp A set pc to [A]
   """*)
+  Definition pureOp_jmp (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cjmp A if flag = 1, set pc to [A] (else increment pc as usual)
   """*)
+  Definition pureOp_cjmp (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   cnjmp A if flag = 0, set pc to [A] (else increment pc as usual)
   """*)
+  Definition pureOp_cnjmp (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   store.b A ri store the least-significant byte of [ri] at the [A]u-th byte in memory
   """*)
+  Definition pureOp_store_b (A : Word) (ri : fin registerCount) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   load.b ri A store into ri (with zero-padding in front) the [A]u-th byte in memory
   """*)
+  Definition pureOp_load_b (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   store.w A ri store [ri] at the word in memory that is aligned to the [A]w-th byte
   """*)
+  Definition pureOp_store_w (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
   (*"""
   load.w ri A store into ri the word in memory that is aligned to the [A]w-th byte
   """*)
+  Definition pureOp_load_w (ri : fin registerCount) (A : Word) :
+    MachineState -> MachineState.
+  Admitted.
 
 
 
