@@ -58,7 +58,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_and (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    apply (nth registerValues0) in rj.
+    remember (bv_and rj A) as res eqn:resDef.
+    split.
+    (* PC *)
+    + exact (bv_incr programCounter0 pcIncrement).
+    (* Registers *)
+    + exact (replace registerValues0 ri res).
+    (* Flag *)
+    + exact (bv_eq res (Vector.const false _)).
+    (* Memory *)
+    + exact memory0.
+  Defined.
 
   (*"""
   compute bitwise OR of [rj] and [A] and store result in ri
@@ -66,7 +78,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_or (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    apply (nth registerValues0) in rj.
+    remember (bv_or rj A) as res eqn:resDef.
+    split.
+    (* PC *)
+    + exact (bv_incr programCounter0 pcIncrement).
+    (* Registers *)
+    + exact (replace registerValues0 ri res).
+    (* Flag *)
+    + exact (bv_eq res (Vector.const false _)).
+    (* Memory *)
+    + exact memory0.
+  Defined.
 
 
   (*"""
@@ -75,8 +99,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_xor (ri rj : fin registerCount) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    apply (nth registerValues0) in rj.
+    remember (bv_xor rj A) as res eqn:resDef.
+    split.
+    (* PC *)
+    + exact (bv_incr programCounter0 pcIncrement).
+    (* Registers *)
+    + exact (replace registerValues0 ri res).
+    (* Flag *)
+    + exact (bv_eq res (Vector.const false _)).
+    (* Memory *)
+    + exact memory0.
+  Defined.
 
   (*"""
   compute bitwise NOT of [A] and store result in ri
@@ -84,7 +119,18 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_not (ri : fin registerCount) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    remember (bv_neg A) as res eqn:resDef.
+    split.
+    (* PC *)
+    + exact (bv_incr programCounter0 pcIncrement).
+    (* Registers *)
+    + exact (replace registerValues0 ri res).
+    (* Flag *)
+    + exact (bv_eq res (Vector.const false _)).
+    (* Memory *)
+    + exact memory0.
+  Defined.
 
   (*"""
   compute [rj]u + [A]u and store result in ri
@@ -96,7 +142,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]u − [A]u and store result in ri
+  compute [rj]u - [A]u and store result in ri
   [flag:] borrow
   """*)
   Definition pureOp_sub (ri rj : fin registerCount) (A : Word) :
@@ -105,7 +151,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]u × [A]u and store least significant bits of result in ri
+  compute [rj]u * [A]u and store least significant bits of result in ri
   [flag:] overflow
   """*)
   Definition pureOp_mull (ri rj : fin registerCount) (A : Word) :
@@ -114,7 +160,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]u × [A]u and store most significant bits of result in ri
+  compute [rj]u * [A]u and store most significant bits of result in ri
   [flag:] overflow
   """*)
   Definition pureOp_umulh (ri rj : fin registerCount) (A : Word) :
@@ -123,7 +169,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
 
   (*"""
-  compute [rj]s × [A]s and store most significant bits of result in ri
+  compute [rj]s * [A]s and store most significant bits of result in ri
   [flag:] over/underflow
   """*)
   Definition pureOp_smulh (ri rj : fin registerCount) (A : Word) :
