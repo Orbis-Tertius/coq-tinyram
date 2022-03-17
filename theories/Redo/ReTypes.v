@@ -302,12 +302,144 @@ Definition Memory_Block_Load_2 : forall
         conditionFlag : bool;
         memory : Memory;
       }.
-      (* Note: Input tapes are READ IN. 
-         They are NOT part of the state. *)
+
+  (* All opcodes which operate putely on state. *)
+
+  (*"""
+  and ri rj A compute bitwise AND of [rj] and [A] and store result in ri result is 0W
+  """*)
 
 
-        (*primaryInput : InputTape primary;*)
-        (*auxiliaryInput : InputTape auxiliary;*)
+  (*"""
+  or ri rj A compute bitwise OR of [rj] and [A] and store result in ri result is 0W
+  """*)
+
+
+  (*"""
+  xor ri rj A compute bitwise XOR of [rj] and [A] and store result in ri result is 0W
+  """*)
+
+
+  (*"""
+  not ri A compute bitwise NOT of [A] and store result in ri result is 0W
+  """*)
+
+
+  (*"""
+  add ri rj A compute [rj]u + [A]u and store result in ri overflow
+  """*)
+
+
+  (*"""
+  sub ri rj A compute [rj]u − [A]u and store result in ri borrow
+  """*)
+
+
+  (*"""
+  mull ri rj A compute [rj]u × [A]u and store least significant bits of result in ri overflow
+  """*)
+
+
+  (*"""
+  umulh ri rj A compute [rj]u × [A]u and store most significant bits of result in ri overflow
+  """*)
+
+
+  (*"""
+  smulh ri rj A compute [rj]s × [A]s and store most significant bits of result in ri over/underflow
+  """*)
+
+
+  (*"""
+  udiv ri rj A compute quotient of [rj]u/[A]u and store result in ri [A]u = 0
+  """*)
+
+
+  (*"""
+  umod ri rj A compute remainder of [rj]u/[A]u and store result in ri [A]u = 0
+  """*)
+
+
+  (*"""
+  shl ri rj A shift [rj] by [A]u bits to the left and store result in ri MSB of [rj]
+  """*)
+
+
+  (*"""
+  shr ri rj A shift [rj] by [A]u bits to the right and store result in ri LSB of [rj]
+  """*)
+
+
+  (*"""
+  cmpe ri A none (“compare equal”) [ri] = [A]
+  """*)
+
+
+  (*"""
+  cmpa ri A none (“compare above”, unsigned) [ri]u > [A]u
+  """*)
+
+
+  (*"""
+  cmpae ri A none (“compare above or equal”, unsigned) [ri]u ≥ [A]u
+  """*)
+
+
+  (*"""
+  cmpg ri A none (“compare greater”, signed) [ri]s > [A]s
+  """*)
+
+
+  (*"""
+  cmpge ri A none (“compare greater or equal”, signed) [ri]s ≥ [A]s
+  """*)
+
+
+  (*"""
+  mov ri A store [A] in ri
+  """*)
+
+
+  (*"""
+  cmov ri A if flag = 1, store [A] in ri
+  """*)
+
+
+  (*"""
+  jmp A set pc to [A]
+  """*)
+
+
+  (*"""
+  cjmp A if flag = 1, set pc to [A] (else increment pc as usual)
+  """*)
+
+
+  (*"""
+  cnjmp A if flag = 0, set pc to [A] (else increment pc as usual)
+  """*)
+
+
+  (*"""
+  store.b A ri store the least-significant byte of [ri] at the [A]u-th byte in memory
+  """*)
+
+
+  (*"""
+  load.b ri A store into ri (with zero-padding in front) the [A]u-th byte in memory
+  """*)
+
+
+  (*"""
+  store.w A ri store [ri] at the word in memory that is aligned to the [A]w-th byte
+  """*)
+
+
+  (*"""
+  load.w ri A store into ri the word in memory that is aligned to the [A]w-th byte
+  """*)
+
+
 
 End TinyRAMTypes.
 
