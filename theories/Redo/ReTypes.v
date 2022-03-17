@@ -1,13 +1,5 @@
 From Coq Require Import
-  Lia
-  String.
-From ExtLib Require Import
-  RelDec.
-From ExtLib.Data Require Import
-  String
-  Map.FMapAList.
-From ITree Require Import
-  ITree.
+  Lia.
 From TinyRAM.Redo Require Import
   Vectors.
 From TinyRAM.Utils Require Import
@@ -275,12 +267,24 @@ Definition Memory_Block_Load_2 : forall
     (idx : fin (2 ^ wordSize))
     (reg : Word) :
     Memory.
-  apply (Memory_Block_Store m idx wordSizeEighthFin).
-  apply vector_unconcat.
-  simpl.
-  rewrite <- wordSizeDiv8.
-  apply reg.
+    apply (Memory_Block_Store m idx wordSizeEighthFin).
+    apply vector_unconcat.
+    simpl.
+    rewrite <- wordSizeDiv8.
+    apply reg.
   Defined.
+
+  Definition Register_Index (w : Word) : fin (2 ^ wordSize) :=
+    bitvector_fin w.
+
+  Definition Memory_Register_Load_from_Reg 
+    (m : Memory) (idx : Word) : Word :=
+    Memory_Register_Load m (Register_Index idx).
+
+  Definition Memory_Register_Store_from_Reg 
+    (m : Memory) (idx reg : Word) : Memory :=
+    Memory_Register_Store m (Register_Index idx) reg.
+
 
   Record MachineState : Type :=
     mkMachineState {
