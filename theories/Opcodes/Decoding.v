@@ -71,6 +71,36 @@ Module TinyRAMState (Params : TinyRAMParameters).
     exact b.
   Defined.
 
+  Inductive OpcodeI : Type :=
+  | andI : regId -> regId -> regId + Word -> OpcodeI
+  | orI : regId -> regId -> regId + Word -> OpcodeI
+  | xorI : regId -> regId -> regId + Word -> OpcodeI
+  | notI : regId -> regId + Word -> OpcodeI
+  | addI : regId -> regId -> regId + Word -> OpcodeI
+  | subI : regId -> regId -> regId + Word -> OpcodeI
+  | mullI : regId -> regId -> regId + Word -> OpcodeI
+  | umulhI : regId -> regId -> regId + Word -> OpcodeI
+  | smulhI : regId -> regId -> regId + Word -> OpcodeI
+  | udivI : regId -> regId -> regId + Word -> OpcodeI
+  | umodI : regId -> regId -> regId + Word -> OpcodeI
+  | shlI : regId -> regId -> regId + Word -> OpcodeI
+  | shrI : regId -> regId -> regId + Word -> OpcodeI
+  | cmpeI : regId -> regId + Word -> OpcodeI
+  | cmpaI : regId -> regId + Word -> OpcodeI
+  | cmpaeI : regId -> regId + Word -> OpcodeI
+  | cmpgI : regId -> regId + Word -> OpcodeI
+  | cmpgeI : regId -> regId + Word -> OpcodeI
+  | movI : regId -> regId + Word -> OpcodeI
+  | cmovI : regId -> regId + Word -> OpcodeI
+  | jmpI : regId + Word -> OpcodeI
+  | cjmpI : regId + Word -> OpcodeI
+  | cnjmpI : regId + Word -> OpcodeI
+  | store_bI : regId -> regId + Word -> OpcodeI
+  | load_bI : regId -> regId + Word -> OpcodeI
+  | store_wI : regId -> regId + Word -> OpcodeI
+  | load_wI : regId -> regId + Word -> OpcodeI
+  | readI : regId -> regId + Word -> OpcodeI
+  | answerI : regId + Word -> OpcodeI.
 
 
 
