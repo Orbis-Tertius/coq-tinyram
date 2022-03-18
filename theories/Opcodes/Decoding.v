@@ -13,6 +13,9 @@ From TinyRAM.Machine Require Import
   Parameters.
 From TinyRAM.Machine Require Import
   Words.
+Require Import ProofIrrelevance.
+Require Import FunctionalExtensionality.
+Import EqNotations.
 
 Module TinyRAMState (Params : TinyRAMParameters).
   Module TRWords := TinyRAMWords Params.
@@ -30,7 +33,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition interpSplit : Word ->
     (*"""
     Field #1. This field stores the instruction's opcode,
-              which consists of 5 = ceil(clog2 29) bits.
+              which consists of 5 = (clog2 29) bits.
     """*)
     Vector.t bool 5 * 
     (*"""
@@ -40,14 +43,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
     bool * 
     (*"""
     Field #3. This field stores a register name operand, which consists
-              of ceil(clog2 [registerCount]) bits. It is all 0's when not
+              of (clog2 [registerCount]) bits. It is all 0's when not
               used. This is the name of the instruction's destination
               register (i.e. the one to be modified) if any.
     """*)
     Vector.t bool (clog2 registerCount) *
     (*"""
     Field #4. This field stores a register name operand, which consists
-              of ceil(clog2 [registerCount]) bits. It is all 0's when not
+              of (clog2 [registerCount]) bits. It is all 0's when not
               used. This is the name of a register operand (if any) that
               will *not* be modified by the instruction.
     """*)
@@ -104,8 +107,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   | readI : regId -> regId + Word -> OpcodeI
   | answerI : regId + Word -> OpcodeI.
 
-  Definition oreg : forall {n}, Vector.t bool n -> option regId.
-    intros n v.
+  Definition oreg {n} (v : Vector.t bool n) : option regId.
     destruct (bitvector_fin v).
     destruct (x <? registerCount) eqn:xlt.
     - apply Some. 
@@ -114,6 +116,56 @@ Module TinyRAMState (Params : TinyRAMParameters).
       assumption.
     - apply None.
   Defined.
+
+  Definition reg2pow : 
+    2 ^ clog2 registerCount = registerCount ->
+    Vector.t bool (clog2 registerCount) ->
+    regId.
+    intros eq v.
+    destruct (bitvector_fin v).
+    rewrite eq in l.
+    exists x.
+    exact l.
+  Defined.
+
+  Lemma reg2powProp_lem :
+    forall {B} {P : B -> Prop}
+      (e : bool) (el : B) (f : e = true -> P el) (f' : P el),
+    e = true ->
+    ( if e as b
+      return (e = b -> option {x : B | P x})
+      then fun xlt : e = true => 
+        Some (exist (fun x : B => P x) el (f xlt))
+      else fun _ : e = false => None )
+    = fun _ => Some (exist (fun x : B => P x) el f').
+  Proof.
+    intros B P e el f f' etru.
+    apply functional_extensionality.
+    intro ee.
+    destruct e.
+    - f_equal. 
+      apply subset_eq_compat.
+      reflexivity.
+    - discriminate etru.
+  Qed.
+
+  Theorem oreg2powProp : forall
+    (eq: 2 ^ clog2 registerCount = registerCount)
+    (v: Vector.t bool (clog2 registerCount)),
+    oreg v = Some (reg2pow eq v).
+  Proof.
+    intros eq v.
+    unfold oreg, reg2pow.
+    destruct (bitvector_fin v) as [bfv bfvProp].
+    assert (bfv < registerCount) as bfvRC.
+    { rewrite <- eq. assumption. }
+    unfold regId, fin.
+    rewrite (reg2powProp_lem (bfv <? registerCount) bfv _ bfvRC).
+    2: { rewrite ltb_lt. assumption. }
+    f_equal.
+    apply subset_eq_compat.
+    reflexivity.
+  Qed.
 
   Definition answer1 : OpcodeI.
     apply answerI.

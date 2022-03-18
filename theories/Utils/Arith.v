@@ -43,7 +43,7 @@ Definition clog2 (x : nat) : nat :=
   | S (S n) => S (log2 (S n))
   end.
 
-Theorem clog2_log2 : forall x,
+Theorem clog2S_Slog2 : forall x,
   x > 1 -> clog2 (S x) = S (log2 x).
 Proof.
   intro x; destruct x. { lia. }
@@ -54,10 +54,10 @@ Qed.
 Theorem clog2_ajoint_lem : forall {x}, ~ (2 ^ x < 1).
 Proof.
   intro x; induction x as [|x IHx].
-  - simpl. lia.
+  - simpl; lia.
   - intro. apply IHx. 
     transitivity (2 ^ S x). 2: { assumption. }
-    simpl. lia.
+    simpl; lia.
 Qed.
 
 (* Adjoint theorem/Galois connection defining ceiling log2 *)
@@ -69,8 +69,7 @@ Proof.
   - destruct (1 <? y) eqn:g1y.
     + rewrite ltb_lt in g1y.
       destruct y. { lia. } destruct y. { lia. }
-      simpl.
-      rewrite lt_succ_r.
+      simpl; rewrite lt_succ_r.
       rewrite <- log2_le_pow2; lia.
     + rewrite ltb_nlt in g1y.
       assert (y = 1) as y1. { lia. }
