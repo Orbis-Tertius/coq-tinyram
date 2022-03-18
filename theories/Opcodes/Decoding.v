@@ -6,6 +6,8 @@ From TinyRAM.Utils Require Import
   BitVectors.
 From TinyRAM.Utils Require Import
   Fin.
+From TinyRAM.Utils Require Import
+  Arith.
 Import PeanoNat.Nat.
 From TinyRAM.Machine Require Import
   Parameters.
@@ -18,9 +20,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem interpSplitLem : 
     wordSize =
-      5 + 1 + (log2 registerCount) + (log2 registerCount) +
-      (wordSize - 6 - 2 * log2 registerCount).
-    assert (6 + 2 * log2 registerCount <= wordSize).
+      5 + 1 + (clog2 registerCount) + (clog2 registerCount) +
+      (wordSize - 6 - 2 * clog2 registerCount).
+    assert (6 + 2 * clog2 registerCount <= wordSize).
     { apply encodingAxiom. }
     lia.
   Qed.
@@ -28,7 +30,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition interpSplit : Word ->
     (*"""
     Field #1. This field stores the instruction's opcode,
-              which consists of 5 = ceil(log2 29) bits.
+              which consists of 5 = ceil(clog2 29) bits.
     """*)
     Vector.t bool 5 * 
     (*"""
@@ -38,24 +40,24 @@ Module TinyRAMState (Params : TinyRAMParameters).
     bool * 
     (*"""
     Field #3. This field stores a register name operand, which consists
-              of ceil(log2 [registerCount]) bits. It is all 0's when not
+              of ceil(clog2 [registerCount]) bits. It is all 0's when not
               used. This is the name of the instruction's destination
               register (i.e. the one to be modified) if any.
     """*)
-    Vector.t bool (log2 registerCount) *
+    Vector.t bool (clog2 registerCount) *
     (*"""
     Field #4. This field stores a register name operand, which consists
-              of ceil(log2 [registerCount]) bits. It is all 0's when not
+              of ceil(clog2 [registerCount]) bits. It is all 0's when not
               used. This is the name of a register operand (if any) that
               will *not* be modified by the instruction.
     """*)
-    Vector.t bool (log2 registerCount) *
+    Vector.t bool (clog2 registerCount) *
     (*"""
     Field #5. This field consists of padding with any sequence of 
               W - 6 - 2|K| bits, so that the first five fields fit exactly
               in a string of W bits.
     """*)
-    Vector.t bool (wordSize - 6 - 2 * log2 registerCount).
+    Vector.t bool (wordSize - 6 - 2 * clog2 registerCount).
     intro w.
     unfold Word in w.
     rewrite interpSplitLem in w.
@@ -120,11 +122,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
     exists 1.
     transitivity wordSize.
     2: { apply pow_gt_lin_r. lia. }
-    assert (6 + 2 * log2 registerCount <= wordSize).
-    { apply encodingAxiom. }
+    assert (5 < wordSize). { apply wordSizeMin. }
     lia.
   Defined.
 
+
+  (* Important Note: The TinyRAM 2.000 spec does not seem to
+     clearify what should be done if a register Id is too big.
+     I've made the opcode answer1 in this case, but this may 
+     not be intended behaviour.
+
+     Such a situation is impossible if registerCount is a 
+     power of 2.
+  *)
   Definition OpcodeDecodeA : forall
     (code : regId + Word -> OpcodeI)
     (isReg : bool) (w2: Word) (w2reg: option regId),
@@ -211,17 +221,6 @@ Module TinyRAMState (Params : TinyRAMParameters).
     exact answer1.
   Defined.
 
-
-
-
-
-
-
-
-
-
-   
-    Vector.t bool wordSize.
 
 
 

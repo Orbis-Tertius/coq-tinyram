@@ -3,6 +3,8 @@ From Coq Require Import
 Import PeanoNat.Nat.
 From TinyRAM.Utils Require Import
   Fin.
+From TinyRAM.Utils Require Import
+  Arith.
 
 Module Type TinyRAMParameters.
   (*"""  
@@ -21,10 +23,21 @@ Module Type TinyRAMParameters.
   (*"""
   The binary encoding assumes that 6 + 2 · ceil(log_2 K) ≤ [wordSize]
   """*)
-  Axiom encodingAxiom : 6 + 2 * log2 registerCount <= wordSize.
+  Axiom encodingAxiom : 6 + 2 * clog2 registerCount <= wordSize.
 
-  (* ??? *)
-  Axiom wordSizePos : 0 < wordSize. (* for MSB *)
+  Theorem wordSizePos : 0 < wordSize.
+  Proof.
+    assert (6 + 2 * clog2 registerCount <= wordSize).
+    { exact encodingAxiom. }
+    lia.
+  Qed.
+
+  Theorem wordSizeMin : 5 < wordSize.
+  Proof.
+    assert (6 + 2 * clog2 registerCount <= wordSize).
+    { exact encodingAxiom. }
+    lia.
+  Qed.
 
   Theorem wordSizeEighthPos : 0 < wordSizeEighth.
   Proof.
