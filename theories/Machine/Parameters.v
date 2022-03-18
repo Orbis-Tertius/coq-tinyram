@@ -49,4 +49,6 @@ Module Type TinyRAMParameters.
   [...] i = 2W/8 for vnTinyRAM.
   """*)
   Definition pcIncrement : nat := 2 * wordSizeEighth.
+
+  Definition regId : Type := fin registerCount.
 End TinyRAMParameters.
