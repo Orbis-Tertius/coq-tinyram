@@ -18,6 +18,11 @@ Module Type TinyRAMParameters.
   Axiom wordSizeDiv8 : wordSize = wordSizeEighth * 8.
   Axiom wordSizePow2 : wordSize = 2 ^ wordSizeLength.
 
+  (*"""
+  The binary encoding assumes that 6 + 2 · ceil(log_2 K) ≤ [wordSize]
+  """*)
+  Axiom encodingAxiom : 6 + 2 * log2 registerCount <= wordSize.
+
   (* ??? *)
   Axiom wordSizePos : 0 < wordSize. (* for MSB *)
 
@@ -39,10 +44,9 @@ Module Type TinyRAMParameters.
     lia.
   Defined.
 
-  Definition pcIncrement : nat := wordSize / 4.
-
-  (*Axiom (H0 : exists k, wordSize = 4 * k).
-  Axiom H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
-  Definition memorySize : nat := 2 ^ wordSize.
-  Definition incrAmount : nat := Nat.div wordSize 4.*)
+  (*"""
+  increments pc (the program counter) by i [...] where
+  [...] i = 2W/8 for vnTinyRAM.
+  """*)
+  Definition pcIncrement : nat := 2 * wordSizeEighth.
 End TinyRAMParameters.
