@@ -71,7 +71,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     exact b.
   Defined.
 
-  Inductive OpcodeI : Type :=
+  Variant OpcodeI : Type :=
   | andI : regId -> regId -> regId + Word -> OpcodeI
   | orI : regId -> regId -> regId + Word -> OpcodeI
   | xorI : regId -> regId -> regId + Word -> OpcodeI
@@ -102,31 +102,126 @@ Module TinyRAMState (Params : TinyRAMParameters).
   | readI : regId -> regId + Word -> OpcodeI
   | answerI : regId + Word -> OpcodeI.
 
+  Definition oreg : forall {n}, Vector.t bool n -> option regId.
+    intros n v.
+    destruct (bitvector_fin v).
+    destruct (x <? registerCount) eqn:xlt.
+    - apply Some. 
+      exists x.
+      rewrite ltb_lt in xlt.
+      assumption.
+    - apply None.
+  Defined.
 
+  Definition answer1 : OpcodeI.
+    apply answerI.
+    apply inr.
+    apply fin_bitvector.
+    exists 1.
+    transitivity wordSize.
+    2: { apply pow_gt_lin_r. lia. }
+    assert (6 + 2 * log2 registerCount <= wordSize).
+    { apply encodingAxiom. }
+    lia.
+  Defined.
 
+  Definition OpcodeDecodeA : forall
+    (code : regId + Word -> OpcodeI)
+    (isReg : bool) (w2: Word) (w2reg: option regId),
+    OpcodeI.
+    intros code isReg w2 w2reg.
+    destruct isReg.
+    + destruct w2reg as [w2reg|]. 2: { exact answer1. }
+      exact (code (inl w2reg)).
+    + exact (code (inr w2)).
+  Defined.
 
+  Definition OpcodeDecodeRiA : forall
+    (code : regId -> regId + Word -> OpcodeI)
+    (isReg : bool) (ri : option regId)
+    (w2: Word) (w2reg: option regId),
+    OpcodeI.
+    intros code isReg ri w2 w2reg.
+    destruct ri as [ri|]. 2: { exact answer1. }
+    destruct isReg.
+    + destruct w2reg as [w2reg|]. 2: { exact answer1. }
+      exact (code ri (inl w2reg)).
+    + exact (code ri (inr w2)).
+  Defined.
 
+  Definition OpcodeDecodeRiRjA : forall
+    (code : regId -> regId -> regId + Word -> OpcodeI)
+    (isReg : bool) (ri rj : option regId)
+    (w2: Word) (w2reg: option regId),
+    OpcodeI.
+    intros code isReg ri rj w2 w2reg.
+    destruct ri as [ri|]. 2: { exact answer1. }
+    destruct rj as [rj|]. 2: { exact answer1. }
+    destruct isReg.
+    + destruct w2reg as [w2reg|]. 2: { exact answer1. }
+      exact (code ri rj (inl w2reg)).
+    + exact (code ri rj (inr w2)).
+  Defined.
 
-
-
-
-
-
-
-    (*"""
+ (*"""
     Field #6. This is either the name of another register (which is not
               modified by the instruction) or an immediate value, as
               determined by field #2. The length of this field is W bits
               (which is the maximum between the length of a register name
               and of an immediate value).
+  """*)
+  Definition OpcodeDecode (w1 w2 : Word) : OpcodeI.
+    apply interpSplit in w1;
+    destruct w1 as [[[[op isReg] ri] rj] _].
+    apply oreg in ri, rj. apply oreg in w2 as w2reg.
+    apply bitvector_fin in op; destruct op.
+    destruct x. { exact (OpcodeDecodeRiRjA andI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA orI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA xorI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA notI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA addI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA subI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA mullI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA umulhI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA smulhI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA udivI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA umodI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA shlI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiRjA shrI isReg ri rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpeI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpaI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpaeI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpgI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpgeI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA movI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmovI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeA jmpI isReg w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeA cjmpI isReg w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeA cnjmpI isReg w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA store_bI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA load_bI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA store_wI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA load_wI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA readI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeA answerI isReg w2 w2reg). }
+    (*"""
+    If pc is not an integer in [...] the number of instructions in P,
+    then the instruction answer 1 is fetched as default.)
     """*)
+    exact answer1.
+  Defined.
+
+
+
+
+
+
+
+
+
+
+   
     Vector.t bool wordSize.
 
 
 
-
-(*"""
-
-• 
-• 
-"""*)
