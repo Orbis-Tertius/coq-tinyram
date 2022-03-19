@@ -15,18 +15,29 @@ From TinyRAM.Machine Require Import
   Words.
 Require Import ProofIrrelevance.
 Require Import FunctionalExtensionality.
-Import EqNotations.
+Require Import VectorDef.
+Import VectorNotations.
 
 Module TinyRAMState (Params : TinyRAMParameters).
   Module TRWords := TinyRAMWords Params.
   Import TRWords.
 
-  Theorem interpSplitLem : 
+  Definition paddingSize := wordSize - 6 - 2 * clog2 registerCount.
+
+  Theorem interpSplitLemLeft : 
     wordSize =
       5 + 1 + (clog2 registerCount) + (clog2 registerCount) +
-      (wordSize - 6 - 2 * clog2 registerCount).
+      paddingSize.
     assert (6 + 2 * clog2 registerCount <= wordSize).
     { apply encodingAxiom. }
+    unfold paddingSize; lia.
+  Qed.
+
+  Lemma interpSplitLemRight : 
+    wordSize =
+    5 + (1 + ((clog2 registerCount) + ((clog2 registerCount) + paddingSize))).
+  Proof.
+    rewrite interpSplitLemLeft.
     lia.
   Qed.
 
@@ -60,10 +71,10 @@ Module TinyRAMState (Params : TinyRAMParameters).
               W - 6 - 2|K| bits, so that the first five fields fit exactly
               in a string of W bits.
     """*)
-    Vector.t bool (wordSize - 6 - 2 * clog2 registerCount).
+    Vector.t bool paddingSize.
     intro w.
     unfold Word in w.
-    rewrite interpSplitLem in w.
+    rewrite interpSplitLemLeft in w.
     apply Vector.splitat in w; destruct w as [w f5].
     split. 2: { exact f5. }
     apply Vector.splitat in w; destruct w as [w f4].
@@ -75,6 +86,31 @@ Module TinyRAMState (Params : TinyRAMParameters).
     destruct (vector_cons_split f2) as [b _].
     exact b.
   Defined.
+
+  Theorem interpSplit_eval :
+    forall (code : Vector.t bool 5)
+           (b : bool)
+           (ri rj : Vector.t bool (clog2 registerCount))
+           (padding : Vector.t bool paddingSize),
+    interpSplit (vector_length_coerce (eq_sym interpSplitLemRight) (
+      code ++ (b :: []) ++ ri ++ rj ++ padding
+    )) = (code, b, ri, rj, padding).
+  Proof.
+    intros code b ri rj padding.
+    unfold interpSplit.
+    replace (eq_rect _ _ _ _ _)
+        with ((((code ++ [b]) ++ ri) ++ rj) ++ padding).
+    { repeat rewrite Vector.splitat_append; reflexivity. }
+    change (eq_rect wordSize _ _ _ _)
+      with (vector_length_coerce interpSplitLemLeft
+              (vector_length_coerce (eq_sym interpSplitLemRight)
+              (code ++ [b] ++ ri ++ rj ++ padding))).
+    repeat rewrite <- vector_length_coerce_app_assoc_2.
+    repeat rewrite vector_length_coerce_trans.
+    repeat rewrite vector_length_coerce_app_l.
+    rewrite vector_length_coerce_id.
+    reflexivity.
+  Qed.
 
   Variant OpcodeI : Type :=
   | andI : regId -> regId -> regId + Word -> OpcodeI
@@ -167,6 +203,31 @@ Module TinyRAMState (Params : TinyRAMParameters).
     reflexivity.
   Qed.
 
+  Definition regFit :
+    forall {n} (v : Vector.t bool n),
+    proj1_sig (bitvector_fin v) < registerCount -> 
+    regId.
+    intros n v ft.
+    exists (proj1_sig (bitvector_fin v)).
+    exact ft.
+  Defined.
+
+  Theorem regFitProp :
+    forall {n} (v : Vector.t bool n)
+    (lt : proj1_sig (bitvector_fin v) < registerCount),
+    oreg v = Some (regFit v lt).
+  Proof.
+    intros n v lt.
+    unfold oreg, regFit.
+    destruct (bitvector_fin v) as [bfv bfvProp].
+    simpl; simpl in lt.
+    unfold regId, fin.
+    rewrite (reg2powProp_lem (bfv <? registerCount) bfv _ lt).
+    { reflexivity. }
+    rewrite ltb_lt.
+    exact lt.
+  Qed.
+
   Definition answer1 : OpcodeI.
     apply answerI.
     apply inr.
@@ -178,14 +239,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     lia.
   Defined.
 
-
   (* Important Note: The TinyRAM 2.000 spec does not seem to
      clearify what should be done if a register Id is too big.
      I've made the opcode answer1 in this case, but this may 
      not be intended behaviour.
 
      Such a situation is impossible if registerCount is a 
-     power of 2.
+     power of 2 (see oreg2powProp above).
   *)
   Definition OpcodeDecodeA : forall
     (code : regId + Word -> OpcodeI)
@@ -226,6 +286,10 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
  (*"""
+  the instruction is thus encoded using 2W bits
+  """
+
+  """
     Field #6. This is either the name of another register (which is not
               modified by the instruction) or an immediate value, as
               determined by field #2. The length of this field is W bits
@@ -250,11 +314,11 @@ Module TinyRAMState (Params : TinyRAMParameters).
     destruct x. { exact (OpcodeDecodeRiRjA umodI isReg ri rj w2 w2reg). }
     destruct x. { exact (OpcodeDecodeRiRjA shlI isReg ri rj w2 w2reg). }
     destruct x. { exact (OpcodeDecodeRiRjA shrI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpeI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpaI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpaeI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpgI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpgeI isReg ri w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpeI isReg rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpaI isReg rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpaeI isReg rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpgI isReg rj w2 w2reg). }
+    destruct x. { exact (OpcodeDecodeRiA cmpgeI isReg rj w2 w2reg). }
     destruct x. { exact (OpcodeDecodeRiA movI isReg ri w2 w2reg). }
     destruct x. { exact (OpcodeDecodeRiA cmovI isReg ri w2 w2reg). }
     destruct x. { exact (OpcodeDecodeA jmpI isReg w2 w2reg). }
@@ -273,6 +337,31 @@ Module TinyRAMState (Params : TinyRAMParameters).
     exact answer1.
   Defined.
 
-
+  (***
+    This section is based on Table 2 of pg. 16 in spec. 
+  ***)
+ 
+  Theorem and_decode_word_correct :
+    forall (b : bool)
+           (ri rj : Vector.t bool (clog2 registerCount))
+           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (A : Word)
+           (padding : Vector.t bool paddingSize),
+    OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
+      ((false :: false :: false :: false :: false :: []) ++
+       (false :: [])                                     ++
+       ri                                                ++
+       rj                                                ++
+       padding
+      ))) A =
+    andI (regFit ri lti) (regFit rj ltj) (inr A).
+  Proof.
+    intros b ri rj lti ltj A padding.
+    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
+    rewrite (regFitProp ri lti), (regFitProp rj ltj).
+    reflexivity.
+  Qed.
+      
 
 

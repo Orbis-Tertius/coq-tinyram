@@ -6,6 +6,8 @@ From TinyRAM.Utils Require Import
   Arith.
 Import PeanoNat.Nat.
 Require Import ProofIrrelevance.
+Require Import VectorDef.
+Import VectorNotations.
 
 Definition vector_length_coerce : forall {A n m},
     n = m ->
@@ -13,14 +15,25 @@ Definition vector_length_coerce : forall {A n m},
     Vector.t A m.
   intros A n m eq v. rewrite <- eq. assumption. Defined.
 
-Theorem vector_length_coerce_trans : forall {A n m}
-    (eq1 : n = m) (eq2 : m = n) (v : Vector.t A n),
+Theorem vector_length_coerce_trans : forall {A n m o}
+    (eq1 : n = m) (eq2 : m = o) (v : Vector.t A n),
     (vector_length_coerce eq2 (vector_length_coerce eq1 v))
     = (vector_length_coerce (eq_trans eq1 eq2) v).
 Proof.
-  intros A n m eq1 eq2 v.
-  destruct eq2.
+  intros A n m o eq1 eq2 v.
+  destruct eq1, eq2.
   reflexivity.
+Qed.
+
+Theorem vector_length_coerce_id : forall {A n}
+    (eq : n = n) (v : Vector.t A n),
+    (vector_length_coerce eq v)
+    = v.
+Proof.
+  intros A n eq v.
+  replace eq with (eq_refl n).
+  - reflexivity.
+  - apply proof_irrelevance.
 Qed.
 
 Theorem vector_length_coerce_inv : forall {A n m}
@@ -33,12 +46,99 @@ Proof.
 Qed.
 
 Theorem vector_length_coerce_inv2 : forall {A n m}
-    (eq : m = n) (v : Vector.t A n),
-    (vector_length_coerce eq (vector_length_coerce (eq_sym eq) v)) = v.
+  (eq : m = n) (v : Vector.t A n),
+  (vector_length_coerce eq (vector_length_coerce (eq_sym eq) v)) = v.
 Proof.
   intros A n m eq v.
   destruct eq.
   reflexivity.
+Qed.
+
+Theorem vector_length_coerce_cons : forall {A n m}
+  (h : A) (vn : Vector.t A n) (eq : S n = S m),
+  vector_length_coerce eq (h :: vn)
+  = h :: vector_length_coerce (succ_inj _ _ eq) vn.
+Proof.
+  intros A n m h vn eq.
+  destruct (succ_inj n m eq).
+  replace eq with (eq_refl (S n)).
+  2: { apply proof_irrelevance. }
+  simpl; f_equal.
+Qed.
+
+Theorem vector_length_coerce_app_l : forall {A n m o}
+  (vn : Vector.t A n) (vm : Vector.t A m) (eq : n + m = n + o),
+  vector_length_coerce eq (vn ++ vm)
+  = vn ++ vector_length_coerce (Plus.plus_reg_l _ _ _ eq) vm.
+Proof.
+  intros A n m o vn vm eq.
+  destruct (Plus.plus_reg_l _ _ _ eq).
+  replace eq with (eq_refl (n + m)).
+  2: { apply proof_irrelevance. }
+  simpl; f_equal.
+Qed.
+
+Theorem vector_length_coerce_app_r : forall {A n m o}
+  (vn : Vector.t A n) (vm : Vector.t A m) (eq : n + m = o + m),
+  vector_length_coerce eq (vn ++ vm)
+  = vector_length_coerce (plus_reg_r _ _ _ eq) vn ++ vm.
+Proof.
+  intros A n m o vn vm eq.
+  destruct (plus_reg_r _ _ _ eq).
+  replace eq with (eq_refl (n + m)).
+  2: { apply proof_irrelevance. }
+  simpl; f_equal.
+Qed.
+
+Theorem vector_length_coerce_app_funct : forall {A n1 n2 m1 m2}
+  (neq : n1 = n2) (meq : m1 = m2)
+  (vn : Vector.t A n1) (vm : Vector.t A m1),
+  vector_length_coerce neq vn ++ vector_length_coerce meq vm
+  = vector_length_coerce (f_equal2_plus _ _ _ _ neq meq) (vn ++ vm).
+Proof.
+  intros A n1 n2 m1 m2 neq meq vn vm.
+  destruct neq, meq.
+  replace (f_equal2_plus _ _ _ _ _ _) with (eq_refl (n1 + m1)).
+  { reflexivity. }
+  apply proof_irrelevance.
+Qed.
+
+Theorem vector_length_coerce_app_assoc_1 : forall {A n m o}
+  (vn : Vector.t A n) (vm : Vector.t A m) (vo : Vector.t A o),
+  vector_length_coerce (add_assoc n m o) (vn ++ (vm ++ vo))
+  = (vn ++ vm) ++ vo.
+Proof.
+  intros A n m o vn vm vo.
+  induction vn.
+  - simpl.
+    replace (add_assoc 0 m o) with (eq_refl (m + o)).
+    + reflexivity.
+    + apply proof_irrelevance.
+  - simpl.
+    rewrite vector_length_coerce_cons.
+    f_equal.
+    rewrite <- IHvn.
+    f_equal.
+    apply proof_irrelevance.
+Qed.
+
+Theorem vector_length_coerce_app_assoc_2 : forall {A n m o}
+  (vn : Vector.t A n) (vm : Vector.t A m) (vo : Vector.t A o),
+  vector_length_coerce (eq_sym (add_assoc n m o)) ((vn ++ vm) ++ vo)
+  = vn ++ (vm ++ vo).
+Proof.
+  intros A n m o vn vm vo.
+  induction vn.
+  - simpl.
+    replace (add_assoc 0 m o) with (eq_refl (m + o)).
+    + reflexivity.
+    + apply proof_irrelevance.
+  - simpl.
+    rewrite vector_length_coerce_cons.
+    f_equal.
+    rewrite <- IHvn.
+    f_equal.
+    apply proof_irrelevance.
 Qed.
 
 Definition vector_cons_split : forall {A n}
@@ -47,7 +147,6 @@ Definition vector_cons_split : forall {A n}
   intros A n v.
   exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
 Defined.
-
 
 Definition replace :
   forall {A n} (v : Vector.t A n) (p: fin n) (a : A), Vector.t A n.
