@@ -343,6 +343,9 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
     This section is based on Table 2 of pg. 16 in spec. 
   ***)
  
+  Definition b1 := true.
+  Definition b0 := false.
+
   Theorem and_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
            (lti : proj1_sig (bitvector_fin ri) < registerCount)
@@ -351,8 +354,8 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: false :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b0 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -372,8 +375,8 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: false :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -394,8 +397,8 @@ Theorem or_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: false :: true :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b0 :: b1 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -415,8 +418,8 @@ Theorem or_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: false :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -437,8 +440,8 @@ Theorem xor_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: true :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b1 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -458,8 +461,8 @@ Theorem xor_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: true :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -479,8 +482,8 @@ Theorem xor_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: true :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b1 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -500,8 +503,8 @@ Theorem xor_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: false :: true :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b0 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -522,8 +525,8 @@ Theorem add_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: false :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b0 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -543,8 +546,8 @@ Theorem add_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: false :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -565,8 +568,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: false :: true :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b0 :: b1 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -586,8 +589,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: false :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -608,8 +611,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: true :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b1 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -629,8 +632,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: true :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -651,8 +654,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: true :: true :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b1 :: b1 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -672,8 +675,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: false :: true :: true :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b0 :: b1 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -694,8 +697,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: false :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b0 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -715,8 +718,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: false :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -737,8 +740,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: false :: true :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b0 :: b1 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -758,8 +761,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: false :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -780,8 +783,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: true :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b1 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -801,8 +804,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: true :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -823,8 +826,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: true :: true :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b1 :: b1 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -844,8 +847,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: false :: true :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b0 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -866,8 +869,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: false :: false :: []) ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b0 :: b0 :: []) ++
+       (b1 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -887,8 +890,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: false :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        rj                                                ++
        padding
@@ -908,8 +911,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: false :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b0 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        pad                                              ++
        ri                                               ++
        padding
@@ -928,8 +931,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: false :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        pad                                                ++
        ri                                                ++
        padding
@@ -949,8 +952,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: true :: false :: [])  ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b1 :: b0 :: [])  ++
+       (b1 :: [])                                     ++
        pad                                              ++
        ri                                               ++
        padding
@@ -969,8 +972,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: true :: false :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        pad                                                ++
        ri                                                ++
        padding
@@ -990,8 +993,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: true :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b1 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        pad                                              ++
        ri                                               ++
        padding
@@ -1010,8 +1013,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((false :: true :: true :: true :: true :: []) ++
-       (false :: [])                                     ++
+      ((b0 :: b1 :: b1 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        pad                                                ++
        ri                                                ++
        padding
@@ -1031,8 +1034,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: false :: false :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b0 :: b0 :: [])  ++
+       (b1 :: [])                                     ++
        pad                                              ++
        ri                                               ++
        padding
@@ -1051,8 +1054,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: false :: false :: []) ++
-       (false :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        pad                                                ++
        ri                                                ++
        padding
@@ -1072,8 +1075,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: false :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b0 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        pad                                              ++
        ri                                               ++
        padding
@@ -1092,8 +1095,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: false :: true :: []) ++
-       (false :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        pad                                                ++
        ri                                                ++
        padding
@@ -1113,8 +1116,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: true :: false :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b1 :: b0 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1133,8 +1136,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: true :: false :: []) ++
-       (false :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        pad                                                ++
        padding
@@ -1154,8 +1157,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: true :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b1 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1174,8 +1177,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: false :: true :: true :: []) ++
-       (false :: [])                                     ++
+      ((b1 :: b0 :: b0 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                     ++
        ri                                                ++
        pad                                                ++
        padding
@@ -1194,8 +1197,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: true :: false :: false :: [])  ++
-       (true :: [])                                    ++
+      ((b1 :: b0 :: b1 :: b0 :: b0 :: [])  ++
+       (b1 :: [])                                    ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1213,8 +1216,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: true :: false :: false :: []) ++
-       (false :: [])                                   ++
+      ((b1 :: b0 :: b1 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                   ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1232,8 +1235,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: true :: false :: true :: [])  ++
-       (true :: [])                                    ++
+      ((b1 :: b0 :: b1 :: b0 :: b1 :: [])  ++
+       (b1 :: [])                                    ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1251,8 +1254,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: true :: false :: true :: []) ++
-       (false :: [])                                   ++
+      ((b1 :: b0 :: b1 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                   ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1270,8 +1273,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: true :: true :: false :: [])  ++
-       (true :: [])                                    ++
+      ((b1 :: b0 :: b1 :: b1 :: b0 :: [])  ++
+       (b1 :: [])                                    ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1289,8 +1292,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: false :: true :: true :: false :: []) ++
-       (false :: [])                                   ++
+      ((b1 :: b0 :: b1 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                   ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1309,8 +1312,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: false :: true :: false :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b1 :: b0 :: b1 :: b0 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1329,8 +1332,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: false :: true :: false :: []) ++
-       (false :: [])                                  ++
+      ((b1 :: b1 :: b0 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                  ++
        ri                                             ++
        pad                                            ++
        padding
@@ -1350,8 +1353,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: false :: true :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b1 :: b0 :: b1 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1370,8 +1373,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: false :: true :: true :: []) ++
-       (false :: [])                                  ++
+      ((b1 :: b1 :: b0 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                  ++
        ri                                             ++
        pad                                            ++
        padding
@@ -1391,8 +1394,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: false :: false :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b1 :: b1 :: b0 :: b0 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1411,8 +1414,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: false :: false :: []) ++
-       (false :: [])                                  ++
+      ((b1 :: b1 :: b1 :: b0 :: b0 :: []) ++
+       (b0 :: [])                                  ++
        ri                                             ++
        pad                                            ++
        padding
@@ -1432,8 +1435,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: false :: true :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b1 :: b1 :: b0 :: b1 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1452,8 +1455,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: false :: true :: []) ++
-       (false :: [])                                  ++
+      ((b1 :: b1 :: b1 :: b0 :: b1 :: []) ++
+       (b0 :: [])                                  ++
        ri                                             ++
        pad                                            ++
        padding
@@ -1473,8 +1476,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: true :: false :: [])  ++
-       (true :: [])                                     ++
+      ((b1 :: b1 :: b1 :: b1 :: b0 :: [])  ++
+       (b1 :: [])                                     ++
        ri                                               ++
        pad                                              ++
        padding
@@ -1493,8 +1496,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: true :: false :: []) ++
-       (false :: [])                                ++
+      ((b1 :: b1 :: b1 :: b1 :: b0 :: []) ++
+       (b0 :: [])                                ++
        ri                                           ++
        pad                                          ++
        padding
@@ -1513,8 +1516,8 @@ Theorem sub_decode_register_correct :
            (ltA : proj1_sig (bitvector_fin A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: true :: true :: [])  ++
-       (true :: [])                                    ++
+      ((b1 :: b1 :: b1 :: b1 :: b1 :: [])  ++
+       (b1 :: [])                                    ++
        pad1                                            ++
        pad2                                            ++
        padding
@@ -1532,8 +1535,8 @@ Theorem sub_decode_register_correct :
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((true :: true :: true :: true :: true :: []) ++
-       (false :: [])                                   ++
+      ((b1 :: b1 :: b1 :: b1 :: b1 :: []) ++
+       (b0 :: [])                                   ++
        pad1                                            ++
        pad2                                            ++
        padding
