@@ -93,7 +93,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
            (ri rj : Vector.t bool (clog2 registerCount))
            (padding : Vector.t bool paddingSize),
     interpSplit (vector_length_coerce (eq_sym interpSplitLemRight) (
-      code ++ (b :: []) ++ ri ++ rj ++ padding
+      code ++ [b] ++ ri ++ rj ++ padding
     )) = (code, b, ri, rj, padding).
   Proof.
     intros code b ri rj padding.
@@ -144,7 +144,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   | answerI : regId + Word -> OpcodeI.
 
   Definition oreg {n} (v : Vector.t bool n) : option regId.
-    destruct (bitvector_fin v).
+    destruct (bitvector_fin_big v).
     destruct (x <? registerCount) eqn:xlt.
     - apply Some. 
       exists x.
@@ -158,7 +158,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
     Vector.t bool (clog2 registerCount) ->
     regId.
     intros eq v.
-    destruct (bitvector_fin v).
+    destruct (bitvector_fin_big v).
     rewrite eq in l.
     exists x.
     exact l.
@@ -192,7 +192,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   Proof.
     intros eq v.
     unfold oreg, reg2pow.
-    destruct (bitvector_fin v) as [bfv bfvProp].
+    destruct (bitvector_fin_big v) as [bfv bfvProp].
     assert (bfv < registerCount) as bfvRC.
     { rewrite <- eq. assumption. }
     unfold regId, fin.
@@ -205,21 +205,21 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
 
   Definition regFit :
     forall {n} (v : Vector.t bool n),
-    proj1_sig (bitvector_fin v) < registerCount -> 
+    proj1_sig (bitvector_fin_big v) < registerCount -> 
     regId.
     intros n v ft.
-    exists (proj1_sig (bitvector_fin v)).
+    exists (proj1_sig (bitvector_fin_big v)).
     exact ft.
   Defined.
 
   Theorem regFitProp :
     forall {n} (v : Vector.t bool n)
-    (lt : proj1_sig (bitvector_fin v) < registerCount),
+    (lt : proj1_sig (bitvector_fin_big v) < registerCount),
     oreg v = Some (regFit v lt).
   Proof.
     intros n v lt.
     unfold oreg, regFit.
-    destruct (bitvector_fin v) as [bfv bfvProp].
+    destruct (bitvector_fin_big v) as [bfv bfvProp].
     simpl; simpl in lt.
     unfold regId, fin.
     rewrite (reg2powProp_lem (bfv <? registerCount) bfv _ lt).
@@ -231,7 +231,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   Definition answer1 : OpcodeI.
     apply answerI.
     apply inr.
-    apply fin_bitvector.
+    apply fin_bitvector_big.
     exists 1.
     transitivity wordSize.
     2: { apply pow_gt_lin_r. lia. }
@@ -296,48 +296,48 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
               (which is the maximum between the length of a register name
               and of an immediate value).
   """*)
-  Definition OpcodeDecode (w1 w2 : Word) : OpcodeI.
-    apply interpSplit in w1;
-    destruct w1 as [[[[op isReg] ri] rj] _].
-    apply oreg in ri, rj. apply oreg in w2 as w2reg.
-    apply bitvector_fin in op; destruct op.
-    destruct x. { exact (OpcodeDecodeRiRjA andI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpgI isReg rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA smulhI isReg ri rj w2 w2reg). }
-    (*"""
-    If pc is not an integer in [...] the number of instructions in P,
-    then the instruction answer 1 is fetched as default.)
-    """*)
-    destruct x. { exact answer1. }
-    destruct x. { exact (OpcodeDecodeRiRjA addI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeA jmpI isReg w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA shrI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA store_wI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA xorI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA movI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA umodI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA store_bI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA mullI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeA cnjmpI isReg w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpaI isReg rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA readI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA orI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpgeI isReg rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA udivI isReg ri rj w2 w2reg). }
-    destruct x. { exact answer1. }
-    destruct x. { exact (OpcodeDecodeRiRjA subI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeA cjmpI isReg w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmpeI isReg rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA load_wI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA notI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA cmovI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA shlI isReg ri rj w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiA load_bI isReg ri w2 w2reg). }
-    destruct x. { exact (OpcodeDecodeRiRjA umulhI isReg ri rj w2 w2reg). }
-    destruct x. { exact answer1. }
-    destruct x. { exact (OpcodeDecodeRiA cmpaeI isReg rj w2 w2reg). }
-    exact (OpcodeDecodeA answerI isReg w2 w2reg).
-  Defined.
+  Definition OpcodeDecode (w1 w2 : Word) : OpcodeI :=
+    match interpSplit w1 with
+    | ((((op, isReg), pri), prj), _) =>
+      let ri := oreg pri in
+      let rj := oreg prj in
+      let ow := oreg w2 in
+      match proj1_sig (bitvector_fin_big op) with
+      | 0 =>  OpcodeDecodeRiRjA andI isReg ri rj w2 ow
+      | 1 =>  OpcodeDecodeRiRjA orI    isReg ri rj w2 ow
+      | 2 =>  OpcodeDecodeRiRjA xorI   isReg ri rj w2 ow
+      | 3 =>  OpcodeDecodeRiA   notI   isReg ri w2 ow
+      | 4 =>  OpcodeDecodeRiRjA addI   isReg ri rj w2 ow
+      | 5 =>  OpcodeDecodeRiRjA subI   isReg ri rj w2 ow
+      | 6 =>  OpcodeDecodeRiRjA mullI  isReg ri rj w2 ow
+      | 7 =>  OpcodeDecodeRiRjA umulhI isReg ri rj w2 ow
+      | 8 =>  OpcodeDecodeRiRjA smulhI isReg ri rj w2 ow
+      | 9 =>  OpcodeDecodeRiRjA udivI  isReg ri rj w2 ow
+      | 10 => OpcodeDecodeRiRjA umodI  isReg ri rj w2 ow
+      | 11 => OpcodeDecodeRiRjA shlI   isReg ri rj w2 ow
+      | 12 => OpcodeDecodeRiRjA shrI   isReg ri rj w2 ow
+      | 13 => OpcodeDecodeRiA   cmpeI  isReg rj w2 ow
+      | 14 => OpcodeDecodeRiA   cmpaI  isReg rj w2 ow
+      | 15 => OpcodeDecodeRiA   cmpaeI isReg rj w2 ow
+      | 16 => OpcodeDecodeRiA   cmpgI  isReg rj w2 ow
+      | 17 => OpcodeDecodeRiA   cmpgeI isReg rj w2 ow
+      | 18 => OpcodeDecodeRiA   movI   isReg ri w2 ow
+      | 19 => OpcodeDecodeRiA   cmovI  isReg ri w2 ow
+      | 20 => OpcodeDecodeA     jmpI   isReg w2 ow
+      | 21 => OpcodeDecodeA     cjmpI  isReg w2 ow
+      | 22 => OpcodeDecodeA     cnjmpI isReg w2 ow
+      | 23 => answer1
+      | 24 => answer1
+      | 25 => answer1
+      | 26 => OpcodeDecodeRiA   store_bI isReg ri w2 ow
+      | 27 => OpcodeDecodeRiA   load_bI  isReg ri w2 ow
+      | 28 => OpcodeDecodeRiA   store_wI isReg ri w2 ow
+      | 29 => OpcodeDecodeRiA   load_wI  isReg ri w2 ow
+      | 30 => OpcodeDecodeRiA   readI    isReg ri w2 ow
+      | 31 => OpcodeDecodeA     answerI  isReg w2 ow
+      | _ => answer1
+      end
+    end.
 
   (***
     This section is based on Table 2 of pg. 16 in spec. 
@@ -346,1207 +346,685 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   Definition b1 := true.
   Definition b0 := false.
 
+  Ltac rirjAProof_register :=
+    intros ri rj lti ltj A ltA padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA);
+    reflexivity.
+
+  Ltac rirjAProof_word :=
+    intros ri rj lti ltj A padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp ri lti), (regFitProp rj ltj);
+    reflexivity.
+
+  Ltac riAProof_register :=
+    intros ri pad lti A ltA padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp ri lti), (regFitProp A ltA);
+    reflexivity.
+
+  Ltac riAProof_word :=
+    intros ri pad lti A padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp ri lti);
+    reflexivity.
+
+  Ltac rjAProof_register :=
+    intros pad ri lti A ltA padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp ri lti), (regFitProp A ltA);
+    reflexivity.
+
+  Ltac rjAProof_word :=
+    intros pad ri lti A padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp ri lti);
+    reflexivity.
+
+  Ltac AProof_register :=
+    intros pad1 pad2 A ltA padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    rewrite (regFitProp A ltA);
+    reflexivity.
+
+  Ltac AProof_word :=
+    intros pad1 pad2 A padding;
+    unfold OpcodeDecode; rewrite interpSplit_eval;
+    unfold bitvector_fin_big; vector_simp; simpl;
+    reflexivity.
+
   Theorem and_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b0 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b0; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     andI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem and_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b0; b0] ++ [b0] ++ ri ++ rj ++ padding))) A =
     andI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
 Theorem or_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b0 :: b1 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b0; b1] ++ [b1] ++ ri ++ rj ++ padding))) A =
     orI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem or_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b0; b1] ++ [b0] ++ ri ++ rj ++ padding))) A =
     orI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
-Theorem xor_decode_register_correct :
+  Theorem xor_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b1 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b1; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     xorI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem xor_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b1; b0] ++ [b0] ++ ri ++ rj ++ padding ))) A =
     xorI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
       
   Theorem not_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b1 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b1; b1] ++ [b1] ++ ri ++ pad ++ padding))) A =
     notI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem not_decode_word_correct :
-    forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+    forall (ri pad : Vector.t bool (clog2 registerCount))
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b0 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b0; b1; b1] ++ [b0] ++ ri ++ pad ++ padding))) A =
     notI (regFit ri lti) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
 Theorem add_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b0 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b0; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     addI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem add_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b0; b0] ++ [b0] ++ ri ++ rj ++ padding))) A =
     addI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
 Theorem sub_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b0 :: b1 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b0; b1] ++ [b1] ++ ri ++ rj ++ padding))) A =
     subI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem sub_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b0; b1] ++ [b0] ++ ri ++ rj ++ padding))) A =
     subI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem mull_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b1 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b1; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     mullI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem mull_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b1; b0] ++ [b0] ++ ri ++ rj ++ padding))) A =
     mullI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem umulh_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b1 :: b1 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b1; b1] ++ [b1] ++ ri ++ rj ++ padding))) A =
     umulhI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem umulh_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b0 :: b1 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b0; b1; b1; b1] ++ [b0] ++ ri ++ rj ++ padding))) A =
     umulhI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem smulh_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b0 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b0; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     smulhI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem smulh_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b0; b0] ++ [b0] ++ ri ++ rj ++ padding))) A =
     smulhI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem udiv_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b0 :: b1 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b0; b1] ++ [b1] ++ ri ++ rj ++ padding))) A =
     udivI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem udiv_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b0; b1] ++ [b0] ++ ri ++ rj ++ padding))) A =
     udivI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem umod_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b1 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b1; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     umodI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem umod_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b1; b0] ++ [b0] ++ ri ++ rj ++ padding))) A =
     umodI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem shl_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b1 :: b1 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b1; b1] ++ [b1] ++ ri ++ rj ++ padding))) A =
     shlI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem shl_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b0 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b0; b1; b1] ++ [b0] ++ ri ++ rj ++ padding))) A =
     shlI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem shr_decode_register_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b0 :: b0 :: []) ++
-       (b1 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b0; b0] ++ [b1] ++ ri ++ rj ++ padding))) A =
     shrI (regFit ri lti) (regFit rj ltj) (inl (regFit A ltA)).
-  Proof.
-    intros ri rj lti ltj A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_register. Qed.
  
   Theorem shr_decode_word_correct :
     forall (ri rj : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
-           (ltj : proj1_sig (bitvector_fin rj) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
+           (ltj : proj1_sig (bitvector_fin_big rj) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       rj                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b0; b0] ++ [b0] ++ ri ++ rj ++ padding))) A =
     shrI (regFit ri lti) (regFit rj ltj) (inr A).
-  Proof.
-    intros ri rj lti ltj A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp rj ltj).
-    reflexivity.
-  Qed.
+  Proof. rirjAProof_word. Qed.
 
   Theorem cmpe_decode_register_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b0 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       pad                                              ++
-       ri                                               ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b0; b1] ++ [b1] ++ pad ++ ri ++ padding))) A =
     cmpeI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros pad ri lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
- 
+  Proof. rjAProof_register. Qed.
+
   Theorem cmpe_decode_word_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       pad                                                ++
-       ri                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b0; b1] ++ [b0] ++ pad ++ ri ++ padding))) A =
     cmpeI (regFit ri lti) (inr A).
-  Proof.
-    intros pad ri lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_word. Qed.
 
   Theorem cmpa_decode_register_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b1 :: b0 :: [])  ++
-       (b1 :: [])                                     ++
-       pad                                              ++
-       ri                                               ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b1; b0] ++ [b1] ++ pad ++ ri ++ padding))) A =
     cmpaI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros pad ri lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_register. Qed.
  
   Theorem cmpa_decode_word_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       pad                                                ++
-       ri                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b1; b0] ++ [b0] ++ pad ++ ri ++ padding))) A =
     cmpaI (regFit ri lti) (inr A).
-  Proof.
-    intros pad ri lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_word. Qed.
 
   Theorem cmpae_decode_register_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b1 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       pad                                              ++
-       ri                                               ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b1; b1] ++ [b1] ++ pad ++ ri ++ padding))) A =
     cmpaeI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros pad ri lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_register. Qed.
  
   Theorem cmpae_decode_word_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b0 :: b1 :: b1 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       pad                                                ++
-       ri                                                ++
-       padding
-      ))) A =
+      ([b0; b1; b1; b1; b1] ++ [b0] ++ pad ++ ri ++ padding))) A =
     cmpaeI (regFit ri lti) (inr A).
-  Proof.
-    intros pad ri lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_word. Qed.
 
   Theorem cmpg_decode_register_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b0 :: b0 :: [])  ++
-       (b1 :: [])                                     ++
-       pad                                              ++
-       ri                                               ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b0; b0] ++ [b1] ++ pad ++ ri ++ padding))) A =
     cmpgI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros pad ri lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_register. Qed.
  
   Theorem cmpg_decode_word_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       pad                                                ++
-       ri                                                ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b0; b0] ++ [b0] ++ pad ++ ri ++ padding))) A =
     cmpgI (regFit ri lti) (inr A).
-  Proof.
-    intros pad ri lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_word. Qed.
 
   Theorem cmpge_decode_register_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b0 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       pad                                              ++
-       ri                                               ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b0; b1] ++ [b1] ++ pad ++ ri ++ padding))) A =
     cmpgeI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros pad ri lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_register. Qed.
  
   Theorem cmpge_decode_word_correct :
     forall (pad ri : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       pad                                                ++
-       ri                                                ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b0; b1] ++ [b0] ++ pad ++ ri ++ padding))) A =
     cmpgeI (regFit ri lti) (inr A).
-  Proof.
-    intros pad ri lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. rjAProof_word. Qed.
       
   Theorem mov_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b1 :: b0 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b1; b0] ++ [b1] ++ ri ++ pad ++ padding))) A =
     movI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
- 
+  Proof. riAProof_register. Qed.
+
   Theorem mov_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       pad                                                ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b1; b0] ++ [b0] ++ ri ++ pad ++ padding))) A =
     movI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem cmov_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b1 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b1; b1] ++ [b1] ++ ri ++ pad ++ padding))) A =
     cmovI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem cmov_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b0 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                     ++
-       ri                                                ++
-       pad                                                ++
-       padding
-      ))) A =
+      ([b1; b0; b0; b1; b1] ++ [b0] ++ ri ++ pad ++ padding))) A =
     cmovI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem jmp_decode_register_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b1 :: b0 :: b0 :: [])  ++
-       (b1 :: [])                                    ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b0; b1; b0; b0] ++ [b1] ++ pad1 ++ pad2 ++ padding))) A =
     jmpI (inl (regFit A ltA)).
-  Proof.
-    intros pad1 pad2 A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. AProof_register. Qed.
  
   Theorem jmp_decode_word_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b1 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                   ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b0; b1; b0; b0] ++ [b0] ++ pad1 ++ pad2 ++ padding))) A =
     jmpI (inr A).
-  Proof.
-    intros pad1 pad2 A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    reflexivity.
-  Qed.
+  Proof. AProof_word. Qed.
 
   Theorem cjmp_decode_register_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b1 :: b0 :: b1 :: [])  ++
-       (b1 :: [])                                    ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b0; b1; b0; b1] ++ [b1] ++ pad1 ++ pad2 ++ padding))) A =
     cjmpI (inl (regFit A ltA)).
-  Proof.
-    intros pad1 pad2 A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. AProof_register. Qed.
  
   Theorem cjmp_decode_word_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b1 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                   ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b0; b1; b0; b1] ++ [b0] ++ pad1 ++ pad2 ++ padding))) A =
     cjmpI (inr A).
-  Proof.
-    intros pad1 pad2 A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    reflexivity.
-  Qed.
+  Proof. AProof_word. Qed.
 
   Theorem cnjmp_decode_register_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b1 :: b1 :: b0 :: [])  ++
-       (b1 :: [])                                    ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b0; b1; b1; b0] ++ [b1] ++ pad1 ++ pad2 ++ padding))) A =
     cnjmpI (inl (regFit A ltA)).
-  Proof.
-    intros pad1 pad2 A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. AProof_register. Qed.
  
   Theorem cnjmp_decode_word_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b0 :: b1 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                   ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b0; b1; b1; b0] ++ [b0] ++ pad1 ++ pad2 ++ padding))) A =
     cnjmpI (inr A).
-  Proof.
-    intros pad1 pad2 A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    reflexivity.
-  Qed.
+  Proof. AProof_word. Qed.
 
   Theorem store_b_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b0 :: b1 :: b0 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b1; b0; b1; b0] ++ [b1] ++ ri ++ pad ++ padding))) A =
     store_bI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem store_b_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b0 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                  ++
-       ri                                             ++
-       pad                                            ++
-       padding
-      ))) A =
+      ([b1; b1; b0; b1; b0] ++ [b0]    ++ ri  ++ pad ++ padding))) A =
     store_bI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem load_b_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b0 :: b1 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b1; b0; b1; b1] ++ [b1] ++ ri ++ pad ++ padding))) A =
     load_bI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem load_b_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b0 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                  ++
-       ri                                             ++
-       pad                                            ++
-       padding
-      ))) A =
+      ([b1; b1; b0; b1; b1] ++ [b0]    ++ ri  ++ pad ++ padding))) A =
     load_bI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem store_w_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b0 :: b0 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b0; b0] ++ [b1] ++ ri ++ pad ++ padding))) A =
     store_wI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem store_w_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b0 :: b0 :: []) ++
-       (b0 :: [])                                  ++
-       ri                                             ++
-       pad                                            ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b0; b0] ++ [b0]    ++ ri  ++ pad ++ padding))) A =
     store_wI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem load_w_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b0 :: b1 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b0; b1] ++ [b1] ++ ri ++ pad ++ padding))) A =
     load_wI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem load_w_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b0 :: b1 :: []) ++
-       (b0 :: [])                                  ++
-       ri                                             ++
-       pad                                            ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b0; b1] ++ [b0]    ++ ri  ++ pad ++ padding))) A =
     load_wI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem read_decode_register_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b1 :: b0 :: [])  ++
-       (b1 :: [])                                     ++
-       ri                                               ++
-       pad                                              ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b1; b0] ++ [b1] ++ ri ++ pad ++ padding))) A =
     readI (regFit ri lti) (inl (regFit A ltA)).
-  Proof.
-    intros ri pad lti A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti), (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. riAProof_register. Qed.
  
   Theorem read_decode_word_correct :
     forall (ri pad : Vector.t bool (clog2 registerCount))
-           (lti : proj1_sig (bitvector_fin ri) < registerCount)
+           (lti : proj1_sig (bitvector_fin_big ri) < registerCount)
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b1 :: b0 :: []) ++
-       (b0 :: [])                                ++
-       ri                                           ++
-       pad                                          ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b1; b0] ++ [b0] ++ ri  ++ pad ++ padding))) A =
     readI (regFit ri lti) (inr A).
-  Proof.
-    intros ri pad lti A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp ri lti).
-    reflexivity.
-  Qed.
+  Proof. riAProof_word. Qed.
 
   Theorem answer_decode_register_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
-           (ltA : proj1_sig (bitvector_fin A) < registerCount)
+           (ltA : proj1_sig (bitvector_fin_big A) < registerCount)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b1 :: b1 :: [])  ++
-       (b1 :: [])                                    ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b1; b1] ++ [b1] ++ pad1 ++ pad2 ++ padding))) A =
     answerI (inl (regFit A ltA)).
-  Proof.
-    intros pad1 pad2 A ltA padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    rewrite (regFitProp A ltA).
-    reflexivity.
-  Qed.
+  Proof. AProof_register. Qed.
  
   Theorem answer_decode_word_correct :
     forall (pad1 pad2 : Vector.t bool (clog2 registerCount))
            (A : Word)
            (padding : Vector.t bool paddingSize),
     OpcodeDecode (vector_length_coerce (eq_sym interpSplitLemRight) (
-      ((b1 :: b1 :: b1 :: b1 :: b1 :: []) ++
-       (b0 :: [])                                   ++
-       pad1                                            ++
-       pad2                                            ++
-       padding
-      ))) A =
+      ([b1; b1; b1; b1; b1] ++ [b0] ++ pad1 ++ pad2 ++ padding))) A =
     answerI (inr A).
-  Proof.
-    intros pad1 pad2 A padding.
-    unfold OpcodeDecode; rewrite interpSplit_eval; simpl.
-    reflexivity.
-  Qed.
+  Proof. AProof_word. Qed.
 
 End TinyRAMDecodOps.
 

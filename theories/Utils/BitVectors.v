@@ -215,8 +215,6 @@ Definition bv_add : forall {n} (b1 b2 : Vector.t bool n), Vector.t bool n.
   lia.
 Defined.
 
-
-
 Definition bv_incr : forall {n}, Vector.t bool n -> nat -> Vector.t bool n.
   intros n b i.
   apply fin_bitvector_little; apply bitvector_fin_little in b.
@@ -226,3 +224,31 @@ Definition bv_incr : forall {n}, Vector.t bool n -> nat -> Vector.t bool n.
   lia.
 Defined.
 
+Ltac vector_bubble :=
+  match goal with
+  | |- context[vector_length_coerce _ (vector_length_coerce _ _)] =>
+      rewrite vector_length_coerce_trans
+  | |- context[vector_length_coerce _ ?x ++ vector_length_coerce _ ?y] =>
+      rewrite (vector_length_coerce_app_funct _ _ x y)
+  | |- context[?h :: vector_length_coerce _ ?y] =>
+      rewrite (vector_length_coerce_cons_in _ h y)
+  | |- context[rev []] =>
+      rewrite vector_rev_nil_nil
+  | |- context[rev (?h :: ?x)] =>
+      rewrite (rev_snoc h x)
+  | |- context[rev (?x ++ [?h])] =>
+      rewrite (rev_cons h x)
+  | |- context[vector_length_coerce _ ?x ++ ?y] =>
+      rewrite <- (vector_length_coerce_id (eq_refl (length (to_list y))) y)
+  end.
+
+Ltac vector_simp :=
+  repeat vector_bubble;
+  repeat rewrite vector_length_coerce_id.
+
+Example test : rev [false ; false ; false ; false ; false ]
+                 = [ false ; false ; false ; false ; false ].
+Proof.
+  vector_simp.
+  reflexivity.
+Qed.
