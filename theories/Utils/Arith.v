@@ -45,23 +45,14 @@ Definition le_sub:
       lia.
 Defined.
 
-(* Ceiling log base 2 function *)
-Definition clog2 (x : nat) : nat := 
-  match x with
-  | 0 => 0
-  | S 0 => 0
-  | S (S n) => S (log2 (S n))
-  end.
-
-Theorem clog2S_Slog2 : forall x,
-  x > 1 -> clog2 (S x) = S (log2 x).
+Theorem log2_upS_Slog2 : forall x,
+  x > 1 -> log2_up (S x) = S (log2 x).
 Proof.
   intro x; destruct x. { lia. }
-  destruct x. { lia. }
   reflexivity.
 Qed.
 
-Theorem clog2_ajoint_lem : forall {x}, ~ (2 ^ x < 1).
+Theorem log2_up_ajoint_lem : forall {x}, ~ (2 ^ x < 1).
 Proof.
   intro x; induction x as [|x IHx].
   - simpl; lia.
@@ -71,38 +62,19 @@ Proof.
 Qed.
 
 (* Adjoint theorem/Galois connection defining ceiling log2 *)
-Theorem clog2_lt_pow2 : forall (x y : nat),
-  (2 ^ x < y) <-> (x < clog2 y).
-  intros x y.
+Theorem log2_up_lt_pow2 : forall (x y : nat),
+  (2 ^ x < y) <-> (x < log2_up y).
 Proof.
-  split; intro.
-  - destruct (1 <? y) eqn:g1y.
-    + rewrite ltb_lt in g1y.
-      destruct y. { lia. } destruct y. { lia. }
-      simpl; rewrite lt_succ_r.
-      rewrite <- log2_le_pow2; lia.
-    + rewrite ltb_nlt in g1y.
-      assert (y = 1) as y1. { lia. }
-      rewrite y1 in H.
-      destruct (clog2_ajoint_lem H).
-  - destruct (1 <? y) eqn:g1y.
-    + rewrite ltb_lt in g1y.
-      destruct y. { lia. }
-      rewrite lt_succ_r.
-      rewrite log2_le_pow2. 2: { lia. }
-      rewrite <- lt_succ_r.
-      destruct y. { lia. }
-      exact H.
-    + rewrite ltb_nlt in g1y.
-      assert (y <= 1). { lia. }
-      destruct (y =? 0) eqn:g0y.
-      * rewrite eqb_eq in g0y.
-        rewrite g0y in H.
-        simpl in H; lia.
-      * rewrite eqb_neq in g0y.
-        assert (y = 1) as y1. { lia. }
-        rewrite y1 in H.
-        simpl in H; lia.
+  intros x y.
+  destruct (0 <? y) eqn:g0y.
+  - apply log2_up_lt_pow2.
+    rewrite ltb_lt in g0y.
+    assumption.
+  - rewrite ltb_ge in g0y.
+    destruct y. 2: { lia. }
+    split. { lia. }
+    unfold log2_up; simpl.
+    lia.
 Qed.
 
 Theorem mod_2_0or1 : forall n, (n mod 2 = 0) \/ (n mod 2 = 1).

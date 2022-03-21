@@ -3,8 +3,6 @@ From Coq Require Import
 Import PeanoNat.Nat.
 From TinyRAM.Utils Require Import
   Fin.
-From TinyRAM.Utils Require Import
-  Arith.
 
 Module Type TinyRAMParameters.
   (*"""  
@@ -23,18 +21,18 @@ Module Type TinyRAMParameters.
   (*"""
   The binary encoding assumes that 6 + 2 · ceil(log_2 K) ≤ [wordSize]
   """*)
-  Axiom encodingAxiom : 6 + 2 * clog2 registerCount <= wordSize.
+  Axiom encodingAxiom : 6 + 2 * log2_up registerCount <= wordSize.
 
   Theorem wordSizePos : 0 < wordSize.
   Proof.
-    assert (6 + 2 * clog2 registerCount <= wordSize).
+    assert (6 + 2 * log2_up registerCount <= wordSize).
     { exact encodingAxiom. }
     lia.
   Qed.
 
   Theorem wordSizeMin : 5 < wordSize.
   Proof.
-    assert (6 + 2 * clog2 registerCount <= wordSize).
+    assert (6 + 2 * log2_up registerCount <= wordSize).
     { exact encodingAxiom. }
     lia.
   Qed.
@@ -56,6 +54,32 @@ Module Type TinyRAMParameters.
     apply pow_gt_lin_r.
     lia.
   Defined.
+
+  Theorem registerCount_lt_2powwordSize :
+    registerCount <= 2 ^ wordSize.
+  Proof.
+    assert (6 + 2 * log2_up registerCount <= wordSize).
+    { apply encodingAxiom. }
+    destruct registerCount. { lia. }
+    rewrite log2_up_le_pow2; lia.
+  Qed.
+
+  Theorem registerCount_lt_2powwordSize2 :
+    0 < registerCount -> registerCount < 2 ^ wordSize.
+  Proof.
+    intro.
+    rewrite log2_lt_pow2. 2: { assumption. }
+    apply (lt_le_trans _ (6 + 2 * log2_up registerCount)).
+    2: { exact encodingAxiom. }
+    change (6 + ?x) with (S (5 + x)).
+    apply le_n_S.
+    rewrite add_comm.
+    apply Plus.le_plus_trans.
+    rewrite plus_n_O at 1.
+    change (log2 ?x + 0) with (1 * log2 x).
+    apply mul_le_mono_nonneg; try lia.
+    apply le_log2_log2_up.
+  Qed.
 
   (*"""
   increments pc (the program counter) by i [...] where
