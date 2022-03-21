@@ -104,3 +104,20 @@ Proof.
         rewrite y1 in H.
         simpl in H; lia.
 Qed.
+
+Theorem mod_2_0or1 : forall n, (n mod 2 = 0) \/ (n mod 2 = 1).
+Proof.
+  intro.
+  induction n as [|n IHn].
+  - auto.
+  - replace (S n) with (1 + n). 2: { reflexivity. }
+    rewrite add_mod. 2: { lia. }
+    destruct IHn.
+    + right.
+      rewrite H.
+      reflexivity.
+    + left.
+      rewrite H.
+      reflexivity.
+Qed.
+

@@ -17,12 +17,16 @@
 From Coq Require Import
      Arith
      Lia.
+Import PeanoNat.Nat.
 
 From ITree Require Import
      ITree
      ITreeFacts
      Basics.Category
      Basics.CategorySub.
+
+From TinyRAM.Utils Require Import
+  Arith.
 (* end hide *)
 
 (* Type with [n] inhabitants. *)
@@ -186,6 +190,15 @@ Proof.
     try (f_equal; apply unique_fin; simpl; reflexivity + lia);
     try contradiction + exfalso; lia.
 Qed.
+
+Definition fin_mod : forall n m,
+  n <> 0 -> fin (m * n) -> fin n.
+  intros n m meq f.
+  destruct f as [f fprp].
+  exists (f mod n).
+  apply mod_upper_bound.
+  assumption.
+Defined.
 
 Instance ToBifunctor_ktree_fin {E} : ToBifunctor (ktree E) fin sum Nat.add :=
   fun n m y => Ret (split_fin_sum n m y).

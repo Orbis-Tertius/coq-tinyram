@@ -8,6 +8,7 @@ Import PeanoNat.Nat.
 Require Import ProofIrrelevance.
 Require Import VectorDef.
 Import VectorNotations.
+Import EqNotations.
 
 Definition vector_length_coerce : forall {A n m},
     n = m ->
@@ -141,12 +142,21 @@ Proof.
     apply proof_irrelevance.
 Qed.
 
+Theorem vector_nil_eq : forall {A} (v : t A 0),
+  v = [].
+Proof.
+  intros A v.
+  apply (case0 (fun vnil => vnil = [])).
+  reflexivity.
+Qed.
+
 Definition vector_cons_split : forall {A n}
   (v : Vector.t A (S n)), 
   { x : A & { vtl : Vector.t A n | v = Vector.cons A x n vtl } }.
   intros A n v.
   exists (Vector.hd v), (Vector.tl v). apply Vector.eta.
 Defined.
+
 
 Definition replace :
   forall {A n} (v : Vector.t A n) (p: fin n) (a : A), Vector.t A n.
@@ -176,157 +186,345 @@ Definition nth :
       lia.
 Defined.
 
-Definition bitvector_fin_double_S : forall {n},
-  fin n -> fin (2 * n).
-  intros n a.
-  destruct a as [a afin].
-  exists (S (2 * a)).
-  lia.
-Defined.
-
-Definition bitvector_fin_double : forall {n},
-  fin n -> fin (2 * n).
-  intros n a.
-  destruct a as [a afin].
-  exists (2 * a).
-  lia.
-Defined.
-
-Definition bitvector_fin : forall {n},
-  Vector.t bool n -> fin (2 ^ n).
-  intros n v.
-  induction v.
-  - exists 0.
+Theorem vector_rev_append_nil_o : forall {A n}
+  (v : Vector.t A n),
+  rev_append [] v = v.
+Proof.
+  intros A n v.
+  destruct v.
+  - unfold rev_append.
     simpl.
-    lia.
-  - destruct h eqn:hdef.
-    + apply (bitvector_fin_double_S IHv).
-    + apply (bitvector_fin_double IHv).
+    replace (Plus.plus_tail_plus 0 0) with (eq_refl 0).
+    { reflexivity. } { apply proof_irrelevance. }
+  - unfold rev_append.
+    simpl rev_append_tail.
+    replace (Plus.plus_tail_plus 0 (S n))
+       with (eq_refl (S n)).
+    { reflexivity. } { apply proof_irrelevance. }
+Qed.
+
+Theorem rev_coerce_unfold : forall {A n}
+  (v : Vector.t A n),
+  rev v = 
+  vector_length_coerce (eq_sym (plus_n_O n))
+    (rev_append v []).
+Proof.
+  reflexivity.
+Qed.
+
+Theorem vector_rev_nil_nil : forall {A},
+  rev [] = ([] : Vector.t A 0).
+Proof.
+  intros A.
+  rewrite rev_coerce_unfold.
+  rewrite vector_rev_append_nil_o.
+  replace (plus_n_O 0) with (eq_refl 0).
+  { reflexivity. } { apply proof_irrelevance. }
+Qed.
+
+Theorem vector_rev_sing_sing : forall {A} (h : A),
+  rev [h] = [h].
+Proof.
+  intros A h.
+  rewrite rev_coerce_unfold.
+  replace (rev_append [h] []) with [h].
+  { replace (plus_n_O 1) with (eq_refl 1).
+    { reflexivity. } { apply proof_irrelevance. } }
+  unfold rev_append.
+  simpl. 
+  replace (Plus.plus_tail_plus 1 0) with (eq_refl 1).
+  { reflexivity. } { apply proof_irrelevance. }
+Qed.
+
+Definition last_ : forall {A n}, t A (n + 1) -> A.
+  intros A n v.
+  rewrite add_comm in v.
+  apply (@last A n).
+  exact v.
 Defined.
 
-Definition fin_mod : forall n m,
-  n <> 0 -> fin (m * n) -> fin n.
-  intros n m meq f.
-  destruct f as [f fprp].
-  exists (f mod n).
-  apply mod_upper_bound.
-  assumption.
+Definition most : forall {A n}, t A (S n) -> t A n.
+  intros A n v.
+  induction n.
+  - apply Vector.nil.
+  - apply Vector.cons.
+    + exact (hd v).
+    + apply IHn.
+      exact (tl v).
 Defined.
 
-Fixpoint fin_bitvector_fun (n m : nat) : Vector.t bool n :=
-  match n with
-  | 0 => Vector.nil bool
-  | S n => 
-    Vector.cons _ (negb (m mod 2 =? 0)) _ (fin_bitvector_fun n (m / 2))
-  end.
-
-Definition fin_bitvector : forall {n},
-  fin (2 ^ n) -> Vector.t bool n.
-  intros n [f _].
-  apply (fin_bitvector_fun n f).
+Definition most_ : forall {A n}, t A (n + 1) -> t A n.
+  intros A n v.
+  rewrite add_comm in v.
+  apply (@most A n).
+  exact v.
 Defined.
 
-Theorem bitvector_fin_inv_lem_true : forall {n} (f : fin (2 ^ n)),
-  fin_bitvector (bitvector_fin_double_S f : fin (2 ^ (S n))) =
-  Vector.cons _ true _ (fin_bitvector f).
+  
+Theorem vector_snoc_eta : forall {A n}
+  (v : Vector.t A (n + 1)),
+  v = most_ v ++ [last_ v].
 Proof.
-  intros n.
-  destruct n as [|n]; intros [f fprp].
-  - rewrite unique_f0 at 1.
+  intros A n v.
+  induction n.
+  - rewrite (vector_nil_eq (most_ v)).
+    rewrite (Vector.eta v).
+    rewrite (vector_nil_eq (tl v)).
+    simpl; f_equal.
+    unfold last_.
+    replace (add_comm 0 1) with (eq_refl 1).
+    2: { apply proof_irrelevance. }
     reflexivity.
-  - simpl bitvector_fin_double_S.
-    unfold fin_bitvector.
-    unfold fin_bitvector_fun.
-    replace (S (f + (f + 0))) with (1 + f * 2).
-    2: { lia. }
-    replace (((1 + f * 2)) mod 2) with 1.
-    2: { rewrite mod_add. { reflexivity. } { lia. } }
-    replace ((1 + f * 2) / 2) with f.
-    2: { rewrite div_add. { reflexivity. } { lia. } }
-    reflexivity.
+  - rewrite (Vector.eta v).
+    assert (tl v = most_ (tl v) ++ [last_ (tl v)]).
+    { apply IHn. }
+    rewrite H at 1.
+    simpl; f_equal.
+    + change (eq_rect _ _ _ _ _)
+        with (vector_length_coerce (add_comm (S n) 1) (hd v :: tl v)).
+      rewrite (vector_length_coerce_cons _ (tl v)).
+      reflexivity.
+    + f_equal.
+      * change (eq_rect _ _ _ _ _)
+          with (vector_length_coerce (add_comm (S n) 1) (hd v :: tl v)).
+        rewrite (vector_length_coerce_cons _ (tl v)).
+        simpl; unfold most_.
+        unfold vector_length_coerce.
+        repeat f_equal.
+        apply proof_irrelevance.
+      * unfold last_ at 2.
+        change (eq_rect _ _ _ _ _)
+          with (vector_length_coerce (add_comm (S n) 1) (hd v :: tl v)).
+        rewrite (vector_length_coerce_cons _ (tl v)).
+        unfold last_, vector_length_coerce.
+        simpl; repeat f_equal.
+        apply proof_irrelevance.
 Qed.
 
-Theorem bitvector_fin_inv_lem_false : forall {n} (f : fin (2 ^ n)),
-  fin_bitvector (bitvector_fin_double f : fin (2 ^ (S n))) =
-  Vector.cons bool false _ (fin_bitvector f).
+Theorem depEqLem : 
+  forall (B : Type) 
+         (F : B -> Type)
+         (P : forall b : B, F b -> Prop)
+         (b1 b2 : B) (eqb : b1 = b2)
+         (p1 : F b1) (p2 : F b2),
+         (rew eqb in p1 = p2) ->
+         P b1 p1 ->
+         P b2 p2.
 Proof.
-  intros n.
-  destruct n as [|n]; intros [f fprp].
-  - rewrite unique_f0 at 1.
-    reflexivity.
-  - simpl bitvector_fin_double.
-    unfold fin_bitvector.
-    unfold fin_bitvector_fun.
-    replace (f + (f + 0)) with (f * 2).
-    2: { lia. }
-    replace (f * 2 / 2) with f.
-    2: { rewrite div_mul. { reflexivity. } { lia. } }
-    replace ((f * 2) mod 2) with 0.
-    2: { symmetry. rewrite mod_mul. { reflexivity. } { lia. } } 
-    reflexivity.
+  intros B F P b1 b2 eqb.
+  destruct eqb.
+  intros p1 p2 eqp.
+  destruct eqp.
+  intros Pp.
+  exact Pp.
+Qed.         
+
+Theorem t_snoc_ind : forall (A : Type) (P : forall n : nat, t A n -> Prop),
+  P 0 [] ->
+  (forall (h : A) (n : nat) (t : t A n), P n t -> P (n + 1) (t ++ [h])) ->
+  forall (n : nat) (t : t A n), P n t.
+Proof.
+  intros A P Pnil Psnoc n t.
+  induction n.
+  - rewrite (vector_nil_eq t).
+    exact Pnil.
+  - remember (vector_length_coerce (eq_sym (add_comm n 1)) t) as t'.
+    assert (t' = most_ t' ++ [last_ t']).
+    { apply vector_snoc_eta. }
+    assert (P n (most_ t')).
+    { apply IHn. }
+    apply (Psnoc (last_ t') _ _) in H0.
+    assert (n + 1 = S n).
+    { rewrite add_comm; reflexivity. }
+    apply (depEqLem nat (Vector.t A) P (n + 1) (S n) H1 t' t).
+    2: { rewrite H; assumption. }
+    rewrite Heqt'.
+    unfold vector_length_coerce.
+    rewrite rew_compose.
+    replace (Logic.eq_trans (eq_sym (add_comm n 1)) H1) with (eq_refl (S n)).
+    + reflexivity.
+    + apply proof_irrelevance.
 Qed.
 
-Theorem bitvector_fin_inv : forall {n} (v : Vector.t bool n),
-  fin_bitvector (bitvector_fin v) = v.
+Theorem rev_append_step : forall {A n m}
+  (h : A) (vn : Vector.t A n) (vm : Vector.t A m),
+  rev_append (h :: vn) vm =
+  vector_length_coerce (eq_sym (plus_n_Sm n m))
+    (rev_append vn (h :: vm)).
 Proof.
-  intros n v.
-  induction v.
-  - reflexivity.
-  - destruct h; simpl bitvector_fin.
-    + rewrite bitvector_fin_inv_lem_true.
-      rewrite IHv.
-      reflexivity.
-    + rewrite bitvector_fin_inv_lem_false.
-      rewrite IHv.
-      reflexivity.
+  intros A n m h vn vm.
+  unfold rev_append.
+  simpl rev_append_tail.
+  unfold vector_length_coerce.
+  unfold eq_rect_r.
+  rewrite rew_compose.
+  f_equal.
+  apply proof_irrelevance.
 Qed.
 
-Theorem mod_2_0or1 : forall n, (n mod 2 = 0) \/ (n mod 2 = 1).
+Theorem rev_append_unstep : forall {A n m}
+  (h : A) (vn : Vector.t A n) (vm : Vector.t A m),
+  rev_append vn (h :: vm) =
+  vector_length_coerce (plus_n_Sm n m)
+    (rev_append (h :: vn) vm).
 Proof.
-  intro.
-  induction n as [|n IHn].
-  - auto.
-  - replace (S n) with (1 + n). 2: { reflexivity. }
-    rewrite add_mod. 2: { lia. }
-    destruct IHn.
-    + right.
-      rewrite H.
-      reflexivity.
-    + left.
-      rewrite H.
-      reflexivity.
+  intros A n m h vn vm.
+  unfold rev_append.
+  simpl rev_append_tail.
+  unfold vector_length_coerce.
+  unfold eq_rect_r.
+  rewrite rew_compose.
+  f_equal.
+  apply proof_irrelevance.
 Qed.
 
-Theorem fin_bitvector_inv : forall {n} (f : fin (2 ^ n)),
-  bitvector_fin (fin_bitvector f) = f.
-  intro n.
-  induction n as [|n IHn]; intros [f fprp].
-  + simpl.
-    rewrite unique_f0.
-    apply subset_eq_compat.
+Theorem append_nil : forall {A n}
+  (vn : Vector.t A n),
+  vn ++ [] =
+  vector_length_coerce (plus_n_O n) vn.
+Proof.
+  intros A n vn; induction vn.
+  - rewrite vector_length_coerce_id.
     reflexivity.
-  + unfold fin_bitvector.
-    replace (fin_bitvector_fun (S n) f)
-       with (Vector.cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_fun n (f / 2))).
-    2: { reflexivity. }
-    assert (f = (2 * (f / 2) + f mod 2)) as fsplit.
-    { rewrite <- div_mod. { reflexivity. } { lia. } }
-    assert (f/2 < 2 ^ n) as fhprp.
-    { apply div_lt_upper_bound. { lia. } exact fprp. } 
-    assert (bitvector_fin (fin_bitvector (exist _ (f/2) fhprp)) = (exist _ (f/2) fhprp)).
-    { apply IHn. } clear IHn. simpl in H.
-    destruct (f mod 2 =? 0) eqn:fmod;
-    simpl; rewrite H; clear H; simpl;
-    apply subset_eq_compat;
-    replace (fst (divmod f 1 0 1)) with (f / 2); try reflexivity.
-    - rewrite eqb_eq in fmod.
-      rewrite fmod, add_0_r in fsplit.
-      lia.
-    - replace (f mod 2) with 1 in fsplit.
-      { lia. }  
-      rewrite eqb_neq in fmod.
-      destruct (mod_2_0or1 f). { destruct (fmod H). }
-      symmetry; assumption.
+  - simpl.
+    rewrite IHvn.
+    rewrite vector_length_coerce_cons.
+    repeat f_equal.
+    apply proof_irrelevance.
+Qed.
+
+Theorem vector_length_coerce_cons_in : forall {A n m}
+  (eq : n = m) (h : A) (vn : Vector.t A n),
+  h :: vector_length_coerce eq vn
+  = vector_length_coerce (eq_S _ _ eq) (h :: vn).
+Proof.
+  intros A n m eq h vn.
+  destruct eq.
+  reflexivity.
+Qed.
+
+Theorem rev_append_app_step_lem : forall {n m},
+  S (n + m) = (n + 1 + m).
+Proof. lia. Qed.
+
+Theorem rev_append_cons : forall {A n m}
+  (h : A) (vn : Vector.t A n) (vm : Vector.t A m),
+  rev_append (vn ++ [h]) vm =
+  vector_length_coerce
+    rev_append_app_step_lem
+    (h :: rev_append vn vm).
+Proof.
+  intros A n m h vn vm.
+  generalize dependent m.
+  generalize dependent h.
+  induction vn; intros.
+  - simpl.
+    replace (rev_append [h] vm)
+       with (rev_append [] (h :: vm)).
+    repeat rewrite vector_rev_append_nil_o.
+    rewrite vector_length_coerce_id.
+    reflexivity.
+    rewrite rev_append_step.
+    rewrite vector_length_coerce_id.
+    reflexivity.
+  - simpl. 
+    rewrite rev_append_step.
+    rewrite IHvn.
+    rewrite rev_append_step.
+    rewrite vector_length_coerce_cons_in.
+    repeat rewrite vector_length_coerce_trans.
+    f_equal; apply proof_irrelevance.
+Qed.
+
+Theorem rev_append_app : forall {A n m o}
+  (vn : Vector.t A n) (vm : Vector.t A m) (vo : Vector.t A o),
+  rev_append vn vm ++ vo =
+  vector_length_coerce (add_assoc n m o)
+    (rev_append vn (vm ++ vo)).
+Proof.
+  intros A n m o vn vm vo.
+  generalize dependent m.
+  generalize dependent o.
+  induction vn; intros.
+  - repeat rewrite vector_rev_append_nil_o.
+    rewrite vector_length_coerce_id.
+    reflexivity.
+  - repeat rewrite rev_append_step.
+    rewrite <- (vector_length_coerce_id (eq_refl o) vo) at 1.
+    rewrite vector_length_coerce_app_funct.
+    rewrite (IHvn _ vo _ (h :: vm)).
+    repeat rewrite vector_length_coerce_trans.
+    f_equal.
+    apply proof_irrelevance.
+Qed.
+
+Theorem rev_append_app_2 : forall {A n m o}
+  (vn : Vector.t A n) (vm : Vector.t A m) (vo : Vector.t A o),
+  rev_append vn (vm ++ vo) =
+  vector_length_coerce (eq_sym (add_assoc n m o))
+    (rev_append vn vm ++ vo).
+Proof.
+  intros A n m o vn vm vo.
+  rewrite rev_append_app.
+  rewrite vector_length_coerce_trans.
+  rewrite vector_length_coerce_id.
+  reflexivity.
+Qed.
+
+Theorem rev_cons : forall {A n} (h : A) (v : Vector.t A n),
+  rev (v ++ [h]) = 
+  vector_length_coerce (add_comm 1 n) (h :: rev v).
+Proof.
+  intros A n h v.
+  repeat rewrite rev_coerce_unfold.
+  rewrite rev_append_cons.
+  rewrite vector_length_coerce_cons_in.
+  repeat rewrite vector_length_coerce_trans.
+  f_equal.
+  apply proof_irrelevance.
+Qed.
+
+Theorem rev_snoc : forall {A n} (h : A) (v : Vector.t A n),
+  rev (h :: v) = 
+  vector_length_coerce (add_comm n 1) (rev v ++ [h]).
+Proof.
+  intros A n h v.
+  repeat rewrite rev_coerce_unfold.
+  rewrite rev_append_step.
+  rewrite <- (vector_length_coerce_id (eq_refl 1) [h]) at 2.
+  rewrite vector_length_coerce_app_funct.
+  rewrite (rev_append_app v [] [h]).
+  simpl.
+  repeat rewrite vector_length_coerce_trans.
+  f_equal.
+  apply proof_irrelevance.
+Qed.
+
+Theorem vector_length_coerce_f_swap : forall {A n m}
+  (f : forall x, t A x -> t A x)
+  (eq : n = m)
+  (v : t A n),
+  f _ (vector_length_coerce eq v) =
+  vector_length_coerce eq (f _ v).
+Proof.
+  intros A n m f eq.
+  destruct eq.
+  reflexivity.
+Qed.
+
+Theorem vector_rev_rev_id : forall {A n}
+  (v : Vector.t A n),
+  rev (rev v) = v.
+Proof.
+  intros A n v; induction v using t_snoc_ind.
+  - repeat rewrite vector_rev_nil_nil.
+    reflexivity.
+  - rewrite rev_cons.
+    rewrite (vector_length_coerce_f_swap (@rev A)).
+    rewrite rev_snoc, IHv,
+            vector_length_coerce_trans,
+            vector_length_coerce_id.
+    reflexivity.
 Qed.
 
 Theorem vector_append_inv1 : forall {A n m}
