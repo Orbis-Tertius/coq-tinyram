@@ -786,21 +786,21 @@ Ltac vector_bubble :=
   | |- context[vector_length_coerce _ (vector_length_coerce _ _)] =>
       rewrite vector_length_coerce_trans
   | |- context[?x ++ vector_length_coerce _ ?y] =>
-      rewrite <- vector_length_coerce_app_left
+      rewrite vector_length_coerce_app_left
   | |- context[vector_length_coerce _ ?x ++ ?y] =>
       rewrite vector_length_coerce_app_right
   | |- context[?h :: vector_length_coerce _ ?y] =>
-      rewrite (vector_length_coerce_cons_in _ h y)
+      rewrite vector_length_coerce_cons_in
   | |- context[(?vn ++ ?vm) ++ ?vo] =>
-      rewrite <- (vector_length_coerce_app_assoc_1 vn vm vo)
+      rewrite <- vector_length_coerce_app_assoc_1
   | |- context[rev []] =>
       rewrite vector_rev_nil_nil
   | |- context[rev (rev ?x)] =>
-      rewrite (vector_rev_rev_id x)
+      rewrite vector_rev_rev_id
   | |- context[rev (?h :: ?x)] =>
-      rewrite (rev_snoc h x)
+      rewrite rev_snoc
   | |- context[rev (?x ++ [?h])] =>
-      rewrite (rev_cons h x)
+      rewrite rev_cons
   end.
 
 Ltac vector_simp :=
@@ -812,4 +812,4 @@ Example test : rev [false ; false ; false ; false ; false ]
 Proof.
   vector_simp.
   reflexivity.
-Qed.
+Qed. 
