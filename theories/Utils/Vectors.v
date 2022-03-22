@@ -749,3 +749,67 @@ Definition Block_Store {B memsz}
     Vector.t B memsz :=
   snd (Block_Load_Store m idx blksz block).
 
+Theorem vector_length_coerce_app_right_lem :
+  forall n m o, m = o -> m + n = o + n.
+Proof.
+  intros n m o eq; destruct eq; reflexivity.
+Qed.
+
+Theorem vector_length_coerce_app_right : 
+  forall {A n m o} (vn : Vector.t A n) (vm : Vector.t A m) (eq : m = o),
+    vector_length_coerce eq vm ++ vn =
+    vector_length_coerce (vector_length_coerce_app_right_lem n m o eq) (vm ++ vn).
+Proof.
+  intros A n m o vn vm eq; destruct eq.
+  repeat rewrite vector_length_coerce_id.
+  reflexivity.
+Qed.
+
+Theorem vector_length_coerce_app_left_lem :
+  forall n m o, m = o -> n + m = n + o.
+Proof.
+  intros n m o eq; destruct eq; reflexivity.
+Qed.
+
+Theorem vector_length_coerce_app_left : 
+  forall {A n m o} (vn : Vector.t A n) (vm : Vector.t A m) (eq : m = o),
+    vn ++ vector_length_coerce eq vm =
+    vector_length_coerce (vector_length_coerce_app_left_lem n m o eq) (vn ++ vm).
+Proof.
+  intros A n m o vn vm eq; destruct eq.
+  repeat rewrite vector_length_coerce_id.
+  reflexivity.
+Qed.
+
+Ltac vector_bubble :=
+  match goal with
+  | |- context[vector_length_coerce _ (vector_length_coerce _ _)] =>
+      rewrite vector_length_coerce_trans
+  | |- context[?x ++ vector_length_coerce _ ?y] =>
+      rewrite <- vector_length_coerce_app_left
+  | |- context[vector_length_coerce _ ?x ++ ?y] =>
+      rewrite vector_length_coerce_app_right
+  | |- context[?h :: vector_length_coerce _ ?y] =>
+      rewrite (vector_length_coerce_cons_in _ h y)
+  | |- context[(?vn ++ ?vm) ++ ?vo] =>
+      rewrite <- (vector_length_coerce_app_assoc_1 vn vm vo)
+  | |- context[rev []] =>
+      rewrite vector_rev_nil_nil
+  | |- context[rev (rev ?x)] =>
+      rewrite (vector_rev_rev_id x)
+  | |- context[rev (?h :: ?x)] =>
+      rewrite (rev_snoc h x)
+  | |- context[rev (?x ++ [?h])] =>
+      rewrite (rev_cons h x)
+  end.
+
+Ltac vector_simp :=
+  repeat vector_bubble;
+  repeat rewrite vector_length_coerce_id.
+
+Example test : rev [false ; false ; false ; false ; false ]
+                 = [ false ; false ; false ; false ; false ].
+Proof.
+  vector_simp.
+  reflexivity.
+Qed.
