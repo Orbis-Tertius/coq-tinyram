@@ -1198,6 +1198,112 @@ Theorem or_decode_register_correct :
       option_word op)
     end.
 
+  Theorem reg_vect_bitvector_fin_big_id_sig : forall r,
+      proj1_sig (bitvector_fin_big (reg_vect r)) =
+      proj1_sig r.
+  Proof.
+    intros [r rprp].
+    unfold reg_vect.
+    rewrite fin_bitvector_big_inv.
+    reflexivity.
+  Qed.
+
+  Theorem reg_vect_bitvector_fin_big_id_lem : forall r,
+      proj1_sig (bitvector_fin_big (reg_vect r)) < registerCount.
+  Proof.
+    intros [r rprp].
+    rewrite reg_vect_bitvector_fin_big_id_sig.
+    exact rprp.
+  Qed.
+
+  Ltac encode_decode_fin :=
+      f_equal; simpl; unfold regFit; f_equal; apply subset_eq_compat;
+      rewrite fin_bitvector_big_inv; reflexivity.
+
+  Theorem encode_decode_id : forall o, 
+    uncurry OpcodeDecode (OpcodeEncode o) = o.
+  Proof.
+    intro o; destruct o;
+    unfold OpcodeEncode, uncurry;
+    destruct s; unfold option_bool;
+    try (destruct r as [r' rprp] eqn:rDef);
+    try (destruct r0 as [r0' r0prp] eqn:r0Def);
+    try (destruct r1 as [r1' r1prp] eqn:r1Def);
+    try (assert (proj1_sig (bitvector_fin_big (reg_vect r)) < registerCount) as H0;
+         try (rewrite reg_vect_bitvector_fin_big_id_sig, rDef; exact rprp);
+         rewrite rDef in H0);
+    try (assert (proj1_sig (bitvector_fin_big (reg_vect r0)) < registerCount) as H1;
+         try (rewrite reg_vect_bitvector_fin_big_id_sig, r0Def; exact r0prp);
+         rewrite r0Def in H1);
+    try ( (assert (proj1_sig (bitvector_fin_big (option_word (inl r1))) < registerCount) as H2;
+           try (rewrite r1Def; unfold option_word; rewrite fin_bitvector_big_inv; exact r1prp);
+           rewrite r1Def in H2)
+        ||(assert (proj1_sig (bitvector_fin_big (option_word (inl r0))) < registerCount) as H2;
+           try (rewrite r0Def; unfold option_word; rewrite fin_bitvector_big_inv; exact r0prp);
+           rewrite r0Def in H2)
+        ||(assert (proj1_sig (bitvector_fin_big (option_word (inl r))) < registerCount) as H2;
+           try (rewrite rDef; unfold option_word; rewrite fin_bitvector_big_inv; exact rprp);
+           rewrite rDef in H2)).
+    - rewrite (and_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (and_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (or_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (or_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (xor_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (xor_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (not_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (not_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (add_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (add_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (sub_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (sub_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (mull_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (mull_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (umulh_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (umulh_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (smulh_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (smulh_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (udiv_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (udiv_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (umod_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (umod_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (shl_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (shl_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (shr_decode_register_correct _ _ H0 H1 _ H2); encode_decode_fin.
+    - rewrite (shr_decode_word_correct _ _ H0 H1); encode_decode_fin.
+    - rewrite (cmpe_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (cmpe_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (cmpa_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (cmpa_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (cmpae_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (cmpae_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (cmpg_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (cmpg_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (cmpge_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (cmpge_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (mov_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (mov_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (cmov_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (cmov_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (jmp_decode_register_correct _ _ _ H2); encode_decode_fin.
+    - rewrite jmp_decode_word_correct; encode_decode_fin.
+    - rewrite (cjmp_decode_register_correct _ _ _ H2); encode_decode_fin.
+    - rewrite cjmp_decode_word_correct; encode_decode_fin.
+    - rewrite (cnjmp_decode_register_correct _ _ _ H2); encode_decode_fin.
+    - rewrite cnjmp_decode_word_correct; encode_decode_fin.
+    - rewrite (store_b_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (store_b_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (load_b_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (load_b_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (store_w_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (store_w_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (load_w_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (load_w_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (read_decode_register_correct _ _ H0 _ H2); encode_decode_fin.
+    - rewrite (read_decode_word_correct _ _ H0); encode_decode_fin.
+    - rewrite (answer_decode_register_correct _ _ _ H2); encode_decode_fin.
+    - rewrite answer_decode_word_correct; encode_decode_fin.
+  Qed.
+
 End TinyRAMDecodOps.
 
 
