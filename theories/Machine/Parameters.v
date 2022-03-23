@@ -9,13 +9,7 @@ Module Type TinyRAMParameters.
   TinyRAM [...] is parametrized by two integers: the word size [...]
   and the number of registers [...]
   """*)
-  Parameter (wordSizeEighth registerCountPred : nat).
-
-  (*
-  Note: The registerCount has to be nonzero for twos complement
-        to make sense.
-  *)
-  Definition registerCount := S registerCountPred.
+  Parameter (wordSizeEighth registerCount : nat).
 
   (*"""  
   the word size [is] required to be a power of 2 and divisible by 8.
