@@ -307,64 +307,14 @@ Proof.
       rewrite div_small_iff; assumption.
 Qed.
 
-Theorem fin_bitvector_big_inv : forall {n} (f : fin (2 ^ n)),
-  bitvector_fin_big (fin_bitvector_big f) = f.
-
-Definition bitvector_fin_big {n} (v : Vector.t bool n) :
-  fin (2 ^ n) := bitvector_fin_little (rev v).
-
-Definition fin_bitvector_big {n} (f : fin (2 ^ n)) :
-  Vector.t bool n := rev (fin_bitvector_little f).
-
-Theorem bitvector_fin_big_inv : forall {n} (v : Vector.t bool n),
-  fin_bitvector_big (bitvector_fin_big v) = v.
-Proof.
-  intros n v.
-  unfold fin_bitvector_big, bitvector_fin_big.
-  rewrite bitvector_fin_little_inv.
-  apply vector_rev_rev_id.
-Qed.
-
-Theorem fin_bitvector_big_inv : forall {n} (f : fin (2 ^ n)),
-  bitvector_fin_big (fin_bitvector_big f) = f.
-Proof.
-  intros n f.
-  unfold fin_bitvector_big, bitvector_fin_big.
-  rewrite vector_rev_rev_id.
-  apply fin_bitvector_little_inv.
-Qed.
-
 (* Relating big to little endian *)
-
-
-(* fin vect conversion theorems. *)
-
-Theorem bitvector_fin_little_snoc_lem : forall {n},
-  S (S (2 * S (2^n) - S (2^n) - 2)) + 2^n - 1 <= 2 ^ (n + 1).
-Proof.
-  intro n.
-  assert (0 < 2 ^ n).
-  { destruct n. { simpl; lia. }
-    change 0 with (0 ^ S n); apply pow_lt_mono_l; lia. }
-  replace (n + 1) with (S n); simpl; lia.
-Qed.
-
-Theorem bitvector_fin_little_snoc : forall {n} x (v : t bool n),
-  bitvector_fin_little (v ++ [x]) =
-  fin_cast bitvector_fin_little_snoc_lem
-    (fin_add (fin_mul (bitVal x) (fin_max (2^n))) (bitvector_fin_little v)).
-Proof.
-  unfold bitvector_fin_little at 1.
-
-  Search bitvector_fin_little.
 
 Theorem bitvector_fin_big_cons_lem : forall {n},
   S (S (2 * S (2^n) - S (2^n) - 2)) + 2^n - 1 <= 2 ^ (S n).
 Proof.
   intro n.
   assert (0 < 2 ^ n).
-  { destruct n. { simpl; lia. }
-    change 0 with (0 ^ S n); apply pow_lt_mono_l; lia. }
+  { apply zero2pow. }
   simpl; lia.
 Qed.
 
@@ -374,9 +324,90 @@ Theorem bitvector_fin_big_cons : forall {n} x (v : t bool n),
     (fin_add (fin_mul (bitVal x) (fin_max (2^n))) (bitvector_fin_big v)).
 Proof.
   intros n x v.
+  simpl bitvector_fin_big; unfold fin_cast, fin_max, fin_mul, fin_add.
+  destruct (bitvector_fin_big v).
+  destruct x eqn:xVal;
+  simpl; apply subset_eq_compat; lia.
+Qed.
 
+Theorem bitvector_fin_little_snoc_lem : forall {n},
+  S (S (2 * S (2^n) - S (2^n) - 2)) + 2^n - 1 <= 2 ^ (n + 1).
+Proof.
+  intro n.
+  assert (0 < 2 ^ n).
+  { apply zero2pow. }
+  replace (n + 1) with (S n);
+  simpl; lia.
+Qed.
 
-(* Bitvector arithmatic *)
+Theorem bitvector_fin_little_snoc : forall {n} (v : t bool n) x,
+  bitvector_fin_little (v ++ [x]) =
+  fin_cast bitvector_fin_little_snoc_lem
+    (fin_add (fin_mul (bitVal x) (fin_max (2^n))) (bitvector_fin_little v)).
+Proof.
+  intros n v; induction v.
+  - simpl; unfold fin_cast, fin_max, fin_mul, fin_add.
+    destruct x; simpl; apply subset_eq_compat; reflexivity.
+  - intro x. destruct h; simpl; rewrite IHv;
+    destruct (bitvector_fin_little v);
+    unfold fin_cast, fin_max, fin_add, fin_mul, bitvector_fin_double_S;
+    destruct x; simpl; apply subset_eq_compat; lia.
+Qed.
+
+Theorem bitvector_fin_rev : forall {n} (v : Vector.t bool n),
+  bitvector_fin_big v = bitvector_fin_little (rev v).
+Proof.
+  intros n v; induction v.
+  - rewrite vector_rev_nil_nil; simpl.
+    apply subset_eq_compat.
+    reflexivity.
+  - vector_simp.
+    unfold vector_length_coerce.
+    rewrite (rew_f_bubble _ _ (fun m => fin (2 ^ m))).
+    rewrite bitvector_fin_little_snoc.
+    rewrite <- IHv.
+    simpl bitvector_fin_big;
+    unfold fin_cast, fin_add, fin_mul, fin_max.
+    destruct (bitvector_fin_big v).
+    destruct h; simpl;
+    apply subset_eq_proj1;
+    rewrite (rew_f_bubble
+                _ (fun x : nat => fin (2 ^ x)) 
+                _ (fun x e => proj1_sig e)
+                _ _ (add_comm n 1)
+            );
+    rewrite rew_const;
+    simpl; lia.
+Qed.
+
+Theorem fin_bitvector_rev : forall {n} (v : Vector.t bool n),
+  bitvector_fin_little v = bitvector_fin_big (rev v).
+Proof.
+  intros n v.
+  rewrite bitvector_fin_rev.
+  rewrite vector_rev_rev_id.
+  reflexivity.
+Qed.
+
+Theorem rev_fin_bitvector : forall {n} (f : fin (2 ^ n)),
+  fin_bitvector_big f = rev (fin_bitvector_little f).
+Proof.
+  intros n f.
+  rewrite <- fin_bitvector_little_inv at 1.
+  rewrite fin_bitvector_rev.
+  apply bitvector_fin_big_inv.
+Qed.
+
+Theorem rev_bitvector_fin : forall {n} (f : fin (2 ^ n)),
+  fin_bitvector_little f = rev (fin_bitvector_big f).
+Proof.
+  intros n f.
+  rewrite <- fin_bitvector_big_inv at 1.
+  rewrite bitvector_fin_rev.
+  apply bitvector_fin_little_inv.
+Qed.
+
+(* Bitvector arithmetic *)
 
 Definition bv_carry {n} (b1 b2 : Vector.t bool n) : Vector.t bool (S n).
   replace (S n) with (n + 1).
@@ -390,8 +421,6 @@ Definition bv_addf {n} (b1 b2 : Vector.t bool n) : Vector.t bool (S n) :=
 Theorem bv_addf_spec_lem : forall {n},
   (2 ^ n + 2 ^ n - 1) <= 2 ^ (S n).
 Proof. intro; simpl; lia. Qed.
-
-
 
 Definition bv_addf_spec {n} (b1 b2 : Vector.t bool n) :
   bitvector_fin_big (bv_addf b1 b2) = fin_cast bv_addf_spec_lem

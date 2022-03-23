@@ -16,6 +16,23 @@ Proof.
   - apply proof_irrelevance.
 Qed.
 
+Theorem rew_f_bubble : 
+  forall A (P : A -> Type) (Q : A -> Type) (f : forall x, P x -> Q x)
+  (a b : A) (e : a = b) (k : P a),
+  f _ (rew [fun x : A => P x] e in k) = 
+  rew [fun x : A => Q x] e in (f _ k).
+Proof. intros A P Q f a b []; reflexivity. Qed.
+
+Theorem subset_eq_proj1 :
+  forall {A} {P : A -> Prop} (k1 k2 : { x | P x }),
+  proj1_sig k1 = proj1_sig k2 -> k1 = k2.
+Proof.
+  intros A P [k1 k1P] [k2 k2P].
+  simpl. intros eq.
+  apply subset_eq_compat.
+  assumption.
+Qed.
+
 Theorem plus_reg_r : forall n m p : nat, n + p = m + p -> n = m.
 Proof.
   intros n m p.
