@@ -87,6 +87,9 @@ Definition bitvector_fin_little : forall {n},
     + apply (bitvector_fin_double IHv).
 Defined.
 
+Definition bitvector_fin_little_fun {n} (v : Vector.t bool n) : nat :=
+  proj1_sig (bitvector_fin_little v).
+
 Fixpoint fin_bitvector_little_fun (n m : nat) : Vector.t bool n :=
   match n with
   | 0 => Vector.nil bool
@@ -206,6 +209,9 @@ Definition bitvector_fin_big : forall {n},
       apply (fin_cast H).
       assumption.
 Defined.
+
+Definition bitvector_fin_big_fun {n} (v : Vector.t bool n) : nat :=
+  proj1_sig (bitvector_fin_big v).
 
 Fixpoint fin_bitvector_big_fun (n m : nat) : Vector.t bool n :=
   match n with
@@ -366,18 +372,14 @@ Proof.
     rewrite (rew_f_bubble _ _ (fun m => fin (2 ^ m))).
     rewrite bitvector_fin_little_snoc.
     rewrite <- IHv.
-    simpl bitvector_fin_big;
-    unfold fin_cast, fin_add, fin_mul, fin_max.
-    destruct (bitvector_fin_big v).
-    destruct h; simpl;
-    apply subset_eq_proj1;
+    apply subset_eq_proj1.
     rewrite (rew_f_bubble
-                _ (fun x : nat => fin (2 ^ x)) 
-                _ (fun x e => proj1_sig e)
-                _ _ (add_comm n 1)
-            );
-    rewrite rew_const;
-    simpl; lia.
+                _ (fun x : nat => fin (2 ^ x))
+                _ (fun x e => proj1_sig e)).
+    rewrite rew_const.
+    rewrite bitvector_fin_big_cons.
+    destruct (fin_add _ _).
+    reflexivity.
 Qed.
 
 Theorem fin_bitvector_rev : forall {n} (v : Vector.t bool n),
@@ -409,126 +411,45 @@ Qed.
 
 (* Bitvector arithmetic *)
 
-Definition bv_carry {n} (b1 b2 : Vector.t bool n) : Vector.t bool (S n).
-  replace (S n) with (n + 1).
-  - exact (bv_and b1 b2 ++ [false]).
-  - lia.
-Defined.
+(*least significant bits of addition (unsigned)
+  extra leading bit indicates an overflow*)
+Definition bv_add {n} (b1 b2 : t bool n) : t bool (S n) :=
+  fin_bitvector_big_fun (S n)
+    (bitvector_fin_big_fun b1 + bitvector_fin_big_fun b2).
 
-Definition bv_addf {n} (b1 b2 : Vector.t bool n) : Vector.t bool (S n) :=
-  bv_or (bv_carry b1 b2) (false :: bv_xor b1 b2).
+Definition bv_incr {n} (i : nat) (v : t bool n) : t bool n :=
+  fin_bitvector_big_fun n ((i + bitvector_fin_big_fun v) mod (2 ^ n)).
 
-Theorem bv_addf_spec_lem : forall {n},
-  (2 ^ n + 2 ^ n - 1) <= 2 ^ (S n).
-Proof. intro; simpl; lia. Qed.
+(*least significant bits of subtraction (unsigned). 
+  extra leading bit indicates a borrow, 0 if borrow, 1 if not.*)
+Definition bv_sub {n} (b1 b2 : t bool n) : t bool (S n) :=
+  fin_bitvector_big_fun (S n) 
+    (bitvector_fin_big_fun b1 + 2 ^ n - bitvector_fin_big_fun b2).
 
-Definition bv_addf_spec {n} (b1 b2 : Vector.t bool n) :
-  bitvector_fin_big (bv_addf b1 b2) = fin_cast bv_addf_spec_lem
-  (fin_add (bitvector_fin_big b1) (bitvector_fin_big b2)).
-  apply (rect2 (fun n => fun t1 => fun t2 => 
-          bitvector_fin_big (bv_addf t1 t2) = fin_cast bv_addf_spec_lem
-          (fin_add (bitvector_fin_big t1) (bitvector_fin_big t2)))).
-  - unfold bv_addf, bv_carry.
-    rewrite rew_id.
-    simpl.
-    unfold bitvector_fin_big.
-    vector_simp; simpl.
-    apply subset_eq_compat.
-    reflexivity.
-  - intros no v1 v2 IHv1v2 x1 x2.
-    apply seq_
-
-    unfold fin_add.
-    simpl. Unset Printing Notations.
-    Search (eq_rect _ _ ?x _ _ = ?x).
- simpl.
-
-
-
-
-eq_rect_id
- reflexivity. 
-
-  induction b1, b2 using rect2.
-
-(*least significant bits of addition (unsigned)*)
-Definition bv_add {n} (b1 b2 : Vector.t bool n) : Vector.t bool n :=
-  tl (bv_addf b1 b2).
-
-
-
-  intros n b1 b2.
-  apply fin_bitvector_big; apply bitvector_fin_big in b1, b2.
-  destruct b1 as [b1 b1prp]; destruct b2 as [b2 b2prp].
-  exists ((b1 + b2) mod (2 ^ n)).
-  apply mod_upper_bound.
-  lia.
-Defined.
-
-
-
-Definition bv_incr : forall {n}, nat -> Vector.t bool n -> Vector.t bool n.
-  intros n i b.
-  apply fin_bitvector_big; apply bitvector_fin_big in b.
-  destruct b as [b bprp].
-  exists ((i + b) mod (2 ^ n)).
-  apply mod_upper_bound.
-  lia.
-Defined.
-
-(*least significant bits of subtraction (unsigned)*)
-Definition bv_sub : forall {n} (b1 b2 : Vector.t bool n), Vector.t bool n.
-  intros n b1 b2.
-  apply fin_bitvector_big; apply bitvector_fin_big in b1, b2.
-  destruct b1 as [b1 b1prp]; destruct b2 as [b2 b2prp].
-  exists ((b1 + (2 ^ n - b2)) mod (2 ^ n)).
-  apply mod_upper_bound.
-  lia.
-Defined.
+(*Multiplication (unsigned), all bits*)
+Definition bv_mul {n} (b1 b2 : t bool n) : t bool (2 * n) :=
+  fin_bitvector_big_fun (2 * n) 
+    (bitvector_fin_big_fun b1 * bitvector_fin_big_fun b2).
 
 (*least significant bits of multiplication (unsigned)
-  additional bits indicate, respecively, an overflow and a result of 0.*)
-Definition bv_mull :
-  forall {n} (b1 b2 : Vector.t bool n), 
-    bool * bool * Vector.t bool n.
+  additional bits indicate, respecively, an overflow and a result of 0.
+  Left vector are MSB, right vector are LSB.*)
+Definition bv_mul_flags :
+  forall {n} (b1 b2 : t bool n), 
+    bool * bool * t bool n * t bool n.
   intros n b1 b2.
-  apply bitvector_fin_big in b1, b2.
-  destruct b1 as [b1 b1prp]; destruct b2 as [b2 b2prp].
+  apply bitvector_fin_big_fun in b1, b2.
   remember (b1 * b2) as b12.
-  split. { exact (2 ^ n <=? b12, b12 =? 0). }
-  apply fin_bitvector_big.
-  exists (b12 mod (2 ^ n)).
-  apply mod_upper_bound.
-  lia.
-Defined.
-
-Definition fin_mul : forall {n m}, fin n -> fin m -> fin (n * m).
-  intros n m [fn fnP] [fm fmP].
-  exists (fn * fm).
-  apply mul_lt_mono_nonneg; lia.
-Defined.
-
-(*most significant bits of multiplication (unsigned)*)
-(* Note: there's an ambiguity in the spec over whether MSBs are 
-   the *actual* MSBs (e.g. "0...01" for 1 * 1) vs the missing
-   MSBs half cut off by bv_mull (e.g. "0...0" for 1 * 1).
-
-   I implemented the "second-half" interpretation since
-   that's obviously more useful.
-*)
-Definition bv_umulh : forall {n} (b1 b2 : Vector.t bool n), Vector.t bool n.
-  intros n b1 b2.
-  apply bitvector_fin_big in b1, b2.
-  remember (fin_mul b1 b2) as b12.
-  remember (rew (eq_sym (pow_add_r 2 n n)) in b12) as b12'.
-  assert (n <= n + n). { lia. }
-  apply (take _ H).
-  apply fin_bitvector_big.
-  exact b12'.
+  remember (fin_bitvector_big_fun (2*n) b12) as b12v.
+  destruct (splitat n b12v) as [b12vH b12vL].
+  split. split. { exact (2 ^ n <=? b12, b12 =? 0). }
+  exact b12vH.
+  rewrite add_0_r in b12vL.
+  exact b12vL.
 Defined.
 
 (*Absolute value of signed vector*)
-Definition bv_abs {n} (v : Vector.t bool (S n)) : Vector.t bool (S n) :=
+Definition bv_abs {n} (v : t bool (S n)) : t bool (S n) :=
   match v with
   | s :: vs => 
     match s with
@@ -538,7 +459,7 @@ Definition bv_abs {n} (v : Vector.t bool (S n)) : Vector.t bool (S n) :=
   end.
 
 (*Negative of signed vector*)
-Definition bv_neg {n} (v : Vector.t bool (S n)) : Vector.t bool (S n) :=
+Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
   match v with
   | s :: vs => 
     match s with
@@ -552,46 +473,21 @@ Definition bv_smulh : forall {n} (b1 b2 : Vector.t bool (S n)),
                                  bool * Vector.t bool (S n).
   intros n b1 b2.
   remember (bv_abs b1) as ab1; remember (bv_abs b2) as ab2.
-  destruct (bv_mull (tl ab1) (tl ab2)) as [[ob zb] mres].
+  destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] _] mresl].
   split. { exact ob. }
   destruct zb. { exact (const false _). }
   remember (xorb (hd b1) (hd b2)) as x12.
   destruct x12 eqn:x12Val.
-  - exact (bv_neg (false :: mres)).
-  - exact (false :: mres).
+  - exact (bv_neg (false :: mresl)).
+  - exact (false :: mresl).
 Defined.
 
 (*unsigned division. Extra boolean indicates division by 0.*)
-Definition bv_udiv : forall {n} (b1 b2 : Vector.t bool n), 
-                                 bool * Vector.t bool n.
-  intros n b1 b2.
-  apply bitvector_fin_big in b1, b2.
-  destruct b1 as [b1 b1prp]; destruct b2 as [b2 b2prp].
-  destruct (b2 =? 0) eqn:b20.
-  - split. { exact true. }
-    exact (const false _).
-  - split. { exact false. }
-    rewrite eqb_neq in b20.
-    apply fin_bitvector_big.
-    exists (b1 / b2).
-    apply neq0_div_lt; assumption.
-Defined.
+Definition bv_udiv {n} (b1 b2 : t bool n) : bool * t bool n :=
+  let den := bitvector_fin_big_fun b2 in
+  (den =? 0, fin_bitvector_big_fun n (bitvector_fin_big_fun b1 / den)).
 
 (*unsigned modulus. Extra boolean indicates modulus by 0.*)
-Definition bv_umod : forall {n} (b1 b2 : Vector.t bool n), 
-                                 bool * Vector.t bool n.
-  intros n b1 b2.
-  apply bitvector_fin_big in b1, b2.
-  destruct b1 as [b1 b1prp]; destruct b2 as [b2 b2prp].
-  destruct (b2 =? 0) eqn:b20.
-  - split. { exact true. }
-    exact (const false _).
-  - split. { exact false. }
-    rewrite eqb_neq in b20.
-    apply fin_bitvector_big.
-    exists (b1 mod b2).
-    transitivity b2.
-    + apply mod_upper_bound.
-      assumption.
-    + assumption.
-Defined.
+Definition bv_umod {n} (b1 b2 : t bool n) : bool * t bool n :=
+  let bas := bitvector_fin_big_fun b2 in
+  (bas =? 0, fin_bitvector_big_fun n (bitvector_fin_big_fun b1 mod bas)).
