@@ -56,7 +56,6 @@ Module TinyRAMMem (Params : TinyRAMParameters).
     (idx : fin (2 ^ wordSize)) :
     Word.
     unfold Word.
-    rewrite wordSizeDiv8.
     apply vector_concat.
     apply (Memory_Block_Load m idx wordSizeEighthFin).
   Defined.
@@ -68,10 +67,7 @@ Module TinyRAMMem (Params : TinyRAMParameters).
     (reg : Word) :
     Memory.
     apply (Memory_Block_Store m idx wordSizeEighthFin).
-    apply vector_unconcat.
-    simpl.
-    rewrite <- wordSizeDiv8.
-    apply reg.
+    apply vector_unconcat, reg.
   Defined.
 
   Definition Register_Index (w : Word) : fin (2 ^ wordSize) :=

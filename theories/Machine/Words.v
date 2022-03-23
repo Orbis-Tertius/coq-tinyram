@@ -22,10 +22,10 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   (*Registers can be cleanly split into bytes.*) 
   Definition RegisterBytes (r : Word) : 
     Vector.t Byte wordSizeEighth :=
-    vector_unconcat (vector_length_coerce wordSizeDiv8 r).
+    vector_unconcat r.
 
   Definition BytesRegister (v : Vector.t Byte wordSizeEighth) : Word 
-    := vector_length_coerce (eq_sym wordSizeDiv8) (vector_concat v).
+    := vector_concat v.
 
   Theorem RegisterBytesIso1 :
     forall (r : Word), 
@@ -34,7 +34,6 @@ Module TinyRAMWords (Params : TinyRAMParameters).
     intros r.
     unfold RegisterBytes, BytesRegister.
     rewrite vector_concat_inv1.
-    rewrite vector_length_coerce_inv.
     reflexivity.
   Qed.
 
@@ -44,7 +43,6 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   Proof.
     intros r.
     unfold RegisterBytes, BytesRegister.
-    rewrite vector_length_coerce_inv2.
     rewrite vector_concat_inv2.
     reflexivity.
   Qed.

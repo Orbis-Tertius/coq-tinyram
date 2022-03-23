@@ -1217,8 +1217,8 @@ Theorem or_decode_register_correct :
   Qed.
 
   Ltac encode_decode_fin :=
-      f_equal; simpl; unfold regFit; f_equal; apply subset_eq_compat;
-      rewrite fin_bitvector_big_inv; reflexivity.
+      f_equal; unfold regFit, reg_vect, option_word; f_equal;
+      apply subset_eq_compat; rewrite fin_bitvector_big_inv; reflexivity.
 
   Theorem encode_decode_id : forall o, 
     uncurry OpcodeDecode (OpcodeEncode o) = o.

@@ -9,13 +9,19 @@ Module Type TinyRAMParameters.
   TinyRAM [...] is parametrized by two integers: the word size [...]
   and the number of registers [...]
   """*)
-  Parameter (wordSize registerCount : nat).
+  Parameter (wordSizeEighth registerCountPred : nat).
+
+  (*
+  Note: The registerCount has to be nonzero for twos complement
+        to make sense.
+  *)
+  Definition registerCount := S registerCountPred.
 
   (*"""  
   the word size [is] required to be a power of 2 and divisible by 8.
   """*)
-  Parameter (wordSizeLength wordSizeEighth : nat).
-  Axiom wordSizeDiv8 : wordSize = wordSizeEighth * 8.
+  Definition wordSize := wordSizeEighth * 8.
+  Parameter (wordSizeLength : nat).
   Axiom wordSizePow2 : wordSize = 2 ^ wordSizeLength.
 
   (*"""
@@ -39,18 +45,14 @@ Module Type TinyRAMParameters.
 
   Theorem wordSizeEighthPos : 0 < wordSizeEighth.
   Proof.
-    assert (0 < wordSizeEighth * 8).
-    { rewrite <- wordSizeDiv8. apply wordSizePos. }
+    assert (0 < wordSizeEighth * 8). { apply wordSizePos. }
     lia.
   Qed.
 
   Definition wordSizeEighthFin : fin (2 ^ wordSize).
     exists wordSizeEighth.
-    assert (0 < wordSizeEighth * 8).
-    { rewrite <- wordSizeDiv8. apply wordSizePos. }
-    transitivity (wordSizeEighth * 8).
-    { lia. }
-    rewrite <- wordSizeDiv8.
+    assert (0 < wordSizeEighth * 8). { apply wordSizePos. }
+    transitivity (wordSizeEighth * 8). { lia. }
     apply pow_gt_lin_r.
     lia.
   Defined.
@@ -59,7 +61,7 @@ Module Type TinyRAMParameters.
     registerCount <= 2 ^ wordSize.
   Proof.
     assert (6 + 2 * log2_up registerCount <= wordSize).
-    { apply encodingAxiom. }
+      { apply encodingAxiom. }
     destruct registerCount. { lia. }
     rewrite log2_up_le_pow2; lia.
   Qed.
