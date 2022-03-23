@@ -235,3 +235,54 @@ Instance InitialObject_ktree_fin {E} : InitialObject (sub (ktree E) fin) 0.
 Proof.
   intros n f x; apply fin_0; auto.
 Qed.
+
+Definition fin_add : forall {n m} (f1 : fin n) (f2 : fin m), fin (n + m - 1).
+  intros n m [f1 f1P] [f2 f2P].
+  exists (f1 + f2).
+  destruct n. { lia. }
+  destruct m. { lia. }
+  lia.
+Defined.
+
+Definition fin_cast : forall {n m}, (n <= m) -> fin n -> fin m.
+  intros n m le [f fP].
+  exists f.
+  lia.
+Defined.
+
+Theorem fin_mul_lem : forall {n m},
+  (n - 1) * (m - 1) <= S (n * m - m - n).
+Proof.
+  intros n m.
+  rewrite mul_sub_distr_l.
+  repeat rewrite mul_sub_distr_r.
+  rewrite mul_1_r, mul_1_l; simpl.
+  destruct n. { simpl; lia. }
+  destruct m. { rewrite <- mult_n_O; simpl; lia. }
+  destruct n. { simpl; rewrite add_0_r, sub_diag; lia. }
+  destruct m. { simpl; rewrite mul_1_r, sub_diag; lia. }
+  rewrite add_sub_distr. 2: { lia. }
+  2: { apply le_add_le_sub_r, add_le_mul; lia. }
+  rewrite add_1_r; apply le_n.
+Qed.
+
+Definition fin_mul : forall {n m} (f1 : fin n) (f2 : fin m),
+                            fin (S (S (n * m - m - n))).
+  intros n m [f1 f1P] [f2 f2P].
+  exists (f1 * f2).
+  apply (le_lt_trans _ ((n - 1) * (m - 1))).
+  + apply mul_le_mono.
+    - rewrite <- lt_succ_r.
+      replace (S (n - 1)) with n. { assumption. }
+      lia.
+    - rewrite <- lt_succ_r.
+      replace (S (m - 1)) with m. { assumption. }
+      lia.
+  + apply (le_lt_trans _ (S (n * m - m - n))).
+    - apply fin_mul_lem.
+    - lia.
+Defined.
+
+Definition fin_max : forall n, fin (S n).
+  intro n; exists n; lia.
+Defined.

@@ -55,10 +55,10 @@ Module TinyRAMMem (Params : TinyRAMParameters).
     (m : Memory)
     (idx : fin (2 ^ wordSize)) :
     Word.
-  unfold Word.
-  rewrite wordSizeDiv8.
-  apply vector_concat.
-  apply (Memory_Block_Load m idx wordSizeEighthFin).
+    unfold Word.
+    rewrite wordSizeDiv8.
+    apply vector_concat.
+    apply (Memory_Block_Load m idx wordSizeEighthFin).
   Defined.
 
   (* Since a Word is a memory block, it can be stored as well. *)
@@ -75,7 +75,7 @@ Module TinyRAMMem (Params : TinyRAMParameters).
   Defined.
 
   Definition Register_Index (w : Word) : fin (2 ^ wordSize) :=
-    bitvector_fin w.
+    bitvector_fin_big w.
 
   Definition Memory_Register_Load_from_Reg 
     (m : Memory) (idx : Word) : Word :=

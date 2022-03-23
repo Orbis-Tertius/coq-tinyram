@@ -1,6 +1,18 @@
 From Coq Require Import
+  Arith
   Lia.
 Import PeanoNat.Nat.
+
+
+(*Don't know where to put this.*)
+Theorem rew_id : forall A (P : A -> Type) (a : A) (e : a = a) (k : P a),
+  rew [fun x : A => P x] e in k = k.
+Proof.
+  intros A P a e k.
+  replace e with (Logic.eq_refl a).
+  - reflexivity.
+  - apply proof_irrelevance.
+Qed.
 
 Theorem plus_reg_r : forall n m p : nat, n + p = m + p -> n = m.
 Proof.
@@ -93,3 +105,38 @@ Proof.
       reflexivity.
 Qed.
 
+Theorem neq0_div_lt : forall a b c,
+  b <> 0 -> a < c -> a / b < c.
+Proof.
+  intros.
+  apply div_lt_upper_bound. { assumption. }
+  apply (lt_le_trans _ c). { assumption. }
+  destruct (Mult.mult_O_le c b).
+  + destruct (H H1).
+  + exact H1.
+Qed.
+
+Theorem add_sub_distr: forall n m p : nat, 
+  p <= m -> m <= n -> 
+  n - (m - p) = n - m + p.
+Proof.
+  intros n m p lpm lmpn.
+  apply add_sub_eq_r.
+  rewrite <- add_assoc.
+  rewrite le_plus_minus_r. 2: { assumption. }
+  rewrite sub_add; trivial.
+Qed.
+
+
+
+Theorem div_bet_1 : 
+  forall {n m}, m <= n < 2 * m -> n / m = 1.
+Proof.
+  intros n m [lmn ln2m].
+  assert (m <> 0). { lia. }
+  apply (div_le_mono _ _ _ H) in lmn.
+  rewrite div_same in lmn. 2: { lia. }
+  rewrite mul_comm in ln2m.
+  apply (div_lt_upper_bound _ _ _ H) in ln2m.
+  lia.
+Qed.

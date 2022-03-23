@@ -133,8 +133,10 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   (*"""
-  compute [rj]u + [A]u and store result in ri
-  [flag:] overflow
+  The instruction add ri rj A stores in ri the W-bit string
+  a_{W-1}...a_0 obtained as follows:
+  a_{W-1}...a_0 are the W least significant bits of G = [rj]u + [A]u.
+  Moreover, flag is set to GW , where GW is the MSB of G.
   """*)
   Definition pureOp_add (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
