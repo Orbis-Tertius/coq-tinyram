@@ -434,19 +434,10 @@ Definition bv_mul {n} (b1 b2 : t bool n) : t bool (2 * n) :=
 (*least significant bits of multiplication (unsigned)
   additional bits indicate, respecively, an overflow and a result of 0.
   Left vector are MSB, right vector are LSB.*)
-Definition bv_mul_flags :
-  forall {n} (b1 b2 : t bool n), 
-    bool * bool * t bool n * t bool n.
-  intros n b1 b2.
-  apply bitvector_fin_big_fun in b1, b2.
-  remember (b1 * b2) as b12.
-  remember (fin_bitvector_big_fun (2*n) b12) as b12v.
-  destruct (splitat n b12v) as [b12vH b12vL].
-  split. split. { exact (2 ^ n <=? b12, b12 =? 0). }
-  exact b12vH.
-  rewrite add_0_r in b12vL.
-  exact b12vL.
-Defined.
+Definition bv_mul_flags {n} (b1 b2 : t bool n) : bool * bool * t bool n * t bool n :=
+  let prod := (bitvector_fin_big_fun b1 * bitvector_fin_big_fun b2) in
+  let (pvH, pvL) := splitat n (fin_bitvector_big_fun (n + n) prod) in
+  (2 ^ n <=? prod, prod =? 0, pvH, pvL).
 
 (*Absolute value of signed vector*)
 Definition bv_abs {n} (v : t bool (S n)) : t bool (S n) :=
