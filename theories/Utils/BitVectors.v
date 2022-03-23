@@ -464,13 +464,13 @@ Definition bv_smulh : forall {n} (b1 b2 : Vector.t bool (S n)),
                                  bool * Vector.t bool (S n).
   intros n b1 b2.
   remember (bv_abs b1) as ab1; remember (bv_abs b2) as ab2.
-  destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] _] mresl].
+  destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] mresh] _].
   split. { exact ob. }
   destruct zb. { exact (const false _). }
   remember (xorb (hd b1) (hd b2)) as x12.
   destruct x12 eqn:x12Val.
-  - exact (bv_neg (false :: mresl)).
-  - exact (false :: mresl).
+  - exact (bv_neg (false :: mresh)).
+  - exact (false :: mresh).
 Defined.
 
 (*unsigned division. Extra boolean indicates division by 0.*)
