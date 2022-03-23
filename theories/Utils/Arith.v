@@ -2,6 +2,8 @@ From Coq Require Import
   Arith
   Lia.
 Import PeanoNat.Nat.
+Require Import ProofIrrelevance.
+Import EqNotations.
 
 
 (*Don't know where to put this.*)
@@ -126,8 +128,6 @@ Proof.
   rewrite le_plus_minus_r. 2: { assumption. }
   rewrite sub_add; trivial.
 Qed.
-
-
 
 Theorem div_bet_1 : 
   forall {n m}, m <= n < 2 * m -> n / m = 1.
