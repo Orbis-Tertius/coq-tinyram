@@ -37,18 +37,26 @@ Module TinyRAMMem (Params : TinyRAMParameters).
     Vector.t Byte (proj1_sig blksz) * Memory :=
     Block_Load_Store m idx blksz block.
 
+  (*"""
+  When storing or loading blocks of multiple bytes, 
+  [...] the least-significant byte is at the lowest address.
+  """*)
   Definition Memory_Block_Load
     (m : Memory)
     (idx blksz : fin (2 ^ wordSize)) :
     Vector.t Byte (proj1_sig blksz) :=
-    Block_Load m idx blksz.
+    Vector.rev (Block_Load m idx blksz).
 
+  (*"""
+  When storing or loading blocks of multiple bytes, 
+  [...] the least-significant byte is at the lowest address.
+  """*)
   Definition Memory_Block_Store 
     (m : Memory)
     (idx blksz : fin (2 ^ wordSize))
     (block : Vector.t Byte (proj1_sig blksz)) :
     Memory :=
-    Block_Store m idx blksz block.
+    Block_Store m idx blksz (Vector.rev block).
 
   (* Since a Word is a memory block, it can be loaded as well. *)
   Definition Memory_Register_Load
