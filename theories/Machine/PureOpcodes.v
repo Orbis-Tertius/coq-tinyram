@@ -372,7 +372,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpae (ri : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in ri.      
+    apply (nth registerValues0) in ri.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
@@ -386,14 +386,36 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
-
   (*"""
   “compare greater”, signed
   [flag:] [ri]s > [A]s
   """*)
   Definition pureOp_cmpg (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    apply (nth registerValues0) in ri.
+    unfold Word in A, ri; replace wordSize with (S (wordSize - 1)) in A, ri.
+    2: { apply (Minus.le_plus_minus_r 1), Lt.lt_le_S, wordSizePos. }
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - destruct (bitvector_fin_big (tl ri)) as [ri_N _].
+      destruct (bitvector_fin_big (tl A)) as [A_N _].
+      destruct (hd ri) eqn:sri; destruct (hd A) eqn:sA.
+      (* - > - *)
+      + exact (ri_N <? A_N).
+      (* - > + *)
+      + exact false.
+      (* + > - *)
+      + exact true.
+      (* + > + *)
+      + exact (A_N <? ri_N).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   “compare greater or equal”, signed
@@ -401,8 +423,30 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_cmpge (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    apply (nth registerValues0) in ri.
+    unfold Word in A, ri; replace wordSize with (S (wordSize - 1)) in A, ri.
+    2: { apply (Minus.le_plus_minus_r 1), Lt.lt_le_S, wordSizePos. }
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - destruct (bitvector_fin_big (tl ri)) as [ri_N _].
+      destruct (bitvector_fin_big (tl A)) as [A_N _].
+      destruct (hd ri) eqn:sri; destruct (hd A) eqn:sA.
+      (* - >= - *)
+      + exact (ri_N <=? A_N).
+      (* - >= + *)
+      + exact false.
+      (* + > - *)
+      + exact true.
+      (* + >= + *)
+      + exact (A_N <=? ri_N).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   store [A] in ri
