@@ -456,7 +456,16 @@ Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
     end
   end.
 
-(*signed multiplication. Extra boolean indicates an under/overflow.*)
+(* Computes the upper n bits of the signed multiplication
+   of two two's-complement numbers.
+
+  Output is the sign of product (in first bit) followed
+  by the upper bits of the absolute-value of the product.
+
+  This means that, for example, -1 * 1 will result in
+  10...0, which is not representing a twos complement 
+  number.
+*)
 Definition bv_smulh : forall {n} (b1 b2 : t bool (S n)), 
                                  bool * t bool (S n).
   intros n b1 b2.
@@ -476,3 +485,26 @@ Definition bv_udiv {n} (b1 b2 : t bool n) : bool * t bool n :=
 Definition bv_umod {n} (b1 b2 : t bool n) : bool * t bool n :=
   let bas := bitvector_fin_big_fun b2 in
   (bas =? 0, fin_bitvector_big_fun n (bitvector_fin_big_fun b1 mod bas)).
+
+(*left-shift by m with zero padding.*)
+Definition bv_shl {n} (m : nat) (v : t bool n) : t bool n.
+  destruct (m <=? n) eqn:mln.
+  - rewrite PeanoNat.Nat.leb_le in mln.
+    rewrite <- (PeanoNat.Nat.sub_add m n mln).
+    apply (fun x => x ++ const b0 m).
+    apply (take _ (PeanoNat.Nat.le_sub_l n m)).
+    exact v.
+  - exact (const b0 _).
+Defined.
+
+(*right-shift by m with zero padding.*)
+Definition bv_shr {n} (m : nat) (v : t bool n) : t bool n.
+  destruct (m <=? n) eqn:mln.
+  - rewrite PeanoNat.Nat.leb_le in mln.
+    rewrite <- (Minus.le_plus_minus_r m n mln).
+    apply (fun x => const b0 m ++ x).
+    apply (fun x => snd (splitat m x)).
+    rewrite (Minus.le_plus_minus_r m n mln).
+    exact v.
+  - exact (const b0 _).
+Defined.

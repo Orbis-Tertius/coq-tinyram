@@ -36,13 +36,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   (*Template:
       intro ms; destruct ms; split.
       (* PC *)
-      + [...]
+      - [...]
       (* Registers *)
-      + [...]
+      - [...]
       (* Flag *)
-      + [...]
+      - [...]
       (* Memory *)
-      + [...]
+      - [...]
   *)
 
   (*"""
@@ -56,13 +56,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (bv_and rj A) as res eqn:resDef.
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
@@ -76,15 +76,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (bv_or rj A) as res eqn:resDef.
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
-
 
   (*"""
   compute bitwise XOR of [rj] and [A] and store result in ri
@@ -97,13 +96,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (bv_xor rj A) as res eqn:resDef.
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
@@ -116,19 +115,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (bv_not A) as res eqn:resDef.
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
   The instruction add ri rj A stores in ri the W-bit string
   a_{W-1}...a_0 obtained as follows:
-  a_{W-1}...a_0 are the W least significant bits of G = [rj]u + [A]u.
+  a_{W-1}...a_0 are the W least significant bits of G = [rj]u - [A]u.
   Moreover, flag is set to GW , where GW is the MSB of G.
   """*)
   Definition pureOp_add (ri rj : regId) (A : Word) :
@@ -138,15 +137,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (bv_add rj A) as res eqn:resDef.
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri (tl res)).
+    - exact (replace registerValues0 ri (tl res)).
     (* Flag *)
-    + exact (hd res).
+    - exact (hd res).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
-
 
   (*"""
   compute [rj]u - [A]u and store result in ri
@@ -160,15 +158,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (bv_sub rj A) as res.
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri (tl res)).
+    - exact (replace registerValues0 ri (tl res)).
     (* Flag *)
-    + exact (negb (hd res)).
+    - exact (negb (hd res)).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
-
 
   (*"""
   compute [rj]u * [A]u and store least significant bits of result in ri
@@ -182,13 +179,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     destruct (bv_mul_flags rj A) as [[[of _] _] res].
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (negb of).
+    - exact (negb of).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
@@ -203,13 +200,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     destruct (bv_mul_flags rj A) as [[[of _] res] _].
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (negb of).
+    - exact (negb of).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
@@ -228,13 +225,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     2: { symmetry; apply succ_pred_pos; apply wordSizePos. } 
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact (negb of).
+    - exact (negb of).
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
@@ -248,13 +245,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
     destruct (bv_udiv rj A) as [zf res].
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact zf.
+    - exact zf.
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
 
@@ -269,15 +266,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
     destruct (bv_umod rj A) as [zf res].
     split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri res).
     (* Flag *)
-    + exact zf.
+    - exact zf.
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
-
 
   (*"""
   shift [rj] by [A]u bits to the left and store result in ri
@@ -285,8 +281,23 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_shl (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    apply (nth registerValues0) in rj.      
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - apply bitvector_fin_big, proj1_sig in A.
+      remember (bv_shl A rj) as res.
+      exact (replace registerValues0 ri res).
+    (* Flag *)
+    - unfold Word in rj.
+      replace wordSize with (S (wordSize - 1)) in rj.
+      2: { apply (Minus.le_plus_minus_r 1), Lt.lt_le_S, wordSizePos. }
+      exact (hd rj).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   shift [rj] by [A]u bits to the right and store result in ri
@@ -294,8 +305,23 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_shr (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    apply (nth registerValues0) in rj.      
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - apply bitvector_fin_big, proj1_sig in A.
+      remember (bv_shr A rj) as res.
+      exact (replace registerValues0 ri res).
+    (* Flag *)
+    - unfold Word in rj.
+      replace wordSize with (S (wordSize - 1)) in rj.
+      2: { apply (Minus.le_plus_minus_r 1), Lt.lt_le_S, wordSizePos. }
+      exact (last rj).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   “compare equal”
@@ -303,8 +329,20 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_cmpe (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    apply (nth registerValues0) in ri.      
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - destruct (bitvector_fin_big ri) as [ri_N _].
+      destruct (bitvector_fin_big A) as [A_N _].
+      exact (ri_N =? A_N).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   “compare above”, unsigned
@@ -312,8 +350,20 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_cmpa (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    apply (nth registerValues0) in ri.      
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - destruct (bitvector_fin_big ri) as [ri_N _].
+      destruct (bitvector_fin_big A) as [A_N _].
+      exact (A_N <? ri_N).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   “compare above or equal”, unsigned
@@ -321,7 +371,20 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_cmpae (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    apply (nth registerValues0) in ri.      
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - destruct (bitvector_fin_big ri) as [ri_N _].
+      destruct (bitvector_fin_big A) as [A_N _].
+      exact (A_N <=? ri_N).
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
 
   (*"""
@@ -331,7 +394,6 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpg (ri : regId) (A : Word) :
     MachineState -> MachineState.
   Admitted.
-
 
   (*"""
   “compare greater or equal”, signed
@@ -347,23 +409,53 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_mov (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact (replace registerValues0 ri A).
+    (* Flag *)
+    - exact conditionFlag0.
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   if flag = 1, store [A] in ri
   """*)
   Definition pureOp_cmov (ri : regId) (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    split.
+    (* PC *)
+    - exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - destruct conditionFlag0.
+      + exact (replace registerValues0 ri A). 
+      + exact registerValues0.
+    (* Flag *)
+    - exact conditionFlag0.
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   set pc to [A]
   """*)
   Definition pureOp_jmp (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    split.
+    (* PC *)
+    - exact A.
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - exact conditionFlag0.
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
 
   (*"""
@@ -371,7 +463,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_cjmp (A : Word) :
     MachineState -> MachineState.
-  Admitted.
+    intro ms; destruct ms.
+    split.
+    (* PC *)
+    - destruct conditionFlag0.
+      + exact A.
+      + exact (bv_incr pcIncrement programCounter0).
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - exact conditionFlag0.
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
 
   (*"""
@@ -379,8 +483,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
   """*)
   Definition pureOp_cnjmp (A : Word) :
     MachineState -> MachineState.
-  Admitted.
-
+    intro ms; destruct ms.
+    split.
+    (* PC *)
+    - destruct conditionFlag0.
+      + exact (bv_incr pcIncrement programCounter0).
+      + exact A.
+    (* Registers *)
+    - exact registerValues0.
+    (* Flag *)
+    - exact conditionFlag0.
+    (* Memory *)
+    - exact memory0.
+  Defined.
 
   (*"""
   store the least-significant byte of [ri] at the [A]u-th byte in memory
@@ -389,18 +504,18 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms; split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact registerValues0.
+    - exact registerValues0.
     (* Flag *)
-    + exact conditionFlag0.
+    - exact conditionFlag0.
     (* Memory *)
-    + apply (replace memory0).
+    - apply (replace memory0).
       (*" at the [A]u-th byte "*)
-      - apply bitvector_fin_big.
+      + apply bitvector_fin_big.
         exact A.
       (*" the least-significant byte of [ri] "*)
-      - apply (fun x => nth x ri) in registerValues0 as regi.
+      + apply (fun x => nth x ri) in registerValues0 as regi.
         apply RegisterBytes in regi.
         apply (nth regi).
         exists 0.
@@ -414,9 +529,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms; split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + apply (replace registerValues0 ri).
+    - apply (replace registerValues0 ri).
       apply BytesRegister.
       (*" (with zero-padding in front) "*)
       replace wordSizeEighth with (Nat.pred wordSizeEighth + 1).
@@ -425,16 +540,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
           lia. }
       apply Vector.append.
       (*" zero-padding "*)
-      - apply (Vector.const zeroByte).
+      + apply (Vector.const zeroByte).
       (*" [A]u-th byte in memory "*)
-      - apply (fun x => Vector.cons _ x _ (Vector.nil _)).
+      + apply (fun x => Vector.cons _ x _ (Vector.nil _)).
         apply (nth memory0).
         apply bitvector_fin_big.
         exact A.
     (* Flag *)
-    + exact conditionFlag0.
+    - exact conditionFlag0.
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
   (*"""
@@ -444,17 +559,17 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms; split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + exact registerValues0.
+    - exact registerValues0.
     (* Flag *)
-    + exact conditionFlag0.
+    - exact conditionFlag0.
     (* Memory *)
-    + apply (Memory_Register_Store_from_Reg memory0).
+    - apply (Memory_Register_Store_from_Reg memory0).
       (*" at the word in memory that is aligned to the [A]w-th byte "*)
-      - exact A. 
+      + exact A. 
       (* store [ri] *)
-      - exact (nth registerValues0 ri).
+      + exact (nth registerValues0 ri).
   Defined.
 
   (*"""
@@ -464,15 +579,15 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms; split.
     (* PC *)
-    + exact (bv_incr pcIncrement programCounter0).
+    - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    + apply (replace registerValues0 ri).
+    - apply (replace registerValues0 ri).
       apply (Memory_Register_Load_from_Reg memory0).
       exact A.
     (* Flag *)
-    + exact conditionFlag0. 
+    - exact conditionFlag0. 
     (* Memory *)
-    + exact memory0.
+    - exact memory0.
   Defined.
 
 End TinyRAMState.
