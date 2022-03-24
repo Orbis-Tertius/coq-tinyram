@@ -1,16 +1,18 @@
 From Coq Require Import
-  Lia.
+  Lia Nat ProofIrrelevance VectorDef.
+Import PeanoNat.Nat(lt_neq,
+                    div_mod,
+                    add_0_r,
+                    eqb_neq,
+                    mod_small,
+                    div_small,
+                    eqb_eq).
 From TinyRAM.Utils Require Import
-  Fin.
-From TinyRAM.Utils Require Import
-  Vectors.
-From TinyRAM.Utils Require Import
-  Arith.
-Import PeanoNat.Nat.
-Require Import ProofIrrelevance.
-Require Import VectorDef.
-Import VectorNotations.
-Import EqNotations.
+  Fin Vectors Arith.
+Import VectorNotations EqNotations.
+
+Definition b1 := true.
+Definition b0 := false.
 
 Definition bitVal : bool -> fin 2.
   intros [|].
@@ -18,13 +20,13 @@ Definition bitVal : bool -> fin 2.
   - exists 0; lia.
 Defined.
 
-Definition Byte := Vector.t bool 8.
+Definition Byte := t bool 8.
 
 Definition zeroByte : Byte :=
-  Vector.const false 8.
+  const b0 8.
 
 Definition oneByte : Byte :=
-  Vector.const true 8.
+  const b1 8.
 
 Definition iffb (b1 b2 : bool) : bool :=
   match b1, b2 with
@@ -40,22 +42,22 @@ Theorem iffb_beq : forall {b1 b2}, (iffb b1 b2 = true) <-> b1 = b2.
   intro x; discriminate x.
 Qed.
 
-Definition bv_eq {n} (b1 b2 : Vector.t bool n) : bool.
+Definition bv_eq {n} (b1 b2 : t bool n) : bool.
   apply (fun x : {b1 = b2} + {b1 <> b2} => if x then true else false).
   apply (VectorEq.eq_dec bool iffb (@iffb_beq)).
 Defined.
 
-Definition bv_and {n} (b1 b2 : Vector.t bool n) : Vector.t bool n :=
-  Vector.map2 andb b1 b2.
+Definition bv_and {n} (b1 b2 : t bool n) : t bool n :=
+  map2 andb b1 b2.
 
-Definition bv_or {n} (b1 b2 : Vector.t bool n) : Vector.t bool n :=
-  Vector.map2 orb b1 b2.
+Definition bv_or {n} (b1 b2 : t bool n) : t bool n :=
+  map2 orb b1 b2.
 
-Definition bv_xor {n} (b1 b2 : Vector.t bool n) : Vector.t bool n :=
-  Vector.map2 xorb b1 b2.
+Definition bv_xor {n} (b1 b2 : t bool n) : t bool n :=
+  map2 xorb b1 b2.
 
-Definition bv_not {n} (b : Vector.t bool n) : Vector.t bool n :=
-  Vector.map negb b.
+Definition bv_not {n} (b : t bool n) : t bool n :=
+  map negb b.
 
 Definition bitvector_fin_double_S : forall {n},
   fin n -> fin (2 * n).
@@ -76,7 +78,7 @@ Defined.
 (* Little Endian encoding. *)
 
 Definition bitvector_fin_little : forall {n},
-  Vector.t bool n -> fin (2 ^ n).
+  t bool n -> fin (2 ^ n).
   intros n v.
   induction v.
   - exists 0.
@@ -87,25 +89,25 @@ Definition bitvector_fin_little : forall {n},
     + apply (bitvector_fin_double IHv).
 Defined.
 
-Definition bitvector_fin_little_fun {n} (v : Vector.t bool n) : nat :=
+Definition bitvector_fin_little_fun {n} (v : t bool n) : nat :=
   proj1_sig (bitvector_fin_little v).
 
-Fixpoint fin_bitvector_little_fun (n m : nat) : Vector.t bool n :=
+Fixpoint fin_bitvector_little_fun (n m : nat) : t bool n :=
   match n with
-  | 0 => Vector.nil bool
+  | 0 => nil bool
   | S n => 
-    Vector.cons _ (negb (m mod 2 =? 0)) _ (fin_bitvector_little_fun n (m / 2))
+    cons _ (negb (m mod 2 =? 0)) _ (fin_bitvector_little_fun n (m / 2))
   end.
 
 Definition fin_bitvector_little : forall {n},
-  fin (2 ^ n) -> Vector.t bool n.
+  fin (2 ^ n) -> t bool n.
   intros n [f _].
   apply (fin_bitvector_little_fun n f).
 Defined.
 
 Theorem bitvector_fin_little_inv_lem_true : forall {n} (f : fin (2 ^ n)),
   fin_bitvector_little (bitvector_fin_double_S f : fin (2 ^ (S n))) =
-  Vector.cons _ true _ (fin_bitvector_little f).
+  cons _ true _ (fin_bitvector_little f).
 Proof.
   intros n.
   destruct n as [|n]; intros [f fprp].
@@ -117,15 +119,15 @@ Proof.
     replace (S (f + (f + 0))) with (1 + f * 2).
     2: { lia. }
     replace (((1 + f * 2)) mod 2) with 1.
-    2: { rewrite mod_add. { reflexivity. } { lia. } }
+    2: { rewrite PeanoNat.Nat.mod_add. { reflexivity. } { lia. } }
     replace ((1 + f * 2) / 2) with f.
-    2: { rewrite div_add. { reflexivity. } { lia. } }
+    2: { rewrite PeanoNat.Nat.div_add. { reflexivity. } { lia. } }
     reflexivity.
 Qed.
 
 Theorem bitvector_fin_little_inv_lem_false : forall {n} (f : fin (2 ^ n)),
   fin_bitvector_little (bitvector_fin_double f : fin (2 ^ (S n))) =
-  Vector.cons bool false _ (fin_bitvector_little f).
+  cons bool false _ (fin_bitvector_little f).
 Proof.
   intros n.
   destruct n as [|n]; intros [f fprp].
@@ -137,13 +139,13 @@ Proof.
     replace (f + (f + 0)) with (f * 2).
     2: { lia. }
     replace (f * 2 / 2) with f.
-    2: { rewrite div_mul. { reflexivity. } { lia. } }
+    2: { rewrite PeanoNat.Nat.div_mul. { reflexivity. } { lia. } }
     replace ((f * 2) mod 2) with 0.
-    2: { symmetry. rewrite mod_mul. { reflexivity. } { lia. } } 
+    2: { symmetry. rewrite PeanoNat.Nat.mod_mul. { reflexivity. } { lia. } } 
     reflexivity.
 Qed.
 
-Theorem bitvector_fin_little_inv : forall {n} (v : Vector.t bool n),
+Theorem bitvector_fin_little_inv : forall {n} (v : t bool n),
   fin_bitvector_little (bitvector_fin_little v) = v.
 Proof.
   intros n v.
@@ -169,13 +171,14 @@ Proof.
     reflexivity.
   + unfold fin_bitvector_little.
     replace (fin_bitvector_little_fun (S n) f)
-       with (Vector.cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_little_fun n (f / 2))).
+       with (cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_little_fun n (f / 2))).
     2: { reflexivity. }
     assert (f = (2 * (f / 2) + f mod 2)) as fsplit.
     { rewrite <- div_mod. { reflexivity. } { lia. } }
     assert (f/2 < 2 ^ n) as fhprp.
-    { apply div_lt_upper_bound. { lia. } exact fprp. } 
-    assert (bitvector_fin_little (fin_bitvector_little (exist _ (f/2) fhprp)) = (exist _ (f/2) fhprp)).
+    { apply PeanoNat.Nat.div_lt_upper_bound. { lia. } exact fprp. } 
+    assert (bitvector_fin_little (fin_bitvector_little (exist _ (f/2) fhprp)) 
+            = (exist _ (f/2) fhprp)).
     { apply IHn. } clear IHn. simpl in H.
     destruct (f mod 2 =? 0) eqn:fmod;
     simpl; rewrite H; clear H; simpl;
@@ -194,7 +197,7 @@ Qed.
 (* Big Endian encoding. *)
 
 Definition bitvector_fin_big : forall {n},
-  Vector.t bool n -> fin (2 ^ n).
+  t bool n -> fin (2 ^ n).
   intros n v.
   induction v.
   - exists 0.
@@ -210,29 +213,23 @@ Definition bitvector_fin_big : forall {n},
       assumption.
 Defined.
 
-Definition bitvector_fin_big_fun {n} (v : Vector.t bool n) : nat :=
+Definition bitvector_fin_big_fun {n} (v : t bool n) : nat :=
   proj1_sig (bitvector_fin_big v).
 
-Fixpoint fin_bitvector_big_fun (n m : nat) : Vector.t bool n :=
+Fixpoint fin_bitvector_big_fun (n m : nat) : t bool n :=
   match n with
-  | 0 => Vector.nil bool
+  | 0 => nil bool
   | S n => 
-    Vector.cons _ (negb (m / (2 ^ n) =? 0)) _ (fin_bitvector_big_fun n (m mod 2 ^ n))
+    cons _ (negb (m / (2 ^ n) =? 0)) _ (fin_bitvector_big_fun n (m mod 2 ^ n))
   end.
 
 Definition fin_bitvector_big : forall {n},
-  fin (2 ^ n) -> Vector.t bool n.
+  fin (2 ^ n) -> t bool n.
   intros n [f _].
   apply (fin_bitvector_big_fun n f).
 Defined.
 
-Theorem zero2pow : forall n, 0 < 2 ^ n.
-Proof.
-  destruct n. { simpl; lia. }
-  change 0 with (0 ^ S n); apply pow_lt_mono_l; lia.
-Qed.
-
-Theorem bitvector_fin_big_inv : forall {n} (v : Vector.t bool n),
+Theorem bitvector_fin_big_inv : forall {n} (v : t bool n),
   fin_bitvector_big (bitvector_fin_big v) = v.
 Proof.
   intros n v; induction v.
@@ -247,12 +244,12 @@ Proof.
       f_equal.
       * rewrite Bool.negb_true_iff, eqb_neq.
         apply not_eq_sym, lt_neq.
-        rewrite div_str_pos_iff; lia.
+        rewrite PeanoNat.Nat.div_str_pos_iff; lia.
       * unfold fin_bitvector_big in IHv.
         rewrite <- IHv.
         f_equal.
-        rewrite <- add_mod_idemp_r. 2: { assumption. }
-        rewrite mod_same. 2: { assumption. }
+        rewrite <- PeanoNat.Nat.add_mod_idemp_r. 2: { assumption. }
+        rewrite PeanoNat.Nat.mod_same. 2: { assumption. }
         rewrite add_0_r.
         rewrite mod_small; trivial. 
     + simpl; unfold fin_cast.
@@ -280,7 +277,7 @@ Proof.
     destruct (f / 2 ^ n =? 0) eqn:fDiv0.
     + rewrite eqb_eq in fDiv0.
       simpl bitvector_fin_big; unfold fin_cast, fin_max, fin_add.
-      assert (f < 2 ^ n) as fl2n. { rewrite <- div_small_iff; lia. }
+      assert (f < 2 ^ n) as fl2n. { rewrite <- PeanoNat.Nat.div_small_iff; lia. }
       remember (exist (fun r => r < 2 ^ n) f fl2n) as f2 eqn:f2Def.
       assert (bitvector_fin_big (fin_bitvector_big f2) = f2).
       { apply IHn. }
@@ -293,7 +290,7 @@ Proof.
     + rewrite eqb_neq in fDiv0.
       simpl bitvector_fin_big; unfold fin_cast, fin_max, fin_add.
       assert ((f mod 2 ^ n) < 2 ^ n) as fl2n.
-      { apply mod_bound_pos; lia. }
+      { apply PeanoNat.Nat.mod_bound_pos; lia. }
       remember (exist (fun r => r < 2 ^ n) (f mod 2 ^ n) fl2n) as f2 eqn:f2Def.
       assert (bitvector_fin_big (fin_bitvector_big f2) = f2).
       { apply IHn. }
@@ -301,16 +298,16 @@ Proof.
       rewrite H.
       apply subset_eq_compat.
       rewrite (div_mod f (2 ^ n)) at 2. 2: { assumption. }
-      rewrite add_comm.
+      rewrite PeanoNat.Nat.add_comm.
       f_equal.
-      replace (f / 2 ^ n) with 1. { rewrite mul_1_r; reflexivity. }
+      replace (f / 2 ^ n) with 1. { rewrite PeanoNat.Nat.mul_1_r; reflexivity. }
       symmetry.
       apply div_bet_1. 
       split. 2: { assumption. }
       apply Compare_dec.not_gt; unfold gt.
       intro.
       apply fDiv0.
-      rewrite div_small_iff; assumption.
+      rewrite PeanoNat.Nat.div_small_iff; assumption.
 Qed.
 
 (* Relating big to little endian *)
@@ -360,7 +357,7 @@ Proof.
     destruct x; simpl; apply subset_eq_compat; lia.
 Qed.
 
-Theorem bitvector_fin_rev : forall {n} (v : Vector.t bool n),
+Theorem bitvector_fin_rev : forall {n} (v : t bool n),
   bitvector_fin_big v = bitvector_fin_little (rev v).
 Proof.
   intros n v; induction v.
@@ -368,7 +365,7 @@ Proof.
     apply subset_eq_compat.
     reflexivity.
   - vector_simp.
-    unfold vector_length_coerce.
+    rewrite cast_rew.
     rewrite (rew_f_bubble _ _ (fun m => fin (2 ^ m))).
     rewrite bitvector_fin_little_snoc.
     rewrite <- IHv.
@@ -382,7 +379,7 @@ Proof.
     reflexivity.
 Qed.
 
-Theorem fin_bitvector_rev : forall {n} (v : Vector.t bool n),
+Theorem fin_bitvector_rev : forall {n} (v : t bool n),
   bitvector_fin_little v = bitvector_fin_big (rev v).
 Proof.
   intros n v.
@@ -460,17 +457,14 @@ Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
   end.
 
 (*signed multiplication. Extra boolean indicates an under/overflow.*)
-Definition bv_smulh : forall {n} (b1 b2 : Vector.t bool (S n)), 
-                                 bool * Vector.t bool (S n).
+Definition bv_smulh : forall {n} (b1 b2 : t bool (S n)), 
+                                 bool * t bool (S n).
   intros n b1 b2.
   remember (bv_abs b1) as ab1; remember (bv_abs b2) as ab2.
   destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] mresh] _].
   split. { exact ob. }
-  destruct zb. { exact (const false _). }
-  remember (xorb (hd b1) (hd b2)) as x12.
-  destruct x12 eqn:x12Val.
-  - exact (bv_neg (false :: mresh)).
-  - exact (false :: mresh).
+  destruct zb. { (* if 0 *) exact (const b0 _). }
+  exact (xorb (hd b1) (hd b2) :: mresh).
 Defined.
 
 (*unsigned division. Extra boolean indicates division by 0.*)

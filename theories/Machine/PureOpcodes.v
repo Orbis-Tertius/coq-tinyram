@@ -1,19 +1,10 @@
 From Coq Require Import
-  Lia.
-Require Import VectorDef.
+  Lia VectorDef.
 Import VectorNotations.
 From TinyRAM.Utils Require Import
-  Vectors.
-From TinyRAM.Utils Require Import
-  BitVectors.
-From TinyRAM.Utils Require Import
-  Fin.
+  Vectors BitVectors Fin.
 From TinyRAM.Machine Require Import
-  Parameters.
-From TinyRAM.Machine Require Import
-  Words.
-From TinyRAM.Machine Require Import
-  Memory.
+  Parameters Words Memory.
 Import PeanoNat.Nat.
 
 Module TinyRAMState (Params : TinyRAMParameters).
@@ -406,7 +397,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Memory *)
     + apply (replace memory0).
       (*" at the [A]u-th byte "*)
-      - apply bitvector_fin.
+      - apply bitvector_fin_big.
         exact A.
       (*" the least-significant byte of [ri] "*)
       - apply (fun x => nth x ri) in registerValues0 as regi.
@@ -438,7 +429,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
       (*" [A]u-th byte in memory "*)
       - apply (fun x => Vector.cons _ x _ (Vector.nil _)).
         apply (nth memory0).
-        apply bitvector_fin.
+        apply bitvector_fin_big.
         exact A.
     (* Flag *)
     + exact conditionFlag0.

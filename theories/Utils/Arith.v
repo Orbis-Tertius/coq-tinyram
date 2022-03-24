@@ -33,6 +33,24 @@ Proof.
   assumption.
 Qed.
 
+Theorem depEqLem : 
+  forall (B : Type) 
+         (F : B -> Type)
+         (P : forall b : B, F b -> Prop)
+         (b1 b2 : B) (eqb : b1 = b2)
+         (p1 : F b1) (p2 : F b2),
+         (rew eqb in p1 = p2) ->
+         P b1 p1 ->
+         P b2 p2.
+Proof.
+  intros B F P b1 b2 eqb.
+  destruct eqb.
+  intros p1 p2 eqp.
+  destruct eqp.
+  intros Pp.
+  exact Pp.
+Qed.
+
 Theorem plus_reg_r : forall n m p : nat, n + p = m + p -> n = m.
 Proof.
   intros n m p.
@@ -156,4 +174,10 @@ Proof.
   rewrite mul_comm in ln2m.
   apply (div_lt_upper_bound _ _ _ H) in ln2m.
   lia.
+Qed.
+
+Theorem zero2pow : forall n, 0 < 2 ^ n.
+Proof.
+  destruct n. { simpl; lia. }
+  change 0 with (0 ^ S n); apply pow_lt_mono_l; lia.
 Qed.
