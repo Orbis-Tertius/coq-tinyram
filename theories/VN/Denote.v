@@ -11,6 +11,7 @@ From TinyRAM.Utils Require Import
 Import Monads.
 Import MonadNotation.
 
+(*
 Module Denote (Params : TinyRAMParameters).
   Module TRTypes := TinyRAMTypes Params.
   Import TRTypes.
@@ -198,3 +199,4 @@ Module Denote (Params : TinyRAMParameters).
     fun s => loop (denote_bks (code s)).
 
 End Denote.
+*)

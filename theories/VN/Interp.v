@@ -22,6 +22,8 @@ From TinyRAM.VN Require Import
      Denote.
 Import MonadNotation.
 
+
+(*
 Module Interp (Params : Types.TinyRAMParameters).
   (* Denote Params exports TinyRAMTypes *)
   Module TRDenote := Denote Params.
@@ -132,3 +134,4 @@ Module Interp (Params : Types.TinyRAMParameters).
 
   End InterpProperties.
 End Interp.
+*)

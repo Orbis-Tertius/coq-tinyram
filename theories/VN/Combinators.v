@@ -24,6 +24,7 @@ From TinyRAM.VN Require Import
      Interp.
 Import ListNotations.
 
+(*
 Module Combinators (Params : Types.TinyRAMParameters).
   Module TRInterp := Interp Params.
   Import TRInterp TRDenote TRTypes.
@@ -448,3 +449,4 @@ Module Combinators (Params : Types.TinyRAMParameters).
     in [Imp2Asm.v].
  *)
 End Combinators.
+*)

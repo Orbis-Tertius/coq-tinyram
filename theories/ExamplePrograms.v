@@ -7,6 +7,7 @@ From TinyRAM.Utils Require Import
      Fin.
 Import ListNotations.
 
+(*
 Module TwelveEight <: Types.TinyRAMParameters.
   Definition wordSize : nat := 12.
   Definition registerCount : nat := 8.
@@ -63,3 +64,4 @@ Section Examples.
     ]
  *)
 End Examples.
+*)
