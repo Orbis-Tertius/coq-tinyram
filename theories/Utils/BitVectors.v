@@ -1,5 +1,5 @@
 From Coq Require Import
-  Lia Nat ProofIrrelevance VectorDef.
+  Lia Nat ZArith.Int Numbers.BinNums ProofIrrelevance VectorDef BinIntDef.
 Import PeanoNat.Nat(lt_neq,
                     div_mod,
                     add_0_r,
@@ -7,6 +7,9 @@ Import PeanoNat.Nat(lt_neq,
                     mod_small,
                     div_small,
                     eqb_eq).
+Import BinInt.Z(of_nat, to_nat, opp,
+                sub, add, mul, pow,
+                leb, le, ltb, lt).
 From TinyRAM.Utils Require Import
   Fin Vectors Arith.
 Import VectorNotations EqNotations.
@@ -19,6 +22,22 @@ Definition bitVal : bool -> fin 2.
   - exists 1; lia.
   - exists 0; lia.
 Defined.
+
+Definition bitValN (b : bool) : nat :=
+  match b with
+  | true => 1
+  | false => 0
+  end.
+
+Definition bitValZ (b : bool) : Z :=
+  match b with
+  | true => 1
+  | false => 0
+  end.
+
+Theorem proj1_bitVal : forall {n},
+  proj1_sig (bitVal n) = bitValN n.
+Proof. intros []; reflexivity. Qed.
 
 Definition Byte := t bool 8.
 
@@ -216,6 +235,14 @@ Defined.
 Definition bitvector_fin_big_fun {n} (v : t bool n) : nat :=
   proj1_sig (bitvector_fin_big v).
 
+Theorem bitvector_fin_big_fun_lt_2pow {n} (v : t bool n) :
+  bitvector_fin_big_fun v < 2 ^ n.
+Proof.
+  unfold bitvector_fin_big_fun.
+  destruct (bitvector_fin_big v) as [f fP].
+  assumption.
+Qed.
+
 Fixpoint fin_bitvector_big_fun (n m : nat) : t bool n :=
   match n with
   | 0 => nil bool
@@ -228,89 +255,6 @@ Definition fin_bitvector_big : forall {n},
   intros n [f _].
   apply (fin_bitvector_big_fun n f).
 Defined.
-
-Theorem bitvector_fin_big_inv : forall {n} (v : t bool n),
-  fin_bitvector_big (bitvector_fin_big v) = v.
-Proof.
-  intros n v; induction v.
-  - reflexivity.
-  - assert (2 ^ n <> 0) as pow0.
-    { apply not_eq_sym, lt_neq, zero2pow. }
-    destruct h.
-    + simpl; unfold fin_cast, fin_max, fin_add.
-      destruct (bitvector_fin_big v) as [bfbv bfbvP].
-      unfold fin_bitvector_big.
-      simpl fin_bitvector_big_fun.
-      f_equal.
-      * rewrite Bool.negb_true_iff, eqb_neq.
-        apply not_eq_sym, lt_neq.
-        rewrite PeanoNat.Nat.div_str_pos_iff; lia.
-      * unfold fin_bitvector_big in IHv.
-        rewrite <- IHv.
-        f_equal.
-        rewrite <- PeanoNat.Nat.add_mod_idemp_r. 2: { assumption. }
-        rewrite PeanoNat.Nat.mod_same. 2: { assumption. }
-        rewrite add_0_r.
-        rewrite mod_small; trivial. 
-    + simpl; unfold fin_cast.
-      destruct (bitvector_fin_big v) as [bfbv bfbvP].
-      simpl fin_bitvector_big.
-      f_equal.
-      * rewrite Bool.negb_false_iff, eqb_eq.
-        apply div_small; assumption.
-      * rewrite mod_small. 2: { assumption. }
-        unfold fin_bitvector_big in IHv.
-        assumption.
-Qed.
-
-Theorem fin_bitvector_big_inv : forall {n} (f : fin (2 ^ n)),
-  bitvector_fin_big (fin_bitvector_big f) = f.
-Proof.
-  intros n f; induction n; destruct f as [f fP].
-  - simpl.
-    apply subset_eq_compat.
-    simpl in fP.
-    lia.
-  - assert (2 ^ n <> 0) as pow0.
-    { apply not_eq_sym, lt_neq, zero2pow. }
-    simpl fin_bitvector_big.
-    destruct (f / 2 ^ n =? 0) eqn:fDiv0.
-    + rewrite eqb_eq in fDiv0.
-      simpl bitvector_fin_big; unfold fin_cast, fin_max, fin_add.
-      assert (f < 2 ^ n) as fl2n. { rewrite <- PeanoNat.Nat.div_small_iff; lia. }
-      remember (exist (fun r => r < 2 ^ n) f fl2n) as f2 eqn:f2Def.
-      assert (bitvector_fin_big (fin_bitvector_big f2) = f2).
-      { apply IHn. }
-      rewrite f2Def in H.
-      unfold fin_bitvector_big in H.
-      rewrite mod_small. 2: { assumption. }
-      rewrite H.
-      apply subset_eq_compat.
-      reflexivity.
-    + rewrite eqb_neq in fDiv0.
-      simpl bitvector_fin_big; unfold fin_cast, fin_max, fin_add.
-      assert ((f mod 2 ^ n) < 2 ^ n) as fl2n.
-      { apply PeanoNat.Nat.mod_bound_pos; lia. }
-      remember (exist (fun r => r < 2 ^ n) (f mod 2 ^ n) fl2n) as f2 eqn:f2Def.
-      assert (bitvector_fin_big (fin_bitvector_big f2) = f2).
-      { apply IHn. }
-      rewrite f2Def in H; unfold fin_bitvector_big in H.
-      rewrite H.
-      apply subset_eq_compat.
-      rewrite (div_mod f (2 ^ n)) at 2. 2: { assumption. }
-      rewrite PeanoNat.Nat.add_comm.
-      f_equal.
-      replace (f / 2 ^ n) with 1. { rewrite PeanoNat.Nat.mul_1_r; reflexivity. }
-      symmetry.
-      apply div_bet_1. 
-      split. 2: { assumption. }
-      apply Compare_dec.not_gt; unfold gt.
-      intro.
-      apply fDiv0.
-      rewrite PeanoNat.Nat.div_small_iff; assumption.
-Qed.
-
-(* Relating big to little endian *)
 
 Theorem bitvector_fin_big_cons_lem : forall {n},
   S (S (2 * S (2^n) - S (2^n) - 2)) + 2^n - 1 <= 2 ^ (S n).
@@ -332,6 +276,110 @@ Proof.
   destruct x eqn:xVal;
   simpl; apply subset_eq_compat; lia.
 Qed.
+
+Theorem bitvector_fin_big_fun_inv : forall {n} (v : t bool n),
+  fin_bitvector_big_fun n (bitvector_fin_big_fun v) = v.
+Proof.
+  intros n v.
+  unfold bitvector_fin_big_fun.
+  induction v.
+  - reflexivity.
+  - rewrite bitvector_fin_big_cons.
+    rewrite proj1_fin_cast, proj1_fin_add, proj1_fin_mul, proj1_fin_max.
+    unfold fin_bitvector_big_fun; fold fin_bitvector_big_fun.
+    f_equal.
+    + destruct (bitvector_fin_big v); destruct h; simpl proj1_sig.
+      * rewrite PeanoNat.Nat.mul_1_l.
+        replace ((2 ^ n + _) / _) with 1. { reflexivity. }
+        symmetry; apply div_bet_1; lia.
+      * rewrite PeanoNat.Nat.mul_0_l, div_small; simpl; lia.
+    + assert (2 ^ n <> 0) as pow0.
+      { apply not_eq_sym, lt_neq, zero2pow. }
+      replace ((_ * 2 ^ n + _) mod _) with (proj1_sig (bitvector_fin_big v)).
+      { apply IHv. }
+      rewrite <- PeanoNat.Nat.add_mod_idemp_l.
+      2: { assumption. }
+      replace ((proj1_sig (bitVal h) * 2 ^ n) mod 2 ^ n)
+         with 0.
+      destruct (bitvector_fin_big v) as [f fP].
+      { simpl; rewrite mod_small; trivial. }
+      destruct h.
+      * simpl. rewrite add_0_r, PeanoNat.Nat.mod_same; trivial.
+      * simpl; rewrite mod_small. { reflexivity. }
+        apply zero2pow.
+Qed.
+
+Theorem bitvector_fin_big_lim : forall {n} (v : t bool n),
+    bitvector_fin_big_fun v < 2 ^ n.
+Proof.
+  intros n v.
+  unfold bitvector_fin_big_fun.
+  destruct (bitvector_fin_big v); trivial.
+Qed.
+
+Theorem bitvector_fin_big_split : forall {n} (v : t bool n),
+    bitvector_fin_big v =
+    exist (fun x => x < 2 ^ n)
+          (bitvector_fin_big_fun v)
+          (bitvector_fin_big_lim v).
+Proof.
+  intros n v.
+  apply unique_fin; reflexivity.
+Qed.
+
+Theorem bitvector_fin_big_inv : forall {n} (v : t bool n),
+  fin_bitvector_big (bitvector_fin_big v) = v.
+Proof.
+  intros n v.
+  rewrite bitvector_fin_big_split.
+  simpl; rewrite bitvector_fin_big_fun_inv.
+  reflexivity.
+Qed.
+
+Theorem fin_bitvector_big_fun_inv : forall n f,
+  f < 2 ^ n ->
+  bitvector_fin_big_fun (fin_bitvector_big_fun n f) = f.
+Proof.
+  intros n; induction n; intros f fP. 
+  - unfold bitvector_fin_big_fun.
+    simpl; simpl in fP; lia.
+  - assert (2 ^ n <> 0) as pow0.
+    { apply not_eq_sym, lt_neq, zero2pow. }
+    assert ((f mod 2 ^ n) < 2 ^ n) as fl2n.
+    { apply PeanoNat.Nat.mod_bound_pos; lia. }
+    simpl fin_bitvector_big_fun.
+    destruct (f / 2 ^ n =? 0) eqn:fDiv0;
+    unfold bitvector_fin_big_fun;
+    simpl bitvector_fin_big; unfold fin_cast, fin_max, fin_add;
+    rewrite bitvector_fin_big_split; simpl;
+    rewrite (IHn (f mod 2 ^ n) fl2n).
+    + rewrite eqb_eq in fDiv0.
+      rewrite mod_small. { reflexivity. }
+      rewrite <- PeanoNat.Nat.div_small_iff; assumption.
+    + rewrite eqb_neq in fDiv0.
+      rewrite (div_mod f (2 ^ n)) at 2. 2: { assumption. }
+      rewrite PeanoNat.Nat.add_comm.
+      f_equal.
+      replace (f / 2 ^ n) with 1. { rewrite PeanoNat.Nat.mul_1_r; reflexivity. }
+      symmetry.
+      apply div_bet_1. 
+      split. 2: { assumption. }
+      apply Compare_dec.not_gt; unfold gt.
+      intro.
+      apply fDiv0.
+      rewrite PeanoNat.Nat.div_small_iff; assumption.
+Qed.
+
+Theorem fin_bitvector_big_inv : forall {n} (f : fin (2 ^ n)),
+  bitvector_fin_big (fin_bitvector_big f) = f.
+Proof.
+  intros n [f fP].
+  unfold fin_bitvector_big; rewrite bitvector_fin_big_split.
+  apply subset_eq_compat.
+  rewrite (fin_bitvector_big_fun_inv n f); trivial.
+Qed.
+
+(* Relating big to little endian *)
 
 Theorem bitvector_fin_little_snoc_lem : forall {n},
   S (S (2 * S (2^n) - S (2^n) - 2)) + 2^n - 1 <= 2 ^ (n + 1).
@@ -456,26 +504,6 @@ Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
     end
   end.
 
-(* Computes the upper n bits of the signed multiplication
-   of two two's-complement numbers.
-
-  Output is the sign of product (in first bit) followed
-  by the upper bits of the absolute-value of the product.
-
-  This means that, for example, -1 * 1 will result in
-  10...0, which is not representing a twos complement 
-  number.
-*)
-Definition bv_smulh : forall {n} (b1 b2 : t bool (S n)), 
-                                 bool * t bool (S n).
-  intros n b1 b2.
-  remember (bv_abs b1) as ab1; remember (bv_abs b2) as ab2.
-  destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] mresh] _].
-  split. { exact ob. }
-  destruct zb. { (* if 0 *) exact (const b0 _). }
-  exact (xorb (hd b1) (hd b2) :: mresh).
-Defined.
-
 (*unsigned division. Extra boolean indicates division by 0.*)
 Definition bv_udiv {n} (b1 b2 : t bool n) : bool * t bool n :=
   let den := bitvector_fin_big_fun b2 in
@@ -507,4 +535,205 @@ Definition bv_shr {n} (m : nat) (v : t bool n) : t bool n.
     rewrite (Minus.le_plus_minus_r m n mln).
     exact v.
   - exact (const b0 _).
+Defined.
+
+(* two's complement signed integer representation. *)
+
+Fixpoint twos_complement' {n} (v : t bool n) : nat :=
+  match v with
+  | [] => 0
+  | x :: xs => bitValN x * (2 ^ (n - 1)) + twos_complement' xs
+  end.
+
+Definition twos_complement {n} (v : t bool (S n)) : Z :=
+  match v with
+  | x :: xs => sub (of_nat (twos_complement' xs))
+                   (of_nat (bitValN x * (2 ^ n)))
+  end.
+
+Theorem twos_complement_big : forall {n} (v : t bool n),
+  twos_complement' v = bitvector_fin_big_fun v.
+Proof.
+  intros n v; induction v.
+  - reflexivity.
+  - simpl twos_complement'.
+    unfold bitvector_fin_big_fun.
+    rewrite bitvector_fin_big_cons.
+    rewrite proj1_fin_cast, proj1_fin_add, proj1_fin_mul,
+            proj1_fin_max, proj1_bitVal.
+    f_equal.
+    + rewrite PeanoNat.Nat.sub_0_r; reflexivity.
+    + exact IHv.
+Qed.
+
+Theorem Z_inj_pow : forall x y, 
+  pow (of_nat x) (of_nat y) = of_nat (x ^ y).
+Proof.
+  intros x y.
+  induction y.
+  - reflexivity.
+  - rewrite Znat.Nat2Z.inj_succ, BinInt.Z.pow_succ_r.
+    2: { apply Zorder.Zle_0_nat. }
+    rewrite IHy.
+    simpl; rewrite Znat.Nat2Z.inj_mul.
+    reflexivity.
+Qed.
+
+Theorem Z2_inj_pow : forall x y, 
+  le 0 x -> le 0 y ->
+  to_nat (pow x y) = to_nat x ^ to_nat y.
+Proof.
+  intros x y l0x l0y.
+  rewrite <- (Znat.Z2Nat.id x), <- (Znat.Z2Nat.id y) at 1; try assumption.
+  rewrite Z_inj_pow, Znat.Nat2Z.id.
+  reflexivity.
+Qed.
+
+Theorem twos_complement_min : forall {n} (v : t bool (S n)),
+  le (opp (pow 2 (of_nat n))) (twos_complement v).
+Proof.
+  intros n v.
+  rewrite <- BinInt.Z.sub_0_l.
+  rewrite (Vector.eta v).
+  simpl twos_complement.
+  apply BinInt.Z.sub_le_mono. { apply Zorder.Zle_0_nat. }
+  destruct (hd v).
+  2: { simpl bitValN; rewrite PeanoNat.Nat.mul_0_l.
+       apply BinInt.Z.pow_nonneg; lia. }
+  simpl bitValN; rewrite PeanoNat.Nat.mul_1_l.
+  change (Zpos (xO xH)) with (of_nat 2).
+  rewrite Z_inj_pow.
+  apply Znat.inj_le.
+  destruct n; apply le_n.
+Qed.
+
+Theorem twos_complement_max : forall {n} (v : t bool (S n)),
+  lt (twos_complement v) (pow 2 (of_nat n)).
+Proof.
+  intros n v.
+  rewrite (Vector.eta v).
+  simpl twos_complement.
+  rewrite (BinInt.Zminus_0_l_reverse (pow _ _)).
+  apply BinInt.Z.sub_lt_le_mono. 2: { apply Zorder.Zle_0_nat. }
+  change (Zpos (xO xH)) with (of_nat 2).
+  rewrite Z_inj_pow.
+  apply Znat.inj_lt.
+  rewrite twos_complement_big.
+  apply bitvector_fin_big_fun_lt_2pow.
+Qed.
+
+Definition twos_complement_inv (n : nat) (z : Z) : t bool (S n) :=
+  match Z_as_Int.ltb z 0 with
+  | true => fin_bitvector_big_fun _ (Z.to_nat (add z (pow 2 (of_nat (S n)))))
+  | false => fin_bitvector_big_fun _ (Z.to_nat z)
+  end.
+
+Theorem twos_complement_iso_1 : forall {n} (v : t bool (S n)),
+  twos_complement_inv n (twos_complement v) = v.
+Proof.
+  intros n v.
+  assert (twos_complement' (tl v) < 2 ^ n).
+  { rewrite twos_complement_big; apply bitvector_fin_big_fun_lt_2pow. }
+  rewrite (Vector.eta v).
+  simpl.
+  destruct (hd v); simpl bitValN.
+  - rewrite PeanoNat.Nat.mul_1_l, <- opp_sub_swap, <- Znat.Nat2Z.inj_sub.
+    2: { apply PeanoNat.Nat.lt_le_incl; assumption. }
+    unfold twos_complement_inv.
+    replace (Z_as_Int.ltb _ 0) with true.
+    2: { symmetry; rewrite Z_ltb_lt, BinInt.Z.opp_neg_pos.
+         change Z0 with (of_nat 0). apply Znat.inj_lt; lia. }
+    rewrite Znat.Nat2Z.inj_sub. 2: { lia. }
+    rewrite opp_sub_swap.
+    rewrite <- BinInt.Z.sub_sub_distr, <- (opp_sub_swap (pow _ _) _).
+    change (Zpos _) with (of_nat 2).
+    rewrite Z_inj_pow, <- Znat.Nat2Z.inj_sub. 2: { simpl; lia. }
+    replace (2 ^ S n - 2 ^ n) with (2 ^ n). 2: { simpl; lia. }
+    rewrite BinInt.Z.sub_opp_r, <- Znat.Nat2Z.inj_add.
+    rewrite Znat.Nat2Z.id.
+    unfold fin_bitvector_big_fun; f_equal.
+    + replace (_ / _) with 1. { reflexivity. }
+      symmetry; apply div_bet_1; lia.
+    + fold fin_bitvector_big_fun.
+      assert (2 ^ n <> 0).
+      { apply PeanoNat.Nat.pow_nonzero; lia. }
+      rewrite <- PeanoNat.Nat.add_mod_idemp_r. 2: { assumption. }
+      rewrite PeanoNat.Nat.mod_same. 2: { assumption. }
+      rewrite add_0_r, mod_small. 2: { assumption. }
+      rewrite twos_complement_big. 
+      apply bitvector_fin_big_fun_inv.
+  - simpl of_nat; rewrite BinInt.Z.sub_0_r.
+    unfold twos_complement_inv.
+    replace (Z_as_Int.ltb (of_nat (twos_complement' (tl v))) 0)
+       with false.
+    2: { symmetry; rewrite Z_nltb_ge. apply Znat.Nat2Z.is_nonneg. }
+    rewrite Znat.Nat2Z.id.
+    unfold fin_bitvector_big_fun; fold fin_bitvector_big_fun.
+    f_equal.
+    + replace (_ / _) with 0. { reflexivity. }
+      symmetry; apply div_small; assumption.
+    + replace (_ mod _) with (twos_complement' (tl v)).
+      2: { symmetry; apply mod_small; assumption. }
+      rewrite twos_complement_big.
+      apply bitvector_fin_big_fun_inv.
+Qed.
+
+Theorem twos_complement_iso_2 : forall n z,
+  le (opp (pow 2 (of_nat n))) z -> 
+  lt z (pow 2 (of_nat n)) ->
+  twos_complement (twos_complement_inv n z) = z.
+Proof.
+  intros n z lez ltz.
+  assert (2 ^ n <> 0).
+  { apply PeanoNat.Nat.pow_nonzero; lia. }
+  unfold twos_complement_inv.
+  destruct (Z_as_Int.ltb z 0) eqn:ltz0.
+  - rewrite Z_ltb_lt in ltz0.
+    assert (0 < to_nat (opp z)). { lia. }
+    rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
+    rewrite Znat.Z2Nat.inj_sub. 2: { lia. }
+    rewrite Z2_inj_pow; try lia.
+    change (to_nat _) with 2 at 1.
+    rewrite Znat.Nat2Z.id.
+    unfold fin_bitvector_big_fun, twos_complement;
+    fold fin_bitvector_big_fun.
+    assert ((to_nat (opp z)) <= 2 ^ n).
+    { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_le; try lia;
+      rewrite opp_le_swap_l, <- Z_inj_pow; exact lez. }
+    replace (_ / _) with 1.
+    2: { symmetry; apply div_bet_1; simpl; lia. }
+    replace (_ mod _) with (2 ^ n - to_nat (opp z)).
+    2: { replace (2 ^ S n - _) with (2 ^ n + (2 ^ n - to_nat (opp z))).
+         rewrite <- PeanoNat.Nat.add_mod_idemp_l, PeanoNat.Nat.mod_same.
+         simpl. symmetry; apply mod_small; lia. assumption. assumption.
+         simpl; lia. }
+    simpl; rewrite twos_complement_big, fin_bitvector_big_fun_inv; lia.
+  - rewrite Z_nltb_ge in ltz0.
+    assert (0 <= to_nat z). { lia. }
+    assert (to_nat z < 2 ^ n).
+    { rewrite Znat.Z2Nat.inj_lt, Z2_inj_pow, Znat.Nat2Z.id in ltz; try lia.
+      assumption. }
+    unfold fin_bitvector_big_fun; fold fin_bitvector_big_fun.
+    rewrite mod_small, div_small; try assumption.
+    simpl; rewrite twos_complement_big, fin_bitvector_big_fun_inv; lia.
+Qed.
+
+(* Computes the upper n bits of the signed multiplication
+   of two two's-complement numbers.
+
+  Output is the sign of product (in first bit) followed
+  by the upper bits of the absolute-value of the product.
+
+  This means that, for example, -1 * 1 will result in
+  10...0, which is not representing a twos complement 
+  number.
+*)
+Definition bv_smulh : forall {n} (b1 b2 : t bool (S n)), 
+                                 bool * t bool (S n).
+  intros n b1 b2.
+  remember (bv_abs b1) as ab1; remember (bv_abs b2) as ab2.
+  destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] mresh] _].
+  split. { exact ob. }
+  destruct zb. { (* if 0 *) exact (const b0 _). }
+  exact (xorb (hd b1) (hd b2) :: mresh).
 Defined.

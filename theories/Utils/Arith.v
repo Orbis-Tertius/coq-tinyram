@@ -1,9 +1,11 @@
 From Coq Require Import
-  Arith
-  Lia.
+  Arith Lia ZArith.Int Numbers.BinNums.
 Import PeanoNat.Nat.
 Require Import ProofIrrelevance.
 Import EqNotations.
+Import BinInt.Z(of_nat, to_nat, opp,
+                sub, add, mul, pow,
+                leb, le, ltb, lt).
 
 
 (*Don't know where to put this.*)
@@ -180,4 +182,81 @@ Theorem zero2pow : forall n, 0 < 2 ^ n.
 Proof.
   destruct n. { simpl; lia. }
   change 0 with (0 ^ S n); apply pow_lt_mono_l; lia.
+Qed.
+
+Theorem opp_sub_swap : forall n m, opp (sub n m) = sub m n.
+Proof.
+  intros n m.
+  rewrite <- BinInt.Z.opp_involutive.
+  repeat rewrite BinInt.Z.opp_sub_distr.
+  rewrite BinInt.Z.opp_add_distr.
+  rewrite BinInt.Z.opp_involutive.
+  rewrite BinInt.Z.add_comm.
+  reflexivity.
+Qed.
+
+Theorem negb_inj : forall x y, negb x = negb y -> x = y.
+Proof.
+  destruct x, y; trivial; simpl; intro H; discriminate H.
+Qed.
+
+Theorem Z_ltb_lt : forall n m : Z, (ltb n m) = true <-> lt n m.
+Proof.
+  intros n m; split.
+  - destruct n, m; intro H; unfold ltb in H; simpl in H; try lia;
+    unfold lt; simpl; destruct (BinPos.Pos.compare _ _); trivial;
+    discriminate H.
+  - destruct n, m; intro H; unfold ltb; simpl; try lia;
+    unfold lt in H; simpl in H; destruct (BinPos.Pos.compare _ _); trivial;
+    discriminate H.
+Qed.
+
+Theorem Z_leb_le : forall n m : Z, (leb n m) = true <-> le n m.
+Proof.
+  intros n m; split.
+  - destruct n, m; intro H; unfold leb in H; simpl in H; try lia;
+    unfold le; simpl; destruct (BinPos.Pos.compare _ _); trivial;
+    try discriminate H; intro H2; discriminate H2.
+  - destruct n, m; intro H; unfold leb; simpl; try lia;
+    unfold le in H; simpl in H;
+    repeat destruct (BinPos.Pos.compare _ _); simpl; trivial;
+    try discriminate H; destruct (H (Logic.eq_refl _)).
+Qed.
+
+Theorem Z_nltb_ge : forall n m : Z, (ltb n m) = false <-> le m n.
+Proof.
+  intros n m.
+  transitivity ((leb m n) = true). 2: { apply Z_leb_le. }
+  split; intro; apply negb_inj.
+  - rewrite <- BinInt.Z.ltb_antisym.
+    exact H.
+  - rewrite <- BinInt.Z.leb_antisym.
+    exact H.
+Qed.
+
+Theorem Z_nleb_gt : forall n m : Z, (leb n m) = false <-> lt m n.
+Proof.
+  intros n m.
+  transitivity ((ltb m n) = true). 2: { apply Z_ltb_lt. }
+  split; intro; apply negb_inj.
+  - rewrite <- BinInt.Z.leb_antisym.
+    exact H.
+  - rewrite <- BinInt.Z.ltb_antisym.
+    exact H.
+Qed.
+
+Theorem opp_le_swap_r: forall n m : Z, le n (opp m) <-> le m (opp n).
+Proof.
+  intros n m.
+  rewrite <- (BinInt.Z.opp_involutive n) at 1.
+  rewrite <- BinInt.Z.opp_le_mono.
+  reflexivity.
+Qed.
+
+Theorem opp_le_swap_l: forall n m : Z, le (opp n) m <-> le (opp m) n.
+Proof.
+  intros n m.
+  rewrite <- (BinInt.Z.opp_involutive m) at 1.
+  rewrite <- BinInt.Z.opp_le_mono.
+  reflexivity.
 Qed.

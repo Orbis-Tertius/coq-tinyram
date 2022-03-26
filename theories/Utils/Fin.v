@@ -286,3 +286,19 @@ Defined.
 Definition fin_max : forall n, fin (S n).
   intro n; exists n; lia.
 Defined.
+
+Theorem proj1_fin_cast : forall {n m} (f : fin n) (eq : n <= m),
+  proj1_sig (fin_cast eq f) = proj1_sig f.
+Proof. destruct f; reflexivity. Qed.
+
+Theorem proj1_fin_add : forall {n m} (f : fin n) (g : fin m),
+  proj1_sig (fin_add f g) = proj1_sig f + proj1_sig g.
+Proof. destruct f, g; reflexivity. Qed.
+
+Theorem proj1_fin_mul : forall {n m} (f : fin n) (g : fin m),
+  proj1_sig (fin_mul f g) = proj1_sig f * proj1_sig g.
+Proof. destruct f, g; reflexivity. Qed.
+
+Theorem proj1_fin_max : forall {n},
+  proj1_sig (fin_max n) = n.
+Proof. reflexivity. Qed.
