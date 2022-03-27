@@ -1235,15 +1235,18 @@ Theorem or_decode_register_correct :
     exact rprp.
   Qed.
 
+  (* Cleanup beurocracy at end of each case. *)
   Ltac encode_decode_fin :=
       f_equal; unfold regFit, reg_vect, option_word; f_equal;
       apply subset_eq_compat; rewrite fin_bitvector_big_inv; reflexivity.
 
+  (* try proving that r is in bounds/is a valid register. *)
   Ltac reg_bound r rprp rDef H :=
     assert (proj1_sig (bitvector_fin_big (reg_vect r)) < registerCount) as H;
     try (rewrite reg_vect_bitvector_fin_big_id_sig, rDef; exact rprp);
     rewrite rDef in H.
 
+  (* try proving that the word r is in bounds/is a valid register. *)
   Ltac reg_bound_word r rprp rDef H :=
     assert (proj1_sig (bitvector_fin_big (option_word (inr r))) < registerCount) as H;
     try (rewrite rDef; unfold option_word; rewrite fin_bitvector_big_inv; exact rprp);
