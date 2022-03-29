@@ -1,6 +1,7 @@
 From Coq Require Import
-  Lia Nat ZArith.Int Numbers.BinNums ProofIrrelevance VectorDef BinIntDef.
-Import PeanoNat.Nat(lt_neq,
+  Lia Nat ZArith.Int Numbers.BinNums ProofIrrelevance VectorDef VectorEq BinIntDef.
+Import PeanoNat.Nat(add_comm,
+                    lt_neq,
                     div_mod,
                     add_0_r,
                     eqb_neq,
@@ -462,6 +463,11 @@ Definition bv_add {n} (b1 b2 : t bool n) : t bool (S n) :=
   fin_bitvector_big_fun (S n)
     (bitvector_fin_big_fun b1 + bitvector_fin_big_fun b2).
 
+Theorem bv_add_correct : forall {n} (b1 b2 : t bool n),
+  bv_add b1 b2 = fin_bitvector_big_fun (S n)
+    (bitvector_fin_big_fun b1 + bitvector_fin_big_fun b2).
+Proof. reflexivity. Qed.
+
 Definition bv_incr {n} (i : nat) (v : t bool n) : t bool n :=
   fin_bitvector_big_fun n ((i + bitvector_fin_big_fun v) mod (2 ^ n)).
 
@@ -471,10 +477,10 @@ Definition bv_sub {n} (b1 b2 : t bool n) : t bool (S n) :=
   fin_bitvector_big_fun (S n) 
     (bitvector_fin_big_fun b1 + 2 ^ n - bitvector_fin_big_fun b2).
 
-(*Multiplication (unsigned), all bits*)
-Definition bv_mul {n} (b1 b2 : t bool n) : t bool (2 * n) :=
-  fin_bitvector_big_fun (2 * n) 
-    (bitvector_fin_big_fun b1 * bitvector_fin_big_fun b2).
+Theorem bv_sub_correct : forall {n} (b1 b2 : t bool n),
+  bv_sub b1 b2 = fin_bitvector_big_fun (S n) 
+    (bitvector_fin_big_fun b1 + 2 ^ n - bitvector_fin_big_fun b2).
+Proof. reflexivity. Qed.
 
 (*least significant bits of multiplication (unsigned)
   additional bits indicate, respecively, an overflow and a result of 0.
@@ -484,35 +490,54 @@ Definition bv_mul_flags {n} (b1 b2 : t bool n) : bool * bool * t bool n * t bool
   let (pvH, pvL) := splitat n (fin_bitvector_big_fun (n + n) prod) in
   (2 ^ n <=? prod, prod =? 0, pvH, pvL).
 
-(*Absolute value of signed vector*)
-Definition bv_abs {n} (v : t bool (S n)) : t bool (S n) :=
-  match v with
-  | s :: vs => 
-    match s with
-    | true => false :: (bv_incr 1 (bv_not vs))
-    | false => false :: vs
-    end
-  end.
+(*Multiplication (unsigned), all bits*)
+Definition bv_mul {n} (b1 b2 : t bool n) : t bool (n + n) :=
+  (fun x => snd (fst x) ++ snd x) (bv_mul_flags b1 b2).
 
-(*Negative of signed vector*)
-Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
-  match v with
-  | s :: vs => 
-    match s with
-    | true => false :: (bv_incr 1 (bv_not vs))
-    | false => true :: (bv_incr 1 (bv_not vs))
-    end
-  end.
+Theorem bv_mul_correct : forall {n} (b1 b2 : t bool n),
+  bv_mul b1 b2 = fin_bitvector_big_fun (n + n) 
+    (bitvector_fin_big_fun b1 * bitvector_fin_big_fun b2).
+Proof.
+  intros n b2 b3.
+  unfold bv_mul, bv_mul_flags.
+  destruct (splitat n _) eqn:splitEq; simpl.
+  apply VectorSpec.append_splitat in splitEq.
+  symmetry; assumption.
+Qed.
 
 (*unsigned division. Extra boolean indicates division by 0.*)
-Definition bv_udiv {n} (b1 b2 : t bool n) : bool * t bool n :=
+Definition bv_udiv_flag {n} (b1 b2 : t bool n) : bool * t bool n :=
   let den := bitvector_fin_big_fun b2 in
   (den =? 0, fin_bitvector_big_fun n (bitvector_fin_big_fun b1 / den)).
 
+Definition bv_udiv {n} (b1 b2 : t bool n) : t bool n :=
+  snd (bv_udiv_flag b1 b2).
+
+Theorem bv_udiv_correct : forall {n} (b1 b2 : t bool n),
+  bv_udiv b1 b2 = fin_bitvector_big_fun n 
+    (bitvector_fin_big_fun b1 / bitvector_fin_big_fun b2).
+Proof.
+  intros n b2 b3.
+  unfold bv_udiv, bv_udiv_flag.
+  reflexivity.
+Qed.
+
 (*unsigned modulus. Extra boolean indicates modulus by 0.*)
-Definition bv_umod {n} (b1 b2 : t bool n) : bool * t bool n :=
+Definition bv_umod_flag {n} (b1 b2 : t bool n) : bool * t bool n :=
   let bas := bitvector_fin_big_fun b2 in
   (bas =? 0, fin_bitvector_big_fun n (bitvector_fin_big_fun b1 mod bas)).
+
+Definition bv_umod {n} (b1 b2 : t bool n) : t bool n :=
+  snd (bv_umod_flag b1 b2).
+
+Theorem bv_umod_correct : forall {n} (b1 b2 : t bool n),
+  bv_umod b1 b2 = fin_bitvector_big_fun n 
+    (bitvector_fin_big_fun b1 mod bitvector_fin_big_fun b2).
+Proof.
+  intros n b2 b3.
+  unfold bv_umod, bv_umod_flag.
+  reflexivity.
+Qed.
 
 (*left-shift by m with zero padding.*)
 Definition bv_shl {n} (m : nat) (v : t bool n) : t bool n.
@@ -520,22 +545,56 @@ Definition bv_shl {n} (m : nat) (v : t bool n) : t bool n.
   - rewrite PeanoNat.Nat.leb_le in mln.
     rewrite <- (PeanoNat.Nat.sub_add m n mln).
     apply (fun x => x ++ const b0 m).
-    apply (take _ (PeanoNat.Nat.le_sub_l n m)).
+    apply (fun x => snd (splitat m x)).
+    rewrite (Minus.le_plus_minus_r m n mln).
     exact v.
   - exact (const b0 _).
 Defined.
+
+Theorem bv_shl_correct : forall {n} m (v : t bool (m + n)),
+  bv_shl m v = cast (snd (splitat m v) ++ const b0 m) (add_comm n m).
+Proof.
+  intros n m v.
+  unfold bv_shl.
+  assert (m <=? m + n = true).
+  { rewrite PeanoNat.Nat.leb_le. lia. }
+  rewrite (dep_if_true _ _ _ _ H).
+  destruct (splitat m v) as [v1 v2] eqn:spvE.
+  apply VectorSpec.append_splitat in spvE; rewrite spvE.
+  unfold eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
+  rewrite cast_app_l, Vector.splitat_append.
+  simpl; vector_simp.
+  f_equal; apply proof_irrelevance.
+Qed.
 
 (*right-shift by m with zero padding.*)
 Definition bv_shr {n} (m : nat) (v : t bool n) : t bool n.
   destruct (m <=? n) eqn:mln.
   - rewrite PeanoNat.Nat.leb_le in mln.
     rewrite <- (Minus.le_plus_minus_r m n mln).
-    apply (fun x => const b0 m ++ x).
-    apply (fun x => snd (splitat m x)).
-    rewrite (Minus.le_plus_minus_r m n mln).
-    exact v.
+    apply append.
+    + exact (const b0 m).
+    + rewrite <- (Minus.le_plus_minus_r m n mln), add_comm in v.
+      apply (splitat (n - m) v).
   - exact (const b0 _).
 Defined.
+
+Theorem bv_shr_correct : forall {n} m (v : t bool (n + m)),
+  bv_shr m v = cast (const b0 m ++ fst (splitat n v)) (add_comm m n).
+Proof.
+  intros n m v.
+  unfold bv_shr.
+  assert (m <=? n + m = true).
+  { rewrite PeanoNat.Nat.leb_le. lia. }
+  rewrite (dep_if_true _ _ _ _ H).
+  destruct (splitat n v) as [v1 v2] eqn:spvE.
+  apply VectorSpec.append_splitat in spvE; rewrite spvE.
+  unfold eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
+  vector_simp; rewrite cast_app_r. 
+  rewrite Vector.splitat_append.
+  simpl; vector_simp.
+  f_equal; apply proof_irrelevance.
+Qed.
 
 (* two's complement signed integer representation. *)
 
@@ -564,29 +623,6 @@ Proof.
     f_equal.
     + rewrite PeanoNat.Nat.sub_0_r; reflexivity.
     + exact IHv.
-Qed.
-
-Theorem Z_inj_pow : forall x y, 
-  pow (of_nat x) (of_nat y) = of_nat (x ^ y).
-Proof.
-  intros x y.
-  induction y.
-  - reflexivity.
-  - rewrite Znat.Nat2Z.inj_succ, BinInt.Z.pow_succ_r.
-    2: { apply Zorder.Zle_0_nat. }
-    rewrite IHy.
-    simpl; rewrite Znat.Nat2Z.inj_mul.
-    reflexivity.
-Qed.
-
-Theorem Z2_inj_pow : forall x y, 
-  le 0 x -> le 0 y ->
-  to_nat (pow x y) = to_nat x ^ to_nat y.
-Proof.
-  intros x y l0x l0y.
-  rewrite <- (Znat.Z2Nat.id x), <- (Znat.Z2Nat.id y) at 1; try assumption.
-  rewrite Z_inj_pow, Znat.Nat2Z.id.
-  reflexivity.
 Qed.
 
 Theorem twos_complement_min : forall {n} (v : t bool (S n)),
@@ -623,7 +659,7 @@ Proof.
 Qed.
 
 Definition twos_complement_inv (n : nat) (z : Z) : t bool (S n) :=
-  match Z_as_Int.ltb z 0 with
+  match ltb z 0 with
   | true => fin_bitvector_big_fun _ (Z.to_nat (add z (pow 2 (of_nat (S n)))))
   | false => fin_bitvector_big_fun _ (Z.to_nat z)
   end.
@@ -640,7 +676,7 @@ Proof.
   - rewrite PeanoNat.Nat.mul_1_l, <- opp_sub_swap, <- Znat.Nat2Z.inj_sub.
     2: { apply PeanoNat.Nat.lt_le_incl; assumption. }
     unfold twos_complement_inv.
-    replace (Z_as_Int.ltb _ 0) with true.
+    replace (ltb _ 0) with true.
     2: { symmetry; rewrite Z_ltb_lt, BinInt.Z.opp_neg_pos.
          change Z0 with (of_nat 0). apply Znat.inj_lt; lia. }
     rewrite Znat.Nat2Z.inj_sub. 2: { lia. }
@@ -664,7 +700,7 @@ Proof.
       apply bitvector_fin_big_fun_inv.
   - simpl of_nat; rewrite BinInt.Z.sub_0_r.
     unfold twos_complement_inv.
-    replace (Z_as_Int.ltb (of_nat (twos_complement' (tl v))) 0)
+    replace (ltb (of_nat (twos_complement' (tl v))) 0)
        with false.
     2: { symmetry; rewrite Z_nltb_ge. apply Znat.Nat2Z.is_nonneg. }
     rewrite Znat.Nat2Z.id.
@@ -687,7 +723,7 @@ Proof.
   assert (2 ^ n <> 0).
   { apply PeanoNat.Nat.pow_nonzero; lia. }
   unfold twos_complement_inv.
-  destruct (Z_as_Int.ltb z 0) eqn:ltz0.
+  destruct (ltb z 0) eqn:ltz0.
   - rewrite Z_ltb_lt in ltz0.
     assert (0 < to_nat (opp z)). { lia. }
     rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
@@ -718,6 +754,103 @@ Proof.
     simpl; rewrite twos_complement_big, fin_bitvector_big_fun_inv; lia.
 Qed.
 
+Theorem twos_complement_sign : forall n z,
+  le (opp (pow 2 (of_nat n))) z -> 
+  lt z (pow 2 (of_nat n)) ->
+  hd (twos_complement_inv n z) = ltb z Z0.
+Proof.
+  intros n z zmin zmax.
+  unfold twos_complement_inv.
+  destruct (ltb z 0) eqn:ltz0; unfold fin_bitvector_big_fun.
+  - rewrite Z_ltb_lt in ltz0.
+    replace (_ / _) with 1. { reflexivity. }
+    rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
+    rewrite Znat.Z2Nat.inj_sub. 2: { lia. }
+    rewrite Z2_inj_pow; try lia.
+    change (to_nat _) with 2 at 1.
+    rewrite Znat.Nat2Z.id.
+    assert ((to_nat (opp z)) <= 2 ^ n).
+    { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_le; try lia;
+      rewrite opp_le_swap_l, <- Z_inj_pow; lia. }
+    symmetry; apply div_bet_1; simpl; lia.
+  - rewrite Z_nltb_ge in ltz0.
+    replace (_ / _) with 0. { reflexivity. }
+    assert (to_nat z < 2 ^ n).
+    { rewrite Znat.Z2Nat.inj_lt, Z2_inj_pow, Znat.Nat2Z.id in zmax; try lia.
+      assumption. }
+    rewrite div_small; lia.
+Qed.
+
+(* signed bitvector arithmetic *)
+
+(*Absolute value of signed vector*)
+Definition bv_abs {n} (v : t bool (S n)) : t bool n :=
+  fin_bitvector_big_fun n (Z.abs_nat (twos_complement v)).
+(*
+Definition bv_abs {n} (v : t bool (S n)) : t bool n :=
+  match v with
+  | s :: vs => 
+    match s with
+    | true => bv_incr 1 (bv_not vs)
+    | false => vs
+    end
+  end.
+*)
+
+Theorem bv_abs_correct : forall {n} (v : t bool (S n)),
+  bv_abs v = fin_bitvector_big_fun n (Z.abs_nat (twos_complement v)).
+Proof. reflexivity. Qed.
+
+(*Negative of signed vector*)
+Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
+  twos_complement_inv n (opp (twos_complement v)).
+(*
+Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
+  match v with
+  | s :: vs => 
+    match s with
+    | true => false :: (bv_incr 1 (bv_not vs))
+    | false => true :: (bv_incr 1 (bv_not vs))
+    end
+  end.
+*)
+
+Theorem bv_neg_correct_1 : forall {n} (v : t bool (S n)),
+  bv_neg v = twos_complement_inv n (opp (twos_complement v)).
+Proof. reflexivity. Qed.
+
+Theorem bv_neg_correct_2 : forall {n} (z : Z),
+  lt (opp (pow 2 (of_nat n))) z ->
+  lt z (pow 2 (of_nat n)) ->
+  opp z = twos_complement (bv_neg (twos_complement_inv n z)).
+Proof.
+  intros; rewrite bv_neg_correct_1.
+  repeat rewrite twos_complement_iso_2; try lia.
+Qed.
+
+(* signed multiplication *)
+Definition bv_smul {n} (b1 b2 : t bool (S n)) : t bool (S (n + n)) :=
+  twos_complement_inv (n + n) 
+    (mul (twos_complement b1) (twos_complement b2)).
+
+Theorem bv_smul_correct_1 : forall {n} (b1 b2 : t bool (S n)),
+  bv_smul b1 b2 = twos_complement_inv (n + n) 
+    (mul (twos_complement b1) (twos_complement b2)).
+Proof. reflexivity. Qed.
+
+Theorem bv_smul_correct_2 : forall {n} (z1 z2 : Z),
+  lt (opp (pow 2 (of_nat n))) z1 -> lt z1 (pow 2 (of_nat n)) ->
+  lt (opp (pow 2 (of_nat n))) z2 -> lt z2 (pow 2 (of_nat n)) ->
+  mul z1 z2 = twos_complement 
+    (bv_smul (twos_complement_inv n z1) (twos_complement_inv n z2)).
+Proof. 
+  intros. rewrite bv_smul_correct_1.
+  repeat rewrite twos_complement_iso_2; try lia;
+  rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+  - apply mult_pow_lem_l; lia.
+  - apply mult_pow_lem_r; lia.
+Qed.
+
 (* Computes the upper n bits of the signed multiplication
    of two two's-complement numbers.
 
@@ -725,15 +858,41 @@ Qed.
   by the upper bits of the absolute-value of the product.
 
   This means that, for example, -1 * 1 will result in
-  10...0, which is not representing a twos complement 
+  10...0, which is NOT representing a twos complement 
   number.
 *)
 Definition bv_smulh : forall {n} (b1 b2 : t bool (S n)), 
-                                 bool * t bool (S n).
+                                 t bool (S n).
   intros n b1 b2.
-  remember (bv_abs b1) as ab1; remember (bv_abs b2) as ab2.
-  destruct (bv_mul_flags (tl ab1) (tl ab2)) as [[[ob zb] mresh] _].
-  split. { exact ob. }
-  destruct zb. { (* if 0 *) exact (const b0 _). }
-  exact (xorb (hd b1) (hd b2) :: mresh).
+  apply twos_complement in b1, b2.
+  remember (mul b1 b2) as b12.
+  apply cons.
+  - exact (ltb b12 Z0).
+  - apply (fun (x : t bool (n + n)) => fst (splitat n x)), 
+          fin_bitvector_big_fun, Z.abs_nat, b12.
 Defined.
+
+Theorem bv_smulh_correct_value :
+  forall {n} (b1 b2 : t bool (S n)), 
+  tl (bv_smulh b1 b2) = 
+    fst (splitat n (fin_bitvector_big_fun (n + n) 
+    (Z.abs_nat (mul (twos_complement b1) (twos_complement b2))))).
+Proof. reflexivity. Qed.
+
+Theorem bv_smulh_correct_sign :
+  forall {n} (b1 b2 : t bool (S n)), 
+  lt (opp (pow 2 (of_nat n))) (twos_complement b1) -> 
+  lt (opp (pow 2 (of_nat n))) (twos_complement b2) -> 
+  hd (bv_smulh b1 b2) = hd (bv_smul b1 b2).
+Proof.
+  intros.
+  assert (lt (twos_complement b2) (pow 2 (of_nat n))).
+  { apply twos_complement_max. }
+  assert (lt (twos_complement b3) (pow 2 (of_nat n))).
+  { apply twos_complement_max. }
+  unfold bv_smulh; simpl.
+  rewrite <- (twos_complement_sign (n + n)); try reflexivity;
+  rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+  - apply mult_pow_lem_l; lia.
+  - apply mult_pow_lem_r; lia.
+Qed.

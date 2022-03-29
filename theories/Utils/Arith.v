@@ -8,7 +8,7 @@ Import BinInt.Z(of_nat, to_nat, opp,
                 leb, le, ltb, lt).
 
 
-(*Don't know where to put this.*)
+(*Don't know where to put these.*)
 Theorem rew_id : forall A (P : A -> Type) (a : A) (e : a = a) (k : P a),
   rew [fun x : A => P x] e in k = k.
 Proof.
@@ -51,6 +51,38 @@ Proof.
   destruct eqp.
   intros Pp.
   exact Pp.
+Qed.
+
+Theorem dep_if_true :
+  forall x (P : Set)
+           (t : forall (e : x = true), P)
+           (f : forall (e: x = false), P)
+           (eq : x = true),
+  ( if x as b return (x = b -> P)
+    then t
+    else f ) Logic.eq_refl
+  = t eq.
+Proof.
+  intros x P t f eq.
+  destruct x.
+  - f_equal; apply proof_irrelevance.
+  - discriminate eq.
+Qed.
+
+Theorem dep_if_false :
+  forall x (P : Set)
+           (t : forall (e : x = true), P)
+           (f : forall (e: x = false), P)
+           (eq : x = false),
+  ( if x as b return (x = b -> P)
+    then t
+    else f ) Logic.eq_refl
+  = f eq.
+Proof.
+  intros x P t f eq.
+  destruct x.
+  - discriminate eq.
+  - f_equal; apply proof_irrelevance.
 Qed.
 
 Theorem plus_reg_r : forall n m p : nat, n + p = m + p -> n = m.
@@ -259,4 +291,114 @@ Proof.
   rewrite <- (BinInt.Z.opp_involutive m) at 1.
   rewrite <- BinInt.Z.opp_le_mono.
   reflexivity.
+Qed.
+
+Theorem Z_inj_pow : forall x y, 
+  pow (of_nat x) (of_nat y) = of_nat (x ^ y).
+Proof.
+  intros x y.
+  induction y.
+  - reflexivity.
+  - rewrite Znat.Nat2Z.inj_succ, BinInt.Z.pow_succ_r.
+    2: { apply Zorder.Zle_0_nat. }
+    rewrite IHy.
+    simpl; rewrite Znat.Nat2Z.inj_mul.
+    reflexivity.
+Qed.
+
+Theorem Z2_inj_pow : forall x y, 
+  le Z0 x -> le Z0 y ->
+  to_nat (pow x y) = to_nat x ^ to_nat y.
+Proof.
+  intros x y l0x l0y.
+  rewrite <- (Znat.Z2Nat.id x), <- (Znat.Z2Nat.id y) at 1; try assumption.
+  rewrite Z_inj_pow, Znat.Nat2Z.id.
+  reflexivity.
+Qed.
+
+
+
+Theorem le_opp_intro_l : forall n m,
+  le Z0 n ->
+  le m Z0 ->
+  le n m -> le (opp m) n.
+Proof. intros n m npos mneg lnm; lia. Qed.
+
+Theorem le_opp_elim_l : forall n m,
+  le Z0 m ->
+  le n Z0 ->
+  le (opp m) n -> le n m.
+Proof. intros n m npos mneg lnm; lia. Qed.
+
+Theorem le_opp_intro_r : forall n m,
+  le Z0 n ->
+  le m Z0 ->
+  le n m -> le m (opp n).
+Proof. intros n m npos mneg lnm; lia. Qed.
+
+Theorem le_opp_elim_r : forall n m,
+  le Z0 m ->
+  le n Z0 ->
+  le m (opp n) -> le n m.
+Proof. intros n m npos mneg lnm; lia. Qed.
+
+
+
+Theorem mult_pow_lem_l : forall p1 p2 t1 t2,
+  lt (opp p1) t1 -> lt (opp p2) t2 -> 
+  lt t1 p1 -> lt t2 p2 ->
+  le (opp (mul p1 p2)) (mul t1 t2).
+Proof.
+  intros.
+  destruct (BinInt.Z.compare p1 Z0) eqn:zp1; 
+  destruct (BinInt.Z.compare p2 Z0) eqn:zp2;
+  try apply BinInt.Z.compare_eq in zp1;
+  try apply BinInt.Z.compare_eq in zp2;
+  try rewrite BinInt.Z.compare_lt_iff in zp1;
+  try rewrite BinInt.Z.compare_lt_iff in zp2;
+  try rewrite BinInt.Z.compare_gt_iff in zp1;
+  try rewrite BinInt.Z.compare_gt_iff in zp2;
+  try lia;
+  destruct (BinInt.Z.compare t1 Z0) eqn:zt1; 
+  destruct (BinInt.Z.compare t2 Z0) eqn:zt2;
+  try apply BinInt.Z.compare_eq in zt1;
+  try apply BinInt.Z.compare_eq in zt2;
+  try rewrite BinInt.Z.compare_lt_iff in zt1;
+  try rewrite BinInt.Z.compare_lt_iff in zt2;
+  try rewrite BinInt.Z.compare_gt_iff in zt1;
+  try rewrite BinInt.Z.compare_gt_iff in zt2;
+  try lia.
+  - rewrite opp_le_swap_l, <- BinInt.Z.mul_opp_l.
+    apply BinInt.Z.mul_le_mono_nonneg; lia.
+  - rewrite opp_le_swap_l, <- BinInt.Z.mul_opp_r.
+    apply BinInt.Z.mul_le_mono_nonneg; lia.
+Qed.
+
+Theorem mult_pow_lem_r : forall p1 p2 t1 t2,
+  lt (opp p1) t1 -> lt (opp p2) t2 -> 
+  lt t1 p1 -> lt t2 p2 ->
+  lt (mul t1 t2) (mul p1 p2).
+Proof. 
+  intros.
+  destruct (BinInt.Z.compare p1 Z0) eqn:zp1; 
+  destruct (BinInt.Z.compare p2 Z0) eqn:zp2;
+  try apply BinInt.Z.compare_eq in zp1;
+  try apply BinInt.Z.compare_eq in zp2;
+  try rewrite BinInt.Z.compare_lt_iff in zp1;
+  try rewrite BinInt.Z.compare_lt_iff in zp2;
+  try rewrite BinInt.Z.compare_gt_iff in zp1;
+  try rewrite BinInt.Z.compare_gt_iff in zp2;
+  try lia;
+  destruct (BinInt.Z.compare t1 Z0) eqn:zt1; 
+  destruct (BinInt.Z.compare t2 Z0) eqn:zt2;
+  try apply BinInt.Z.compare_eq in zt1;
+  try apply BinInt.Z.compare_eq in zt2;
+  try rewrite BinInt.Z.compare_lt_iff in zt1;
+  try rewrite BinInt.Z.compare_lt_iff in zt2;
+  try rewrite BinInt.Z.compare_gt_iff in zt1;
+  try rewrite BinInt.Z.compare_gt_iff in zt2;
+  try lia.
+  - rewrite <- BinInt.Z.mul_opp_opp.
+    apply BinInt.Z.mul_lt_mono_nonneg; lia.
+  - apply BinInt.Z.mul_lt_mono_nonneg; try lia.
 Qed.

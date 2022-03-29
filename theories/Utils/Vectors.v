@@ -52,7 +52,7 @@ Qed.
 
 Theorem cast_app_l : forall {A n m o}
   (vn : t A n) (vm : t A m) (eq : n + m = n + o),
-  cast (vn ++ vm)  eq
+  cast (vn ++ vm) eq
   = vn ++ cast vm (Plus.plus_reg_l _ _ _ eq).
 Proof.
   intros A n m o vn vm eq.
@@ -721,13 +721,13 @@ Definition Block_Store {B memsz}
 
 Ltac vector_bubble :=
   match goal with
-  | |- context[cast _ (cast _ _)] =>
+  | |- context[cast (cast _ _) _] =>
       rewrite cast_trans
-  | |- context[?x ++ cast _ ?y] =>
+  | |- context[?x ++ cast ?y _] =>
       rewrite cast_app_left
-  | |- context[cast _ ?x ++ ?y] =>
+  | |- context[cast ?x _ ++ ?y] =>
       rewrite cast_app_right
-  | |- context[?h :: cast _ ?y] =>
+  | |- context[?h :: cast ?y _] =>
       rewrite cast_cons_in
   | |- context[(?vn ++ ?vm) ++ ?vo] =>
       rewrite <- cast_app_assoc_1
