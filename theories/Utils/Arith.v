@@ -377,7 +377,7 @@ Proof.
   try rewrite Z_ltb_lt in zt2;
   try rewrite Z_nltb_ge in zt1;
   try rewrite Z_nltb_ge in zt2;
-  try
+  try lia.
   - rewrite <- BinInt.Z.mul_opp_opp.
     apply BinInt.Z.mul_lt_mono_nonneg; lia.
   - apply BinInt.Z.mul_lt_mono_nonneg; try lia.
