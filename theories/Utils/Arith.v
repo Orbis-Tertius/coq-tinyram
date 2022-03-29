@@ -342,31 +342,20 @@ Theorem le_opp_elim_r : forall n m,
   le m (opp n) -> le n m.
 Proof. intros n m npos mneg lnm; lia. Qed.
 
-
-
-Theorem mult_pow_lem_l : forall p1 p2 t1 t2,
+Theorem le_opp_mul_mul : forall p1 p2 t1 t2,
   lt (opp p1) t1 -> lt (opp p2) t2 -> 
   lt t1 p1 -> lt t2 p2 ->
   le (opp (mul p1 p2)) (mul t1 t2).
 Proof.
   intros.
-  destruct (BinInt.Z.compare p1 Z0) eqn:zp1; 
-  destruct (BinInt.Z.compare p2 Z0) eqn:zp2;
-  try apply BinInt.Z.compare_eq in zp1;
-  try apply BinInt.Z.compare_eq in zp2;
-  try rewrite BinInt.Z.compare_lt_iff in zp1;
-  try rewrite BinInt.Z.compare_lt_iff in zp2;
-  try rewrite BinInt.Z.compare_gt_iff in zp1;
-  try rewrite BinInt.Z.compare_gt_iff in zp2;
-  try lia;
-  destruct (BinInt.Z.compare t1 Z0) eqn:zt1; 
-  destruct (BinInt.Z.compare t2 Z0) eqn:zt2;
-  try apply BinInt.Z.compare_eq in zt1;
-  try apply BinInt.Z.compare_eq in zt2;
-  try rewrite BinInt.Z.compare_lt_iff in zt1;
-  try rewrite BinInt.Z.compare_lt_iff in zt2;
-  try rewrite BinInt.Z.compare_gt_iff in zt1;
-  try rewrite BinInt.Z.compare_gt_iff in zt2;
+  assert (lt Z0 p1). { lia. }
+  assert (lt Z0 p2). { lia. }
+  destruct (ltb t1 Z0) eqn:zt1; 
+  destruct (ltb t2 Z0) eqn:zt2;
+  try rewrite Z_ltb_lt in zt1;
+  try rewrite Z_ltb_lt in zt2;
+  try rewrite Z_nltb_ge in zt1;
+  try rewrite Z_nltb_ge in zt2;
   try lia.
   - rewrite opp_le_swap_l, <- BinInt.Z.mul_opp_l.
     apply BinInt.Z.mul_le_mono_nonneg; lia.
@@ -374,30 +363,21 @@ Proof.
     apply BinInt.Z.mul_le_mono_nonneg; lia.
 Qed.
 
-Theorem mult_pow_lem_r : forall p1 p2 t1 t2,
+Theorem lt_mul_mul : forall p1 p2 t1 t2,
   lt (opp p1) t1 -> lt (opp p2) t2 -> 
   lt t1 p1 -> lt t2 p2 ->
   lt (mul t1 t2) (mul p1 p2).
 Proof. 
   intros.
-  destruct (BinInt.Z.compare p1 Z0) eqn:zp1; 
-  destruct (BinInt.Z.compare p2 Z0) eqn:zp2;
-  try apply BinInt.Z.compare_eq in zp1;
-  try apply BinInt.Z.compare_eq in zp2;
-  try rewrite BinInt.Z.compare_lt_iff in zp1;
-  try rewrite BinInt.Z.compare_lt_iff in zp2;
-  try rewrite BinInt.Z.compare_gt_iff in zp1;
-  try rewrite BinInt.Z.compare_gt_iff in zp2;
-  try lia;
-  destruct (BinInt.Z.compare t1 Z0) eqn:zt1; 
-  destruct (BinInt.Z.compare t2 Z0) eqn:zt2;
-  try apply BinInt.Z.compare_eq in zt1;
-  try apply BinInt.Z.compare_eq in zt2;
-  try rewrite BinInt.Z.compare_lt_iff in zt1;
-  try rewrite BinInt.Z.compare_lt_iff in zt2;
-  try rewrite BinInt.Z.compare_gt_iff in zt1;
-  try rewrite BinInt.Z.compare_gt_iff in zt2;
-  try lia.
+  assert (lt Z0 p1). { lia. }
+  assert (lt Z0 p2). { lia. }
+  destruct (ltb t1 Z0) eqn:zt1; 
+  destruct (ltb t2 Z0) eqn:zt2;
+  try rewrite Z_ltb_lt in zt1;
+  try rewrite Z_ltb_lt in zt2;
+  try rewrite Z_nltb_ge in zt1;
+  try rewrite Z_nltb_ge in zt2;
+  try
   - rewrite <- BinInt.Z.mul_opp_opp.
     apply BinInt.Z.mul_lt_mono_nonneg; lia.
   - apply BinInt.Z.mul_lt_mono_nonneg; try lia.

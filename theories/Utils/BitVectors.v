@@ -847,8 +847,8 @@ Proof.
   intros. rewrite bv_smul_correct_1.
   repeat rewrite twos_complement_iso_2; try lia;
   rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
-  - apply mult_pow_lem_l; lia.
-  - apply mult_pow_lem_r; lia.
+  - apply le_opp_mul_mul; lia.
+  - apply lt_mul_mul; lia.
 Qed.
 
 (* Computes the upper n bits of the signed multiplication
@@ -893,6 +893,6 @@ Proof.
   unfold bv_smulh; simpl.
   rewrite <- (twos_complement_sign (n + n)); try reflexivity;
   rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
-  - apply mult_pow_lem_l; lia.
-  - apply mult_pow_lem_r; lia.
+  - apply le_opp_mul_mul; lia.
+  - apply lt_mul_mul; lia.
 Qed.
