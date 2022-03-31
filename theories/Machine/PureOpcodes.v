@@ -1,11 +1,11 @@
 From Coq Require Import
-  Lia VectorDef.
-Import VectorNotations.
+  Lia ZArith.Int Numbers.BinNums BinIntDef
+  VectorDef VectorEq.
+Import BinInt.Z PeanoNat.Nat VectorNotations EqNotations.
 From TinyRAM.Utils Require Import
-  Vectors BitVectors Fin.
+  Vectors BitVectors Fin Arith.
 From TinyRAM.Machine Require Import
   Parameters Words Memory.
-Import PeanoNat.Nat.
 
 Module TinyRAMState (Params : TinyRAMParameters).
   Module TRMem := TinyRAMMem Params.
@@ -29,21 +29,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
         memory : Memory;
       }.
 
-  (* TODO: Verify basic properties of replace!!! *)
-
-    (* All opcodes which operate purely on state. *)
-
-  (*Template:
-      intro ms; destruct ms; split.
-      (* PC *)
-      - [...]
-      (* Registers *)
-      - [...]
-      (* Flag *)
-      - [...]
-      (* Memory *)
-      - [...]
-  *)
+  (* All opcodes which operate purely on state. *)
 
   (*"""
   compute bitwise AND of [rj] and [A] and store result in ri
@@ -65,6 +51,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
+  Theorem pureOp_and_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_and ri rj A m)) ri = 
+    bv_and (nth (registerValues m) rj) A.
+  Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
+
+  Theorem pureOp_and_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_and ri rj A m) = 
+    (bitvector_nat_big (bv_and (nth (registerValues m) rj) A) =? 0).
+  Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
+
   (*"""
   compute bitwise OR of [rj] and [A] and store result in ri
   [flag:] result is 0W
@@ -84,6 +80,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_or_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_or ri rj A m)) ri = 
+    bv_or (nth (registerValues m) rj) A.
+  Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
+
+  Theorem pureOp_or_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_or ri rj A m) = 
+    (bitvector_nat_big (bv_or (nth (registerValues m) rj) A) =? 0).
+  Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
 
   (*"""
   compute bitwise XOR of [rj] and [A] and store result in ri
@@ -105,6 +111,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
+  Theorem pureOp_xor_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_xor ri rj A m)) ri = 
+    bv_xor (nth (registerValues m) rj) A.
+  Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
+
+  Theorem pureOp_xor_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_xor ri rj A m) = 
+    (bitvector_nat_big (bv_xor (nth (registerValues m) rj) A) =? 0).
+  Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
+
   (*"""
   compute bitwise NOT of [A] and store result in ri
   [flag:] result is 0W
@@ -123,6 +139,16 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_not_correct (ri : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_not ri A m)) ri = 
+    bv_not A.
+  Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
+
+  Theorem pureOp_not_correct_flag (ri : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_not ri A m) = 
+    (bitvector_nat_big (bv_not A) =? 0).
+  Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
 
   (*"""
   The instruction add ri rj A stores in ri the W-bit string
@@ -146,6 +172,19 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
+  Theorem pureOp_add_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_add ri rj A m) :: 
+    nth (registerValues (pureOp_add ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj)
+        + bitvector_nat_big A).
+  Proof.
+    destruct m.
+    unfold pureOp_add; rewrite bv_add_correct_1.
+    simpl nth; simpl conditionFlag.
+    rewrite nth_replace. reflexivity.
+  Qed.
+
   (*"""
   compute [rj]u - [A]u and store result in ri
   
@@ -167,6 +206,20 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
+  Theorem pureOp_sub_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    negb (conditionFlag (pureOp_sub ri rj A m)) :: 
+    nth (registerValues (pureOp_sub ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj)
+        + 2 ^ wordSize - bitvector_nat_big A).
+  Proof.
+    destruct m.
+    unfold pureOp_sub; rewrite bv_sub_correct_1.
+    simpl nth; simpl conditionFlag.
+    rewrite nth_replace, Bool.negb_involutive.
+    reflexivity.
+  Qed.
+
   (*"""
   compute [rj]u * [A]u and store least significant bits of result in ri
  
@@ -176,17 +229,28 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms.
     apply (nth registerValues0) in rj.
-    destruct (bv_mul_flags rj A) as [[[of _] _] res].
+    destruct (splitat wordSize (bv_mul rj A)) as [resh resl].
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri resl).
     (* Flag *)
-    - exact (negb of).
+    - exact (bv_eq resh (const b0 _)).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_mull_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_mull ri rj A m) = 
+    ((bitvector_nat_big (nth (registerValues m) rj)
+     * bitvector_nat_big A) <? 2 ^ wordSize).
+  Proof. 
+    destruct m; unfold pureOp_mull.
+    destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
+    rewrite Bool.eq_iff_eq_true, bv_eq_equiv, ltb_lt, bv_mull_high_const0, sm.
+    reflexivity.
+  Qed.
 
   (*"""
   compute [rj]u * [A]u and store most significant bits of result in ri
@@ -197,17 +261,44 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms.
     apply (nth registerValues0) in rj.
-    destruct (bv_mul_flags rj A) as [[[of _] res] _].
+    destruct (splitat wordSize (bv_mul rj A)) as [resh resl].
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registerValues0 ri resh).
     (* Flag *)
-    - exact (negb of).
+    - exact (bv_eq resh (const b0 _)).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_umulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_umulh ri rj A m) = 
+    ((bitvector_nat_big (nth (registerValues m) rj)
+     * bitvector_nat_big A) <? 2 ^ wordSize).
+  Proof. 
+    destruct m; unfold pureOp_umulh.
+    destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
+    rewrite Bool.eq_iff_eq_true, bv_eq_equiv, ltb_lt, bv_mull_high_const0, sm.
+    reflexivity.
+  Qed.
+
+  Theorem pureOp_mul_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_umulh ri rj A m)) ri ++ 
+    nth (registerValues (pureOp_mull ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj)
+        * bitvector_nat_big A).
+  Proof.
+    destruct m.
+    unfold pureOp_mull, pureOp_umulh.
+    rewrite bv_mul_correct_1; simpl.
+    destruct (splitat _ _) as [b1 b2] eqn:speq.
+    apply VectorSpec.append_splitat in speq.
+    simpl; repeat rewrite nth_replace.
+    symmetry; exact speq.
+  Qed.
 
   (*"""
   compute [rj]s * [A]s and store most significant bits of result in ri
@@ -220,19 +311,75 @@ Module TinyRAMState (Params : TinyRAMParameters).
     unfold Word in rj, A.
     replace wordSize with (S (pred wordSize)) in rj, A.
     2: { apply succ_pred_pos; apply wordSizePos. } 
-    destruct (bv_smulh rj A) as [of res].
-    replace (S (pred wordSize)) with wordSize in res.
-    2: { symmetry; apply succ_pred_pos; apply wordSizePos. } 
+    remember (bv_smul rj A) as sres.
+    remember (hd sres) as sign.
+    destruct (splitat _ (bv_abs sres)) as [resh resl].
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - apply (replace registerValues0 ri).
+      unfold Word.
+      replace wordSize with (S (pred wordSize)). 
+      2: { apply succ_pred_pos; apply wordSizePos. } 
+      exact (sign :: resh).
     (* Flag *)
-    - exact (negb of).
+    - exact (bv_eq resh (const b0 _)).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Definition wcast (v : Word) := 
+    cast v (eq_sym (succ_pred_pos _ wordSizePos)).
+
+  Theorem pureOp_smulh_correct_value (ri rj : regId) (A : Word) (m : MachineState) :
+    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast (nth (registerValues m) rj)))%Z ->
+    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast A))%Z ->
+    tl (wcast (nth (registerValues (pureOp_smulh ri rj A m)) ri))
+    = fst (splitat (pred wordSize)
+          (nat_bitvector_big (pred wordSize + pred wordSize)
+          (Z.abs_nat (twos_complement (wcast (nth (registerValues m) rj))
+                      * twos_complement (wcast A))%Z))).
+  Proof.
+    destruct m; simpl.
+    destruct (splitat _ _) as [absh absl] eqn:speq1;
+    apply VectorSpec.append_splitat in speq1; simpl.
+    destruct (splitat _ _) as [b3 b4] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2; simpl.
+    rewrite nth_replace.
+    rewrite <- cast_rew; unfold wcast.
+    remember (eq_rec_r _ (nth registerValues0 rj) _) as regj.
+    remember (eq_rec_r _ A _) as A'.
+    rewrite cast_trans, cast_id.
+    simpl. intros jmin Amin.
+    apply (app_eq_l _ _ absl b4).
+    rewrite  <- speq1, <- speq2.
+    rewrite bv_abs_correct.
+    repeat f_equal.
+    rewrite Heqregj, HeqA'; unfold wcast, eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
+    rewrite bv_smul_correct_1, twos_complement_iso_2;
+    try reflexivity; try apply twos_complement_max;
+    rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+    - apply le_opp_mul_mul; try apply twos_complement_max; assumption.
+    - apply lt_mul_mul; try apply twos_complement_max; assumption.
+  Qed.
+
+  Theorem pureOp_smulh_correct_sign (ri rj : regId) (A : Word) (m : MachineState) :
+    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast (nth (registerValues m) rj)))%Z ->
+    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast A))%Z ->
+    hd (wcast (nth (registerValues (pureOp_smulh ri rj A m)) ri))
+    = (twos_complement (wcast (nth (registerValues m) rj))
+      * twos_complement (wcast A) <? 0)%Z.
+  Proof.
+    destruct m; simpl.
+    destruct (splitat _ _) as [absh absl] eqn:speq1; simpl.
+    rewrite nth_replace.
+    unfold eq_rec_r, eq_rec.
+    repeat rewrite <- cast_rew; unfold wcast.
+    rewrite cast_trans, cast_id.
+    simpl. intros H0 H1.
+    apply bv_smul_correct_sign; lia.
+  Qed.
 
   (*"""
   compute quotient of [rj]u/[A]u and store result in ri

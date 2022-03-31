@@ -195,6 +195,16 @@ Definition nth :
       lia.
 Defined.
 
+Theorem nth_replace : forall {A a n} (v : t A n) (p: fin n),
+  nth (replace v p a) p = a.
+Proof. 
+  intros; induction v.
+  - destruct p; lia.
+  - destruct p as [p pP].
+    destruct p. { reflexivity. }
+    apply IHv.
+Qed.
+
 Theorem vector_rev_append_nil_o : forall {A n}
   (v : t A n),
   rev_append [] v = v.
@@ -620,6 +630,39 @@ Definition vector_concat_2 : forall {A n m},
   apply vector_concat.
   assumption.
 Defined.
+
+Theorem app_eq_l : forall {A n m} (v1 v2 : t A n) (v3 v4 : t A m),
+  v1 ++ v3 = v2 ++ v4 -> v1 = v2.
+Proof.
+  intros A n m v1 v2 v3 v4.
+  apply (fun I0 IC => 
+          rect2 (fun P v1 v2 => v1 ++ v3 = v2 ++ v4 -> v1 = v2) 
+        I0 IC v1 v2).
+  - reflexivity.
+  - clear v1 v2.
+    intros n' v1 v2 IHv x1 x2.
+    simpl; intro H.
+    injection H; intros H0 H1; apply Eqdep.EqdepTheory.inj_pair2 in H0.
+    rewrite H1; f_equal.
+    apply IHv.
+    exact H0.
+Qed.
+
+Theorem app_eq_r : forall {A n m} (v1 v2 : t A n) (v3 v4 : t A m),
+  v1 ++ v3 = v2 ++ v4 -> v3 = v4.
+Proof.
+  intros A n m v1 v2 v3 v4.
+  apply (fun I0 IC => 
+          rect2 (fun P v1 v2 => v1 ++ v3 = v2 ++ v4 -> v3 = v4) 
+        I0 IC v1 v2).
+  - trivial.
+  - clear v1 v2.
+    intros n' v1 v2 IHv x1 x2.
+    simpl; intro H.
+    injection H; intros H0 H1; apply Eqdep.EqdepTheory.inj_pair2 in H0.
+    apply IHv.
+    exact H0.
+Qed.
 
 Definition Block_Lem : forall idx blksz memsz,
     (idx < memsz) -> (blksz < memsz) ->
