@@ -2,11 +2,6 @@
   description = "A Flake for building coq and providing devShells for the coq-tinyram project";
 
   inputs = {
-    flake-compat-ci.url = "github:hercules-ci/flake-compat-ci";
-    flake-compat = {
-      url = "github:edolstra/flake-compat";
-      flake = false;
-    };
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nix-doom-emacs.url = "github:nix-community/nix-doom-emacs";
     emacs.url = "github:cmacrae/emacs";
@@ -17,8 +12,6 @@
     , nixpkgs
     , emacs
     , nix-doom-emacs
-    , flake-compat
-    , flake-compat-ci
     }:
     let
       # Generate a user-friendly version number.
@@ -35,10 +28,7 @@
         });
     in
     {
-      ciNix = flake-compat-ci.lib.recurseIntoFlakeWith {
-        flake = self;
-        systems = [ "x86_64-linux" ];
-      };
+      herculesCI.ciSystems = [ "x86_64-linux" ];
       overlay = final: prev: { };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
