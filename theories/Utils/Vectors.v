@@ -38,6 +38,15 @@ Proof.
   - apply proof_irrelevance.
 Qed.
 
+Theorem cast_inj : forall {A n m} (eq : n = m) (v1 v2 : t A n),
+    cast v1 eq = cast v2 eq -> v1 = v2.
+Proof.
+  intros.
+  destruct eq.
+  repeat rewrite cast_rew in H.
+  exact H.
+Qed.
+
 Theorem cast_cons : forall {A n m}
   (h : A) (vn : t A n) (eq : S n = S m),
   cast (h :: vn)  eq

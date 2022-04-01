@@ -1,6 +1,6 @@
 From Coq Require Import
   Lia ZArith.Int Numbers.BinNums BinIntDef
-  VectorDef VectorEq.
+  VectorDef VectorEq ProofIrrelevance.
 Import BinInt.Z PeanoNat.Nat VectorNotations EqNotations.
 From TinyRAM.Utils Require Import
   Vectors BitVectors Fin Arith.
@@ -241,6 +241,18 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
+  Theorem pureOp_mull_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_mull ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj)
+        * bitvector_nat_big A mod 2 ^ wordSize).
+  Proof.
+    destruct m.
+    unfold pureOp_mull.
+    rewrite bv_mullh_correct; simpl.
+    rewrite nth_replace; reflexivity.
+  Qed.
+
   Theorem pureOp_mull_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_mull ri rj A m) = 
     ((bitvector_nat_big (nth (registerValues m) rj)
@@ -273,6 +285,18 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact memory0.
   Defined.
 
+  Theorem pureOp_umulh_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_umulh ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj)
+        * bitvector_nat_big A / 2 ^ wordSize).
+  Proof.
+    destruct m.
+    unfold pureOp_umulh.
+    rewrite bv_mullh_correct; simpl.
+    rewrite nth_replace; reflexivity.
+  Qed.
+
   Theorem pureOp_umulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_umulh ri rj A m) = 
     ((bitvector_nat_big (nth (registerValues m) rj)
@@ -302,7 +326,6 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   (*"""
   compute [rj]s * [A]s and store most significant bits of result in ri
-  [flag:] over/underflow
   """*)
   Definition pureOp_smulh (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
@@ -310,8 +333,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
     apply (nth registerValues0) in rj.
     unfold Word in rj, A.
     replace wordSize with (S (pred wordSize)) in rj, A.
-    2: { apply succ_pred_pos; apply wordSizePos. } 
-    remember (bv_smul rj A) as sres.
+    2: { apply succ_pred_pos; apply wordSizePos. }
+    remember (twos_complement rj * twos_complement A)%Z as mjA.
+    remember (twos_complement_inv (pred wordSize + pred wordSize) mjA) as sres.
     remember (hd sres) as sign.
     destruct (splitat _ (bv_abs sres)) as [resh resl].
     split.
@@ -324,7 +348,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
       2: { apply succ_pred_pos; apply wordSizePos. } 
       exact (sign :: resh).
     (* Flag *)
-    - exact (bv_eq resh (const b0 _)).
+    (*"""
+    flag is set to 1 if [rj]s x [A]s ∈ S_W and to 0 otherwise.
+    """ """
+    S_W is the set of integers {-2^(W-1), ..., 0, 1, ..., 2^(W-1) - 1};
+    """*)
+    - exact (andb (- 2 ^ (of_nat wordSize - 1) <=? mjA) 
+                  (mjA <? 2 ^ (of_nat wordSize - 1)))%Z.
     (* Memory *)
     - exact memory0.
   Defined.
@@ -333,8 +363,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
     cast v (eq_sym (succ_pred_pos _ wordSizePos)).
 
   Theorem pureOp_smulh_correct_value (ri rj : regId) (A : Word) (m : MachineState) :
-    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast (nth (registerValues m) rj)))%Z ->
-    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast A))%Z ->
+    (wcast (nth (registerValues m) rj)) <> b1 :: const b0 _ ->
+    (wcast A) <> b1 :: const b0 _ ->
     tl (wcast (nth (registerValues (pureOp_smulh ri rj A m)) ri))
     = fst (splitat (pred wordSize)
           (nat_bitvector_big (pred wordSize + pred wordSize)
@@ -352,21 +382,23 @@ Module TinyRAMState (Params : TinyRAMParameters).
     remember (eq_rec_r _ A _) as A'.
     rewrite cast_trans, cast_id.
     simpl. intros jmin Amin.
+    rewrite twos_complement_nmin_1s in jmin, Amin.
     apply (app_eq_l _ _ absl b4).
     rewrite  <- speq1, <- speq2.
     rewrite bv_abs_correct.
     repeat f_equal.
     rewrite Heqregj, HeqA'; unfold wcast, eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
-    rewrite bv_smul_correct_1, twos_complement_iso_2;
+    rewrite twos_complement_iso_2;
     try reflexivity; try apply twos_complement_max;
     rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
-    - apply le_opp_mul_mul; try apply twos_complement_max; assumption.
+    - apply le_opp_mul_mul;
+      try apply twos_complement_max; try apply twos_complement_min.
     - apply lt_mul_mul; try apply twos_complement_max; assumption.
   Qed.
 
   Theorem pureOp_smulh_correct_sign (ri rj : regId) (A : Word) (m : MachineState) :
-    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast (nth (registerValues m) rj)))%Z ->
-    (- 2 ^ of_nat (pred wordSize) < twos_complement (wcast A))%Z ->
+    (wcast (nth (registerValues m) rj)) <> b1 :: const b0 _ ->
+    (wcast A) <> b1 :: const b0 _ ->
     hd (wcast (nth (registerValues (pureOp_smulh ri rj A m)) ri))
     = (twos_complement (wcast (nth (registerValues m) rj))
       * twos_complement (wcast A) <? 0)%Z.
@@ -377,8 +409,24 @@ Module TinyRAMState (Params : TinyRAMParameters).
     unfold eq_rec_r, eq_rec.
     repeat rewrite <- cast_rew; unfold wcast.
     rewrite cast_trans, cast_id.
-    simpl. intros H0 H1.
-    apply bv_smul_correct_sign; lia.
+    simpl. intros jmin Amin.
+    apply bv_smul_correct_sign; assumption.
+  Qed.
+
+  Theorem pureOp_smulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_smulh ri rj A m) = 
+    (andb (- 2 ^ (of_nat wordSize - 1) <=? 
+          (twos_complement (wcast (nth (registerValues m) rj)) * twos_complement (wcast A)))
+          (twos_complement (wcast (nth (registerValues m) rj)) * twos_complement (wcast A) <? 2 ^ (of_nat wordSize - 1)))%Z.
+  Proof. 
+    destruct m; unfold pureOp_smulh.
+    destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
+    replace (eq_rec_r _ (nth registerValues0 rj) _)
+       with (wcast (nth registerValues0 rj)).
+    2: { unfold wcast; rewrite cast_rew; reflexivity. }
+    replace (eq_rec_r _ A _) with (wcast A).
+    2: { unfold wcast; rewrite cast_rew; reflexivity. }
+    reflexivity.
   Qed.
 
   (*"""
@@ -389,18 +437,37 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms.
     apply (nth registerValues0) in rj.
-    destruct (bv_udiv rj A) as [zf res].
+    remember (bv_udiv rj A) as res.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
     - exact (replace registerValues0 ri res).
     (* Flag *)
-    - exact zf.
+    - exact (bv_eq A (const b0 _)).
     (* Memory *)
     - exact memory0.
   Defined.
 
+  Theorem pureOp_udiv_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_udiv ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj) / bitvector_nat_big A).
+  Proof.
+    destruct m.
+    unfold pureOp_udiv; rewrite bv_udiv_correct_1.
+    simpl nth; rewrite nth_replace. 
+    reflexivity.
+  Qed.
+
+  Theorem pureOp_udiv_flag_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_udiv ri rj A m)
+    = (bitvector_nat_big A =? 0).
+  Proof.
+    destruct m; simpl conditionFlag.
+    rewrite Bool.eq_iff_eq_true, bv_eq_equiv, eqb_eq.
+    apply bitvector_fin_big_0_const.
+  Qed.
 
   (*"""
   compute remainder of [rj]u/[A]u and store result in ri
@@ -410,17 +477,37 @@ Module TinyRAMState (Params : TinyRAMParameters).
     MachineState -> MachineState.
     intro ms; destruct ms.
     apply (nth registerValues0) in rj.
-    destruct (bv_umod rj A) as [zf res].
+    remember (bv_umod rj A) as res.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
     - exact (replace registerValues0 ri res).
     (* Flag *)
-    - exact zf.
+    - exact (bv_eq A (const b0 _)).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_umod_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    nth (registerValues (pureOp_umod ri rj A m)) ri
+    = nat_bitvector_big _ 
+       (bitvector_nat_big (nth (registerValues m) rj) mod bitvector_nat_big A).
+  Proof.
+    destruct m.
+    unfold pureOp_umod; rewrite bv_umod_correct_1.
+    simpl nth; rewrite nth_replace. 
+    reflexivity.
+  Qed.
+
+  Theorem pureOp_umod_flag_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_umod ri rj A m)
+    = (bitvector_nat_big A =? 0).
+  Proof.
+    destruct m; simpl conditionFlag.
+    rewrite Bool.eq_iff_eq_true, bv_eq_equiv, eqb_eq.
+    apply bitvector_fin_big_0_const.
+  Qed.
 
   (*"""
   shift [rj] by [A]u bits to the left and store result in ri
@@ -429,22 +516,44 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_shl (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.      
+    apply (nth registerValues0) in rj.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - apply bitvector_fin_big, proj1_sig in A.
+    - apply bitvector_nat_big in A.
       remember (bv_shl A rj) as res.
       exact (replace registerValues0 ri res).
     (* Flag *)
-    - unfold Word in rj.
-      replace wordSize with (S (wordSize - 1)) in rj.
-      2: { apply (Minus.le_plus_minus_r 1), Lt.lt_le_S, wordSizePos. }
-      exact (hd rj).
+    - exact (hd (wcast rj)).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_shl_correct (ri rj : regId) (A : Word) 
+                             (m : MachineState) (e : bitvector_nat_big A <= wordSize):
+    nth (registerValues (pureOp_shl ri rj A m)) ri
+    = cast (snd (splitat _ (cast (nth (registerValues m) rj)
+                           (Minus.le_plus_minus _ _ e)))
+            ++ const b0 _)
+           (sub_add _ _ e).
+  Proof.
+    destruct m.
+    unfold pureOp_shl.
+    simpl nth; rewrite nth_replace.
+    remember (nth _ rj) as regj.
+    remember (cast regj _) as cregj.
+    apply (cast_inj (Minus.le_plus_minus _ _ e)).
+    transitivity (bv_shl (bitvector_nat_big A) cregj).
+    { rewrite Heqcregj, (cast_f_swap (fun x v => bv_shl _ v)); reflexivity. }
+    rewrite bv_shl_correct.
+    vector_simp.
+    f_equal; apply proof_irrelevance.
+  Qed.
+
+  Theorem pureOp_shl_flag_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_shl ri rj A m) = hd (wcast (nth (registerValues m) rj)).
+  Proof. destruct m; reflexivity. Qed.
 
   (*"""
   shift [rj] by [A]u bits to the right and store result in ri
@@ -458,17 +567,38 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - apply bitvector_fin_big, proj1_sig in A.
+    - apply bitvector_nat_big in A.
       remember (bv_shr A rj) as res.
       exact (replace registerValues0 ri res).
     (* Flag *)
-    - unfold Word in rj.
-      replace wordSize with (S (wordSize - 1)) in rj.
-      2: { apply (Minus.le_plus_minus_r 1), Lt.lt_le_S, wordSizePos. }
-      exact (last rj).
+    - exact (last (wcast rj)).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_shr_correct (ri rj : regId) (A : Word) 
+                             (m : MachineState) (e : bitvector_nat_big A <= wordSize):
+    nth (registerValues (pureOp_shr ri rj A m)) ri
+    = cast (const b0 _ ++ fst (splitat _ (cast (nth (registerValues m) rj)
+                              (eq_sym (sub_add _ _ e)))))
+           (eq_sym (Minus.le_plus_minus _ _ e)).
+  Proof.
+    destruct m.
+    unfold pureOp_shr.
+    simpl nth; rewrite nth_replace.
+    remember (nth _ rj) as regj.
+    remember (cast regj _) as cregj.
+    apply (cast_inj (eq_sym (sub_add _ _ e))).
+    transitivity (bv_shr (bitvector_nat_big A) cregj).
+    { rewrite Heqcregj, (cast_f_swap (fun x v => bv_shr _ v)); reflexivity. }
+    rewrite bv_shr_correct.
+    vector_simp.
+    f_equal; apply proof_irrelevance.
+  Qed.
+
+  Theorem pureOp_shr_flag_correct (ri rj : regId) (A : Word) (m : MachineState) :
+    conditionFlag (pureOp_shr ri rj A m) = last (wcast (nth (registerValues m) rj)).
+  Proof. destruct m; reflexivity. Qed.
 
   (*"""
   “compare equal”

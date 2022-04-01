@@ -343,7 +343,7 @@ Theorem le_opp_elim_r : forall n m,
 Proof. intros n m npos mneg lnm; lia. Qed.
 
 Theorem le_opp_mul_mul : forall p1 p2 t1 t2,
-  lt (opp p1) t1 -> lt (opp p2) t2 -> 
+  le (opp p1) t1 -> le (opp p2) t2 -> 
   lt t1 p1 -> lt t2 p2 ->
   le (opp (mul p1 p2)) (mul t1 t2).
 Proof.
@@ -381,4 +381,24 @@ Proof.
   - rewrite <- BinInt.Z.mul_opp_opp.
     apply BinInt.Z.mul_lt_mono_nonneg; lia.
   - apply BinInt.Z.mul_lt_mono_nonneg; try lia.
+Qed.
+
+Theorem le_mul_mul : forall p1 p2 t1 t2,
+  le (opp p1) t1 -> le (opp p2) t2 -> 
+  lt t1 p1 -> lt t2 p2 ->
+  le (mul t1 t2) (mul p1 p2).
+Proof. 
+  intros.
+  assert (lt Z0 p1). { lia. }
+  assert (lt Z0 p2). { lia. }
+  destruct (ltb t1 Z0) eqn:zt1; 
+  destruct (ltb t2 Z0) eqn:zt2;
+  try rewrite Z_ltb_lt in zt1;
+  try rewrite Z_ltb_lt in zt2;
+  try rewrite Z_nltb_ge in zt1;
+  try rewrite Z_nltb_ge in zt2;
+  try lia.
+  - rewrite <- BinInt.Z.mul_opp_opp.
+    apply BinInt.Z.mul_le_mono_nonneg; lia.
+  - apply BinInt.Z.mul_le_mono_nonneg; try lia.
 Qed.
