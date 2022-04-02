@@ -1,5 +1,5 @@
 From Coq Require Import
-  Lia.
+  Lia VectorEq.
 From TinyRAM.Utils Require Import
   Vectors.
 From TinyRAM.Utils Require Import
@@ -18,6 +18,9 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   each Word consists of [wordSize] bits
   """*)
   Definition Word := Vector.t bool wordSize.
+
+  Definition wcast (v : Word) := 
+    cast v (eq_sym (succ_pred_pos _ wordSizePos)).
 
   (*Registers can be cleanly split into bytes.*) 
   Definition RegisterBytes (r : Word) : 

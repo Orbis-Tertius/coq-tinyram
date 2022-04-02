@@ -384,6 +384,27 @@ Proof.
   rewrite (nat_bitvector_big_inv n f); trivial.
 Qed.
 
+Theorem nat_bitvector_big_inj : forall {n m o},
+  m < 2 ^ n -> o < 2 ^ n ->
+  nat_bitvector_big n m = nat_bitvector_big n o <-> m = o.
+Proof.
+  intros; split; intro.
+  - apply (f_equal bitvector_nat_big) in H1.
+    rewrite nat_bitvector_big_inv in H1;
+    rewrite nat_bitvector_big_inv in H1; auto.
+  - f_equal; auto.
+Qed.
+
+Theorem bitvector_nat_big_inj : forall {n} {m o : t bool n},
+  bitvector_nat_big m = bitvector_nat_big o <-> m = o.
+Proof.
+  intros; split; intro.
+  - apply (f_equal (nat_bitvector_big n)) in H.
+    rewrite bitvector_nat_big_inv in H;
+    rewrite bitvector_nat_big_inv in H; auto.
+  - f_equal; auto.
+Qed.
+
 (* Relating big to little endian *)
 
 Theorem bitvector_fin_little_snoc_lem : forall {n},
@@ -622,7 +643,7 @@ Theorem bv_mullh_correct : forall {n} (v1 v2 : t bool n),
     , nat_bitvector_big n (bitvector_nat_big v1 * bitvector_nat_big v2 mod 2 ^ n)).
 Proof.
   intros n v2 v3.
-  unfold bv_mul, bv_mul_flags.
+  rewrite bv_mul_correct_1.
   destruct (splitat n (nat_bitvector_big _ _)) eqn:splitEq; simpl.
   apply VectorSpec.append_splitat in splitEq.
   assert (bitvector_nat_big v2 < 2 ^ n).
@@ -631,7 +652,7 @@ Proof.
   { apply bitvector_nat_big_lt_2pow. }
   replace (bitvector_nat_big v2 * bitvector_nat_big v3)
      with (bitvector_nat_big t * 2 ^ n + bitvector_nat_big t0).
-  - rewrite VectorSpec.splitat_append; f_equal.
+  - f_equal.
     + replace (_ / _) with (bitvector_nat_big t).
       { symmetry; apply bitvector_nat_big_inv. }
       rewrite PeanoNat.Nat.div_add_l.

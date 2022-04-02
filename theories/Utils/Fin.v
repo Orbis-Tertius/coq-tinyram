@@ -17,7 +17,7 @@
 From Coq Require Import
      Arith
      Lia.
-Import PeanoNat.Nat.
+Import PeanoNat.Nat EqNotations.
 
 From ITree Require Import
      ITree
@@ -302,3 +302,8 @@ Proof. destruct f, g; reflexivity. Qed.
 Theorem proj1_fin_max : forall {n},
   proj1_sig (fin_max n) = n.
 Proof. reflexivity. Qed.
+
+Theorem fin_rew : forall {n m o} (eq : n = m) (H : o < n),
+  (rew eq in (exist (fun x => x < n) o H : fin n)) =
+  exist (fun x => x < m) o (rew eq in H).
+Proof. intros n m o eq; destruct eq; reflexivity. Qed.

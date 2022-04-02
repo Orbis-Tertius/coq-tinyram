@@ -9,7 +9,8 @@ Import PeanoNat.Nat(succ_inj,
                     add_comm, 
                     nlt_0_r,
                     mul_comm,
-                    ltb_lt).
+                    mod_small, div_small,
+                    ltb_lt, leb_le, ltb_ge).
 
 Theorem cast_rew : forall {A} {m n} (eq : m = n) (v : t A m),
   cast v eq = rew eq in v.
@@ -212,6 +213,52 @@ Proof.
   - destruct p as [p pP].
     destruct p. { reflexivity. }
     apply IHv.
+Qed.
+
+Theorem nth_rew_l : forall {A n m} (eq : n = m)
+  (v : t A n) (f : fin m),
+  nth (rew eq in v) f = nth v (rew (eq_sym eq) in f).
+Proof. intros; destruct eq; reflexivity. Qed.
+
+Theorem nth_rew_r : forall {A n m} (eq : n = m)
+  (v : t A m) (f : fin n),
+  nth v (rew eq in f) = nth (rew (eq_sym eq) in v) f.
+Proof. intros; destruct eq; reflexivity. Qed.
+
+Theorem nth_app_l : forall {A n m o}
+  (H : o < n + m) (H1 : o < n) (vn : t A n) (vm : t A m),
+  nth (vn ++ vm) (exist _ o H) = nth vn (exist _ o H1).
+Proof.
+  intros A n m o H H1 vn vm.
+  generalize dependent o.
+  induction vn.
+  - lia.
+  - simpl; intros.
+    destruct o. { reflexivity. }
+    assert (o < n) as H2. { lia. }
+    rewrite (IHvn _ _ H2). 
+    repeat f_equal; apply proof_irrelevance.
+Qed.
+
+Theorem nth_app_r_lem : forall {n m o},
+  o < n + m -> n <= o -> (o - n) < m.
+Proof. lia. Qed.
+
+Theorem nth_app_r : forall {A n m o}
+  (H : o < n + m) (H1 : n <= o) (vn : t A n) (vm : t A m),
+  nth (vn ++ vm) (exist _ o H) =
+  nth vm (exist _ (o - n) (nth_app_r_lem H H1)).
+Proof.
+  intros A n m o H H1 vn vm.
+  generalize dependent o.
+  induction vn.
+  - intros; simpl; simpl in H; f_equal.
+    apply subset_eq_compat; lia.
+  - simpl; intros.
+    destruct o. { lia. }
+    assert (n <= o) as H2. { lia. }
+    rewrite (IHvn _ _ H2). 
+    repeat f_equal; apply proof_irrelevance.
 Qed.
 
 Theorem vector_rev_append_nil_o : forall {A n}
@@ -707,42 +754,6 @@ Definition Block_Lem : forall idx blksz memsz,
       lia.
 Defined.
 
-Definition Block_Load_Store : forall {B memsz}
-    (m : t B memsz)
-    (idx blksz: fin memsz)
-    (block : t B (proj1_sig blksz)),
-    t B (proj1_sig blksz) * t B memsz.
-  intros B memsz m [idx lip] [blksz lbp] block.
-  destruct (Block_Lem _ _ _ lip lbp) as 
-    [[tl eq]|[blk1[blk2[idx2[eq1 [eq2 eq3]]]]]].
-  - rewrite eq in m.
-    destruct (splitat _ m) as [m' m3].
-    destruct (splitat _ m') as [m1 m2].
-    split.
-    { exact m2. }
-    rewrite eq.
-    exact (append (append m1 block) m3).
-  - rewrite eq3 in m.
-    destruct (splitat _ m) as [m' m3].
-    destruct (splitat _ m') as [m1 m2].
-    split.
-    + apply (fun x => cast x eq1).
-      (* Note: m1 is an overflow, so it's
-              bits are more significant than m3. *)
-      rewrite add_comm.
-      apply (append m3 m1).
-    + rewrite <- eq1 in block.
-      destruct (splitat _ block) as [block1 block2].
-      rewrite eq3.
-      (* Note: The overflow means block2 should go at
-              the begining of memory, and block 1 at the end. *)
-      assert (blk1 + idx2 + blk2 = blk2 + idx2 + blk1) as OvrEq.
-      { lia. }
-      rewrite OvrEq.
-      exact (append (append block2 m2) block1).
-Defined.
-
-(* Memory_Block_Load w/o rebuilding memory. *)
 Definition Block_Load : forall {B memsz}
     (m : t B memsz)
     (idx blksz: fin memsz),
@@ -764,12 +775,169 @@ Definition Block_Load : forall {B memsz}
     apply (append m3 m1).
 Defined.
 
-Definition Block_Store {B memsz}
-    (m : t B memsz)
-    (idx blksz: fin memsz)
-    (block : t B (proj1_sig blksz)) :
-    t B memsz :=
-  snd (Block_Load_Store m idx blksz block).
+Theorem Block_Load_Spec : forall {B memsz}
+  (memN0 : memsz <> 0)
+  (m : t B memsz)
+  (idx blksz: fin memsz)
+  (bid : fin (proj1_sig blksz)),
+  nth (Block_Load m idx blksz) bid =
+  nth m (exist _ ((proj1_sig bid + proj1_sig idx) mod memsz)
+                 (PeanoNat.Nat.mod_upper_bound _ _ memN0)).
+Proof.
+  intros B memsz memN0 m [idx lidxm] [blksz lblkszm] [bid lbidbl].
+  simpl; simpl in lbidbl.
+  destruct (Block_Lem idx blksz memsz lidxm lblkszm) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]];
+  destruct (splitat _ _) as [v12 v3] eqn:speq;
+  apply VectorSpec.append_splitat in speq; 
+  destruct (splitat _ _) as [v1 v2] eqn:speq2;
+  apply VectorSpec.append_splitat in speq2;
+  rewrite speq2 in speq; clear speq2.
+  - assert (bid + idx < memsz) as H. { lia. }
+    replace (fi' ((bid + idx) mod memsz))
+       with (exist (fun x => x < memsz) (bid + idx) H).
+    2: { apply subset_eq_compat; rewrite mod_small; lia. }
+    assert (bid + idx < idx + blksz + tl) as H2. { lia. }
+    transitivity (nth ((v1 ++ v2) ++ v3) (exist _ (bid + idx) H2)).
+    2: { rewrite <- speq, nth_rew_l, fin_rew; 
+         repeat f_equal; apply proof_irrelevance. }
+    assert (bid + idx < idx + blksz) as H3. { lia. }
+    rewrite (nth_app_l H2 H3).
+    assert (idx <= bid + idx) as H4. { lia. }
+    rewrite (nth_app_r H3 H4).
+    f_equal; apply subset_eq_compat; lia.
+  - unfold eq_rect_r.
+    rewrite <- cast_rew in speq.
+    rewrite cast_rew, rew_compose, nth_rew_l, fin_rew.
+    assert ((bid + idx) mod memsz < blk2 + idx2 + blk1) as H0.
+    { rewrite <- eq3; apply PeanoNat.Nat.mod_upper_bound; assumption. }
+    transitivity (nth (cast m eq3) (exist _ ((bid + idx) mod memsz) H0)).
+    2: { rewrite cast_rew, nth_rew_l, fin_rew. 
+         repeat f_equal; apply proof_irrelevance. }
+    rewrite speq.
+    destruct (bid + idx <? memsz) eqn:bim.
+    + rewrite ltb_lt in bim.
+      assert (bid < blk1) as H1. { lia. }
+      rewrite (nth_app_l _ H1).
+      assert (blk2 + idx2 <= (bid + idx) mod memsz) as H2.
+      { rewrite mod_small; lia. }
+      rewrite (nth_app_r _ H2).
+      f_equal; apply subset_eq_compat.
+      rewrite mod_small; lia.
+    + rewrite ltb_ge in bim.
+      assert ((bid + idx) mod memsz = bid - blk1).
+      { rewrite PeanoNat.Nat.mod_eq; try lia.
+        replace (_ / _) with 1. { rewrite PeanoNat.Nat.mul_1_r; lia. }
+        symmetry; apply div_bet_1; lia. }
+      assert (bid - blk1 < blk2 + idx2 + blk1) as H1. { lia. }
+      transitivity (nth ((v1 ++ v2) ++ v3)
+                        (exist _ (bid - blk1) H1)).
+      2: { f_equal; apply subset_eq_compat; lia. }
+      assert (blk1 <= bid) as H2. { lia. }
+      rewrite (nth_app_r _ H2).
+      assert (bid - blk1 < blk2 + idx2) as H3. { lia. }
+      rewrite (nth_app_l _ H3). 
+      assert (bid - blk1 < blk2) as H4. { lia. }
+      rewrite (nth_app_l _ H4).
+      f_equal; apply subset_eq_compat; reflexivity.
+Qed.
+
+Definition Block_Store : forall {B memsz}
+  (m : t B memsz)
+  (idx blksz: fin memsz)
+  (block : t B (proj1_sig blksz)),
+  t B memsz.
+  intros B memsz m [idx lidxm] [blksz lblkszm] block.
+  destruct (Block_Lem _ _ _ lidxm lblkszm) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite eq in m; destruct (splitat _ m) as [m' m3];
+    destruct (splitat _ m') as [m1 m2].
+    rewrite eq.
+    exact ((m1 ++ block) ++ m3).
+  - rewrite eq3 in m; destruct (splitat _ m) as [m' m3];
+    destruct (splitat _ m') as [m1 m2].
+    rewrite <- eq1, add_comm in block.
+    destruct (splitat _ block) as [block1 block2].
+    rewrite eq3.
+    (* Note: The overflow means block2 should go at
+             the begining of memory, and block 1 at the end. *)
+    exact ((block2 ++ m2) ++ block1).
+Defined.
+
+Theorem Block_Store_Spec : forall {B memsz}
+  (memN0 : memsz <> 0)
+  (m : t B memsz)
+  (idx blksz: fin memsz)
+  (block : t B (proj1_sig blksz))
+  (bid : fin (proj1_sig blksz)),
+  nth block bid =
+  nth (Block_Store m idx blksz block) 
+      (exist _ ((proj1_sig bid + proj1_sig idx) mod memsz)
+                (PeanoNat.Nat.mod_upper_bound _ _ memN0)).
+Proof.
+  intros B memsz memN0 m [idx lidxm] [blksz lblkszm] block [bid lbidbl].
+  simpl; simpl in lbidbl; simpl in block.
+  unfold Block_Store.
+  destruct (Block_Lem idx blksz memsz lidxm lblkszm) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]];
+  simpl; destruct (splitat _ _) as [v12 v3] eqn:speq;
+  apply VectorSpec.append_splitat in speq;
+  destruct (splitat _ _) as [v1 v2] eqn:speq2;
+  apply VectorSpec.append_splitat in speq2;
+  rewrite speq2 in speq; clear speq2; simpl.
+  - unfold eq_rect_r; rewrite nth_rew_l, fin_rew.
+    assert (bid + idx < idx + blksz + tl) as H0. { lia. }
+    transitivity (nth ((v1 ++ block) ++ v3)
+                      (exist _ (bid + idx) H0)).
+    2: { f_equal; apply subset_eq_compat;
+         symmetry; apply mod_small; lia. }
+    assert (bid + idx < idx + blksz) as H1. { lia. }
+    rewrite (nth_app_l _ H1).
+    assert (idx <= bid + idx) as H2. { lia. }
+    rewrite (nth_app_r _ H2).
+    f_equal; apply subset_eq_compat; lia.
+  - repeat rewrite <- cast_rew.
+    destruct (splitat _ _) as [block1 block2] eqn:spblk;
+    apply VectorSpec.append_splitat in spblk;
+    repeat unfold eq_rect_r; repeat rewrite rew_compose;
+    rewrite nth_rew_l, fin_rew.
+    unfold eq_rect_r in spblk.
+    rewrite cast_rew, rew_compose in spblk.
+    assert (bid < blk1 + blk2) as H0. { lia. }
+    transitivity (nth (block1 ++ block2)
+                      (exist _ bid H0)).
+    { rewrite <- spblk, nth_rew_l, fin_rew;
+      f_equal; apply subset_eq_compat; reflexivity. }
+    clear spblk speq v12 v1 v3.
+    destruct (bid + idx <? memsz) eqn:bim.
+    + rewrite ltb_lt in bim.
+      assert (bid + idx < blk2 + idx2 + blk1) as H1. { lia. }
+      transitivity (nth ((block2 ++ v2) ++ block1)
+                   (exist _ (bid + idx) H1)).
+      2: { f_equal; apply subset_eq_compat; rewrite mod_small; lia. }
+      assert (blk2 + idx2 <= bid + idx) as H2. { lia. }
+      rewrite (nth_app_r _ H2).
+      assert (bid < blk1) as H3. { lia. }
+      rewrite (nth_app_l _ H3).
+      f_equal; apply subset_eq_compat; lia.
+    + rewrite ltb_ge in bim.
+      assert ((bid + idx) mod memsz = bid - blk1).
+      { rewrite PeanoNat.Nat.mod_eq; try lia.
+        replace (_ / _) with 1. { rewrite PeanoNat.Nat.mul_1_r; lia. }
+        symmetry; apply div_bet_1; lia. }
+      assert (bid - blk1 < blk2 + idx2 + blk1) as H1. { lia. }
+      transitivity (nth ((block2 ++ v2) ++ block1)
+                        (exist _ (bid - blk1) H1)).
+      2: { f_equal; apply subset_eq_compat; lia. }
+      clear H.
+      assert (blk1 <= bid) as H2. { lia. }
+      rewrite (nth_app_r _ H2).
+      assert (bid - blk1 < blk2 + idx2) as H3. { lia. }
+      rewrite (nth_app_l _ H3). 
+      assert (bid - blk1 < blk2) as H4. { lia. }
+      rewrite (nth_app_l _ H4).
+      f_equal; apply subset_eq_compat; reflexivity.
+Qed.
 
 Ltac vector_bubble :=
   match goal with
