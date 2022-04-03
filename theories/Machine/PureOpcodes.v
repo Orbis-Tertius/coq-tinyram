@@ -21,7 +21,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
         (*"""
         [registerCount] general-purpose registers, [...]
         """*)
-        registerValues : Vector.t Word registerCount;
+        registers : Vector.t Word registerCount;
         (*"""
         The (condition) flag [...]; it consists of a single bit.
         """*)
@@ -38,13 +38,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_and (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_and rj A) as res eqn:resDef.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registers0 ri res).
     (* Flag *)
     - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
@@ -52,13 +52,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_and_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_and ri rj A m)) ri = 
-    bv_and (nth (registerValues m) rj) A.
+    nth (registers (pureOp_and ri rj A m)) ri = 
+    bv_and (nth (registers m) rj) A.
   Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
 
   Theorem pureOp_and_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_and ri rj A m) = 
-    (bitvector_nat_big (bv_and (nth (registerValues m) rj) A) =? 0).
+    (bitvector_nat_big (bv_and (nth (registers m) rj) A) =? 0).
   Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
 
   (*"""
@@ -68,13 +68,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_or (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_or rj A) as res eqn:resDef.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registers0 ri res).
     (* Flag *)
     - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
@@ -82,13 +82,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_or_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_or ri rj A m)) ri = 
-    bv_or (nth (registerValues m) rj) A.
+    nth (registers (pureOp_or ri rj A m)) ri = 
+    bv_or (nth (registers m) rj) A.
   Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
 
   Theorem pureOp_or_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_or ri rj A m) = 
-    (bitvector_nat_big (bv_or (nth (registerValues m) rj) A) =? 0).
+    (bitvector_nat_big (bv_or (nth (registers m) rj) A) =? 0).
   Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
 
   (*"""
@@ -98,13 +98,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_xor (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_xor rj A) as res eqn:resDef.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registers0 ri res).
     (* Flag *)
     - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
@@ -112,13 +112,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_xor_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_xor ri rj A m)) ri = 
-    bv_xor (nth (registerValues m) rj) A.
+    nth (registers (pureOp_xor ri rj A m)) ri = 
+    bv_xor (nth (registers m) rj) A.
   Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
 
   Theorem pureOp_xor_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_xor ri rj A m) = 
-    (bitvector_nat_big (bv_xor (nth (registerValues m) rj) A) =? 0).
+    (bitvector_nat_big (bv_xor (nth (registers m) rj) A) =? 0).
   Proof. destruct m; simpl. apply bitvector_fin_big_0_0. Qed.
 
   (*"""
@@ -133,7 +133,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registers0 ri res).
     (* Flag *)
     - exact (bv_eq res (Vector.const false _)).
     (* Memory *)
@@ -141,7 +141,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_not_correct (ri : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_not ri A m)) ri = 
+    nth (registers (pureOp_not ri A m)) ri = 
     bv_not A.
   Proof. destruct m; simpl. rewrite nth_replace. reflexivity. Qed.
 
@@ -159,13 +159,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_add (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_add rj A) as res eqn:resDef.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri (tl res)).
+    - exact (replace registers0 ri (tl res)).
     (* Flag *)
     - exact (hd res).
     (* Memory *)
@@ -174,9 +174,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_add_correct (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_add ri rj A m) :: 
-    nth (registerValues (pureOp_add ri rj A m)) ri
+    nth (registers (pureOp_add ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj)
+       (bitvector_nat_big (nth (registers m) rj)
         + bitvector_nat_big A).
   Proof.
     destruct m.
@@ -193,13 +193,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_sub (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_sub rj A) as res.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri (tl res)).
+    - exact (replace registers0 ri (tl res)).
     (* Flag *)
     - exact (negb (hd res)).
     (* Memory *)
@@ -208,9 +208,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_sub_correct (ri rj : regId) (A : Word) (m : MachineState) :
     negb (conditionFlag (pureOp_sub ri rj A m)) :: 
-    nth (registerValues (pureOp_sub ri rj A m)) ri
+    nth (registers (pureOp_sub ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj)
+       (bitvector_nat_big (nth (registers m) rj)
         + 2 ^ wordSize - bitvector_nat_big A).
   Proof.
     destruct m.
@@ -228,13 +228,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_mull (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     destruct (splitat wordSize (bv_mul rj A)) as [resh resl].
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri resl).
+    - exact (replace registers0 ri resl).
     (* Flag *)
     - exact (bv_eq resh (const b0 _)).
     (* Memory *)
@@ -242,9 +242,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_mull_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_mull ri rj A m)) ri
+    nth (registers (pureOp_mull ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj)
+       (bitvector_nat_big (nth (registers m) rj)
         * bitvector_nat_big A mod 2 ^ wordSize).
   Proof.
     destruct m.
@@ -255,7 +255,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_mull_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_mull ri rj A m) = 
-    ((bitvector_nat_big (nth (registerValues m) rj)
+    ((bitvector_nat_big (nth (registers m) rj)
      * bitvector_nat_big A) <? 2 ^ wordSize).
   Proof. 
     destruct m; unfold pureOp_mull.
@@ -272,13 +272,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_umulh (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     destruct (splitat wordSize (bv_mul rj A)) as [resh resl].
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri resh).
+    - exact (replace registers0 ri resh).
     (* Flag *)
     - exact (bv_eq resh (const b0 _)).
     (* Memory *)
@@ -286,9 +286,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_umulh_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_umulh ri rj A m)) ri
+    nth (registers (pureOp_umulh ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj)
+       (bitvector_nat_big (nth (registers m) rj)
         * bitvector_nat_big A / 2 ^ wordSize).
   Proof.
     destruct m.
@@ -299,7 +299,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_umulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_umulh ri rj A m) = 
-    ((bitvector_nat_big (nth (registerValues m) rj)
+    ((bitvector_nat_big (nth (registers m) rj)
      * bitvector_nat_big A) <? 2 ^ wordSize).
   Proof. 
     destruct m; unfold pureOp_umulh.
@@ -309,10 +309,10 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Qed.
 
   Theorem pureOp_mul_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_umulh ri rj A m)) ri ++ 
-    nth (registerValues (pureOp_mull ri rj A m)) ri
+    nth (registers (pureOp_umulh ri rj A m)) ri ++ 
+    nth (registers (pureOp_mull ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj)
+       (bitvector_nat_big (nth (registers m) rj)
         * bitvector_nat_big A).
   Proof.
     destruct m.
@@ -330,7 +330,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_smulh (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     apply wcast in rj, A.
     remember (twos_complement rj * twos_complement A)%Z as mjA.
     remember (twos_complement_inv (pred wordSize + pred wordSize) mjA) as sres.
@@ -340,7 +340,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - apply (replace registerValues0 ri).
+    - apply (replace registers0 ri).
       unfold Word.
       replace wordSize with (S (pred wordSize)). 
       2: { apply succ_pred_pos; apply wordSizePos. } 
@@ -358,11 +358,11 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_smulh_correct_value (ri rj : regId) (A : Word) (m : MachineState) :
-    (wcast (nth (registerValues m) rj)) <> b1 :: const b0 _ ->
+    (wcast (nth (registers m) rj)) <> b1 :: const b0 _ ->
     (wcast A) <> b1 :: const b0 _ ->
-    tl (wcast (nth (registerValues (pureOp_smulh ri rj A m)) ri))
+    tl (wcast (nth (registers (pureOp_smulh ri rj A m)) ri))
     = nat_bitvector_big (pred wordSize) ((Z.abs_nat 
-        (twos_complement (wcast (nth (registerValues m) rj)) *
+        (twos_complement (wcast (nth (registers m) rj)) *
          twos_complement (wcast A))%Z) / 2 ^ pred wordSize).
   Proof.
     destruct m; simpl.
@@ -371,9 +371,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
     unfold wcast, eq_rec_r, eq_rec.
     repeat rewrite <- cast_rew.
     rewrite cast_trans, cast_id.
-    change (cast (nth registerValues0 rj) _) with (wcast (nth registerValues0 rj)).
+    change (cast (nth registers0 rj) _) with (wcast (nth registers0 rj)).
     change (cast A _) with (wcast A).
-    remember (wcast (nth registerValues0 rj)) as wj.
+    remember (wcast (nth registers0 rj)) as wj.
     remember (wcast A) as wA.
     intros jmin Amin; rewrite twos_complement_nmin_1s in jmin, Amin.
     simpl tl.
@@ -411,10 +411,10 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Qed.
 
   Theorem pureOp_smulh_correct_sign (ri rj : regId) (A : Word) (m : MachineState) :
-    (wcast (nth (registerValues m) rj)) <> b1 :: const b0 _ ->
+    (wcast (nth (registers m) rj)) <> b1 :: const b0 _ ->
     (wcast A) <> b1 :: const b0 _ ->
-    hd (wcast (nth (registerValues (pureOp_smulh ri rj A m)) ri))
-    = (twos_complement (wcast (nth (registerValues m) rj))
+    hd (wcast (nth (registers (pureOp_smulh ri rj A m)) ri))
+    = (twos_complement (wcast (nth (registers m) rj))
       * twos_complement (wcast A) <? 0)%Z.
   Proof.
     destruct m; simpl.
@@ -430,16 +430,11 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Theorem pureOp_smulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_smulh ri rj A m) = 
     (andb (- 2 ^ (of_nat wordSize - 1) <=? 
-          (twos_complement (wcast (nth (registerValues m) rj)) * twos_complement (wcast A)))
-          (twos_complement (wcast (nth (registerValues m) rj)) * twos_complement (wcast A) <? 2 ^ (of_nat wordSize - 1)))%Z.
+          (twos_complement (wcast (nth (registers m) rj)) * twos_complement (wcast A)))
+          (twos_complement (wcast (nth (registers m) rj)) * twos_complement (wcast A) <? 2 ^ (of_nat wordSize - 1)))%Z.
   Proof. 
     destruct m; unfold pureOp_smulh.
     destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
-    replace (eq_rec_r _ (nth registerValues0 rj) _)
-       with (wcast (nth registerValues0 rj)).
-    2: { unfold wcast; rewrite cast_rew; reflexivity. }
-    replace (eq_rec_r _ A _) with (wcast A).
-    2: { unfold wcast; rewrite cast_rew; reflexivity. }
     reflexivity.
   Qed.
 
@@ -450,13 +445,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_udiv (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_udiv rj A) as res.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registers0 ri res).
     (* Flag *)
     - exact (bv_eq A (const b0 _)).
     (* Memory *)
@@ -464,9 +459,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_udiv_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_udiv ri rj A m)) ri
+    nth (registers (pureOp_udiv ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj) / bitvector_nat_big A).
+       (bitvector_nat_big (nth (registers m) rj) / bitvector_nat_big A).
   Proof.
     destruct m.
     unfold pureOp_udiv; rewrite bv_udiv_correct_1.
@@ -490,13 +485,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_umod (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     remember (bv_umod rj A) as res.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri res).
+    - exact (replace registers0 ri res).
     (* Flag *)
     - exact (bv_eq A (const b0 _)).
     (* Memory *)
@@ -504,9 +499,9 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_umod_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_umod ri rj A m)) ri
+    nth (registers (pureOp_umod ri rj A m)) ri
     = nat_bitvector_big _ 
-       (bitvector_nat_big (nth (registerValues m) rj) mod bitvector_nat_big A).
+       (bitvector_nat_big (nth (registers m) rj) mod bitvector_nat_big A).
   Proof.
     destruct m.
     unfold pureOp_umod; rewrite bv_umod_correct_1.
@@ -530,14 +525,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_shl (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.
+    apply (nth registers0) in rj.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
     - apply bitvector_nat_big in A.
       remember (bv_shl A rj) as res.
-      exact (replace registerValues0 ri res).
+      exact (replace registers0 ri res).
     (* Flag *)
     - exact (hd (wcast rj)).
     (* Memory *)
@@ -546,8 +541,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_shl_correct (ri rj : regId) (A : Word) 
                              (m : MachineState) (e : bitvector_nat_big A <= wordSize):
-    nth (registerValues (pureOp_shl ri rj A m)) ri
-    = cast (snd (splitat _ (cast (nth (registerValues m) rj)
+    nth (registers (pureOp_shl ri rj A m)) ri
+    = cast (snd (splitat _ (cast (nth (registers m) rj)
                            (Minus.le_plus_minus _ _ e)))
             ++ const b0 _)
            (sub_add _ _ e).
@@ -566,7 +561,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Qed.
 
   Theorem pureOp_shl_flag_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    conditionFlag (pureOp_shl ri rj A m) = hd (wcast (nth (registerValues m) rj)).
+    conditionFlag (pureOp_shl ri rj A m) = hd (wcast (nth (registers m) rj)).
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -576,14 +571,14 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_shr (ri rj : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in rj.      
+    apply (nth registers0) in rj.      
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
     - apply bitvector_nat_big in A.
       remember (bv_shr A rj) as res.
-      exact (replace registerValues0 ri res).
+      exact (replace registers0 ri res).
     (* Flag *)
     - exact (last (wcast rj)).
     (* Memory *)
@@ -592,8 +587,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_shr_correct (ri rj : regId) (A : Word) 
                              (m : MachineState) (e : bitvector_nat_big A <= wordSize):
-    nth (registerValues (pureOp_shr ri rj A m)) ri
-    = cast (const b0 _ ++ fst (splitat _ (cast (nth (registerValues m) rj)
+    nth (registers (pureOp_shr ri rj A m)) ri
+    = cast (const b0 _ ++ fst (splitat _ (cast (nth (registers m) rj)
                               (eq_sym (sub_add _ _ e)))))
            (eq_sym (Minus.le_plus_minus _ _ e)).
   Proof.
@@ -611,7 +606,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Qed.
 
   Theorem pureOp_shr_flag_correct (ri rj : regId) (A : Word) (m : MachineState) :
-    conditionFlag (pureOp_shr ri rj A m) = last (wcast (nth (registerValues m) rj)).
+    conditionFlag (pureOp_shr ri rj A m) = last (wcast (nth (registers m) rj)).
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -621,12 +616,12 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpe (ri : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in ri.      
+    apply (nth registers0) in ri.      
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - exact (bv_eq ri A).
     (* Memory *)
@@ -634,7 +629,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_cmpe_flag_correct (ri : regId) (A : Word) (m : MachineState) :
-    conditionFlag (pureOp_cmpe ri A m) = bv_eq (nth (registerValues m) ri) A.
+    conditionFlag (pureOp_cmpe ri A m) = bv_eq (nth (registers m) ri) A.
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -644,12 +639,12 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpa (ri : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in ri.      
+    apply (nth registers0) in ri.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - apply bitvector_nat_big in ri, A.
       exact (A <? ri).
@@ -659,7 +654,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_cmpa_flag_correct (ri : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_cmpa ri A m) = 
-    (bitvector_nat_big A <? bitvector_nat_big (nth (registerValues m) ri)).
+    (bitvector_nat_big A <? bitvector_nat_big (nth (registers m) ri)).
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -669,12 +664,12 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpae (ri : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in ri.
+    apply (nth registers0) in ri.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - apply bitvector_nat_big in ri, A.
       exact (A <=? ri).
@@ -684,7 +679,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_cmpae_flag_correct (ri : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_cmpae ri A m) = 
-    (bitvector_nat_big A <=? bitvector_nat_big (nth (registerValues m) ri)).
+    (bitvector_nat_big A <=? bitvector_nat_big (nth (registers m) ri)).
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -694,13 +689,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpg (ri : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in ri.
+    apply (nth registers0) in ri.
     apply wcast in ri, A.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - apply twos_complement in ri, A.
       exact (A <? ri)%Z.
@@ -711,7 +706,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Theorem pureOp_cmpg_flag_correct (ri : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_cmpg ri A m) = 
     (twos_complement (wcast A) <?
-     twos_complement (wcast (nth (registerValues m) ri)))%Z.
+     twos_complement (wcast (nth (registers m) ri)))%Z.
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -721,13 +716,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Definition pureOp_cmpge (ri : regId) (A : Word) :
     MachineState -> MachineState.
     intro ms; destruct ms.
-    apply (nth registerValues0) in ri.
+    apply (nth registers0) in ri.
     apply wcast in ri, A.
     split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - apply twos_complement in ri, A.
       exact (A <=? ri)%Z.
@@ -738,7 +733,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Theorem pureOp_cmpge_flag_correct (ri : regId) (A : Word) (m : MachineState) :
     conditionFlag (pureOp_cmpge ri A m) = 
     (twos_complement (wcast A) <=?
-     twos_complement (wcast (nth (registerValues m) ri)))%Z.
+     twos_complement (wcast (nth (registers m) ri)))%Z.
   Proof. destruct m; reflexivity. Qed.
 
   (*"""
@@ -751,7 +746,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact (replace registerValues0 ri A).
+    - exact (replace registers0 ri A).
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
@@ -759,7 +754,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
   Defined.
 
   Theorem pureOp_mov_correct (ri : regId) (A : Word) (m : MachineState) :
-    nth (registerValues (pureOp_mov ri A m)) ri = A.
+    nth (registers (pureOp_mov ri A m)) ri = A.
   Proof. destruct m; simpl; rewrite nth_replace; reflexivity. Qed.
 
   (*"""
@@ -773,8 +768,8 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
     - destruct conditionFlag0 eqn:flagVal.
-      + exact (replace registerValues0 ri A). 
-      + exact registerValues0.
+      + exact (replace registers0 ri A). 
+      + exact registers0.
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
@@ -783,13 +778,13 @@ Module TinyRAMState (Params : TinyRAMParameters).
 
   Theorem pureOp_cmov_correct_0 (ri : regId) (A : Word) (m : MachineState) :
     conditionFlag m = b0 ->
-    nth (registerValues (pureOp_cmov ri A m)) ri = 
-    nth (registerValues m) ri.
+    nth (registers (pureOp_cmov ri A m)) ri = 
+    nth (registers m) ri.
   Proof. destruct m; simpl; intro H; rewrite H; reflexivity. Qed.
 
   Theorem pureOp_cmov_correct_1 (ri : regId) (A : Word) (m : MachineState) :
     conditionFlag m = b1 ->
-    nth (registerValues (pureOp_cmov ri A m)) ri = A.
+    nth (registers (pureOp_cmov ri A m)) ri = A.
   Proof.
     destruct m; simpl; intro H; rewrite H; simpl; 
     rewrite nth_replace; reflexivity.
@@ -805,7 +800,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact A.
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
@@ -828,7 +823,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
       + exact A.
       + exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
@@ -858,7 +853,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
       + exact (bv_incr pcIncrement programCounter0).
       + exact A.
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
@@ -876,30 +871,50 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (bv_incr pcIncrement (programCounter m)).
   Proof. destruct m; simpl; intro H; rewrite H; reflexivity. Qed.
 
+  Definition wbcast {A} (v : Vector.t A wordSizeEighth) :
+                        (Vector.t A (S (pred wordSizeEighth))).
+    rewrite succ_pred_pos. { exact v. }
+    apply wordSizeEighthPos.
+  Defined.
+
   (*"""
   store the least-significant byte of [ri] at the [A]u-th byte in memory
   """*)
-  Definition pureOp_store_b (A : Word) (ri : regId) :
+  Definition pureOp_store_b (ri : regId) (A : Word) :
     MachineState -> MachineState.
-    intro ms; destruct ms; split.
+    intro ms; destruct ms; apply (nth registers0) in ri; split.
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
     - apply (replace memory0).
       (*" at the [A]u-th byte "*)
-      + apply bitvector_fin_big.
-        exact A.
+      + exact (bitvector_fin_big A).
       (*" the least-significant byte of [ri] "*)
-      + apply (fun x => nth x ri) in registerValues0 as regi.
-        apply RegisterBytes in regi.
-        apply (nth regi).
-        exists 0.
-        apply wordSizeEighthPos.
+      + exact (last (wbcast (WordBytes ri))).
+  Defined.
+
+  Theorem pureOp_store_b_correct :
+    forall (ri : regId) (A : Word) (m : MachineState),
+     nth (memory (pureOp_store_b ri A m)) (bitvector_fin_big A)
+      = (last (wbcast (WordBytes (nth (registers m) ri)))).
+  Proof.
+    intros [ri ltri] A m; destruct m; simpl.
+    apply nth_replace.
   Qed.
+
+  Theorem wordMax8 : 8 <= wordSize.
+  Proof.
+    unfold wordSize.
+    assert (0 < wordSizeEighth). { apply wordSizeEighthPos. }
+    destruct wordSizeEighth; lia.
+  Qed.
+
+  Theorem pureOp_load_b_lem : wordSize = (wordSize - 8 + 8).
+  Proof. assert (8 <= wordSize). { exact wordMax8. } lia. Qed.
 
   (*"""
   store into ri (with zero-padding in front) the [A]u-th byte in memory
@@ -910,26 +925,28 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - apply (replace registerValues0 ri).
-      apply BytesRegister.
-      (*" (with zero-padding in front) "*)
-      replace wordSizeEighth with (Nat.pred wordSizeEighth + 1).
-      2: { assert (Nat.pred wordSizeEighth < wordSizeEighth).
-          { apply Lt.lt_pred_n_n. apply wordSizeEighthPos. }
-          lia. }
-      apply Vector.append.
-      (*" zero-padding "*)
-      + apply (Vector.const zeroByte).
+    - apply (replace registers0 ri).
+      unfold Word; rewrite pureOp_load_b_lem.
+      apply append. { exact (const b0 _). } (*" zero-padding "*)
       (*" [A]u-th byte in memory "*)
-      + apply (fun x => Vector.cons _ x _ (Vector.nil _)).
-        apply (nth memory0).
-        apply bitvector_fin_big.
-        exact A.
+      exact (nth memory0 (bitvector_fin_big A)).
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_load_b_correct :
+    forall (ri : regId) (A : Word) (m : MachineState),
+      nth (registers (pureOp_load_b ri A m)) ri = 
+      cast (const b0 (wordSize - 8) ++ nth (memory m) (bitvector_fin_big A))
+           (eq_sym pureOp_load_b_lem).
+  Proof.
+    intros [ri ltri] A m; destruct m; simpl.
+    rewrite nth_replace.
+    unfold eq_rec_r, eq_rec. rewrite <- cast_rew.
+    reflexivity.
+  Qed.
 
   (*"""
   store [ri] at the word in memory that is aligned to the [A]w-th byte
@@ -940,7 +957,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - exact registerValues0.
+    - exact registers0.
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
@@ -948,8 +965,32 @@ Module TinyRAMState (Params : TinyRAMParameters).
       (*" at the word in memory that is aligned to the [A]w-th byte "*)
       + exact A. 
       (* store [ri] *)
-      + exact (nth registerValues0 ri).
+      + exact (nth registers0 ri).
   Defined.
+
+  Theorem pureOp_store_w_correct_lem : (2 ^ wordSize) <> 0.
+  Proof. apply pow_nonzero; lia. Qed.
+
+  Theorem pureOp_store_w_correct (ri : regId) (A : Word) (m : MachineState) :
+    forall (bid : fin wordSizeEighth),
+    nth (WordBytes (nth (registers m) ri)) bid =
+    nth (memory (pureOp_store_w ri A m))
+        (exist _ ((wordSizeEighth - proj1_sig bid - 1 + bitvector_nat_big A) mod (2 ^ wordSize))
+                 (PeanoNat.Nat.mod_upper_bound _ _ pureOp_store_w_correct_lem)).
+  Proof.
+    intros bid; destruct m; simpl.
+    unfold Memory_Register_Store_from_Reg, Memory_Register_Store, Memory_Block_Store.
+    replace (WordBytes (nth registers0 ri))
+       with (rev (rev (WordBytes (nth registers0 ri)))).
+    2: { apply vector_rev_rev_id. }
+    rewrite nth_rev.
+    rewrite (Block_Store_Spec pureOp_store_w_correct_lem
+                              memory0
+                              (bitvector_fin_big A)
+                              wordSizeEighthFin
+                              (rev (WordBytes (nth registers0 ri)))).
+    reflexivity.
+  Qed.
 
   (*"""
   store into ri the word in memory that is aligned to the [A]w-th byte
@@ -960,7 +1001,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* PC *)
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
-    - apply (replace registerValues0 ri).
+    - apply (replace registers0 ri).
       apply (Memory_Register_Load_from_Reg memory0).
       exact A.
     (* Flag *)
@@ -968,6 +1009,22 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Memory *)
     - exact memory0.
   Defined.
+
+  Theorem pureOp_load_w_correct (ri : regId) (A : Word) (m : MachineState) :
+    forall (bid : fin wordSizeEighth),
+    nth (WordBytes (nth (registers (pureOp_load_w ri A m)) ri)) bid =
+    nth (memory m) (exist _ ((wordSizeEighth - proj1_sig bid - 1 + bitvector_nat_big A) mod (2 ^ wordSize))
+                            (PeanoNat.Nat.mod_upper_bound _ _ pureOp_store_w_correct_lem)).
+  Proof.
+    intros bid; destruct m; simpl.
+    unfold Memory_Register_Load_from_Reg, Memory_Register_Load, Memory_Block_Load.
+    rewrite nth_replace; unfold WordBytes; rewrite vector_concat_inv2, nth_rev.
+    rewrite (Block_Load_Spec pureOp_store_w_correct_lem
+                             memory0
+                             (bitvector_fin_big A)
+                             wordSizeEighthFin); simpl.
+    reflexivity.
+  Qed.
 
 End TinyRAMState.
 

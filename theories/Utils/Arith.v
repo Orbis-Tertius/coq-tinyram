@@ -316,8 +316,6 @@ Proof.
   reflexivity.
 Qed.
 
-
-
 Theorem le_opp_intro_l : forall n m,
   le Z0 n ->
   le m Z0 ->

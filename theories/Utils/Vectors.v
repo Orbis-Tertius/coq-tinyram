@@ -563,6 +563,31 @@ Proof.
     reflexivity.
 Qed.
 
+Theorem nth_rev_lem : forall {n i}, (i < n) -> (n - i - 1) < n.
+  Proof. lia. Qed. 
+
+Theorem nth_rev : forall {A n} (v : t A n) (i : fin n),
+  nth (rev v) i =
+  nth v (exist _ (n - proj1_sig i - 1) 
+                 (nth_rev_lem (proj2_sig i))).
+Proof.
+  intros A n v.
+  induction v using t_snoc_ind; intros [i lti].
+  - lia.
+  - rewrite rev_cons.
+    rewrite cast_rew, nth_rew_l, fin_rew.
+    destruct i; simpl.
+    + assert (n <= n + 1 - 0 - 1) as H. { lia. }
+      rewrite (nth_app_r _ H).
+      assert (0 < 1) as H0. { lia. }
+      transitivity (nth [h] (exist _ 0 H0)). { reflexivity. }
+      f_equal; apply subset_eq_compat; lia.
+    + assert (n + 1 - S i - 1 < n) as H. { lia. }
+      rewrite (nth_app_l _ H).
+      rewrite IHv.
+      f_equal; apply subset_eq_compat; simpl; lia.
+Qed.
+
 Theorem vector_append_inv1 : forall {A n m}
     (v : t A (n + m)),
     uncurry append (splitat _ v) = v.

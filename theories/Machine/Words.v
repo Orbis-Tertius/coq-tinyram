@@ -23,29 +23,29 @@ Module TinyRAMWords (Params : TinyRAMParameters).
     cast v (eq_sym (succ_pred_pos _ wordSizePos)).
 
   (*Registers can be cleanly split into bytes.*) 
-  Definition RegisterBytes (r : Word) : 
+  Definition WordBytes (r : Word) : 
     Vector.t Byte wordSizeEighth :=
     vector_unconcat r.
 
-  Definition BytesRegister (v : Vector.t Byte wordSizeEighth) : Word 
+  Definition BytesWord (v : Vector.t Byte wordSizeEighth) : Word 
     := vector_concat v.
 
-  Theorem RegisterBytesIso1 :
+  Theorem WordBytesIso1 :
     forall (r : Word), 
-    BytesRegister (RegisterBytes r) = r.
+    BytesWord (WordBytes r) = r.
   Proof.
     intros r.
-    unfold RegisterBytes, BytesRegister.
+    unfold WordBytes, BytesWord.
     rewrite vector_concat_inv1.
     reflexivity.
   Qed.
 
-  Theorem RegisterBytesIso2 :
+  Theorem WordBytesIso2 :
     forall (v : Vector.t Byte wordSizeEighth), 
-    RegisterBytes (BytesRegister v) = v.
+    WordBytes (BytesWord v) = v.
   Proof.
     intros r.
-    unfold RegisterBytes, BytesRegister.
+    unfold WordBytes, BytesWord.
     rewrite vector_concat_inv2.
     reflexivity.
   Qed.

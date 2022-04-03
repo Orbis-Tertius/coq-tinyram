@@ -23,19 +23,9 @@ Module TinyRAMMem (Params : TinyRAMParameters).
   Definition Memory := Vector.t Byte (2 ^ wordSize).
 
   (*"""
-  When storing or loading blocks of multiple bytes,
-  we use the little-endian convention 
-  (i.e., the least-significant byte is at the lowest address). 
-
   We say that a block is aligned to the A-th byte if its
   least-significant byte is at address A.
   """*)
-  Definition Memory_Block_Load_Store
-    (m : Memory)
-    (idx blksz: fin (2 ^ wordSize))
-    (block : Vector.t Byte (proj1_sig blksz)) :
-    Vector.t Byte (proj1_sig blksz) * Memory :=
-    Block_Load_Store m idx blksz block.
 
   (*"""
   When storing or loading blocks of multiple bytes, 
