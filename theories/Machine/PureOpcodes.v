@@ -871,12 +871,6 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (bv_incr pcIncrement (programCounter m)).
   Proof. destruct m; simpl; intro H; rewrite H; reflexivity. Qed.
 
-  Definition wbcast {A} (v : Vector.t A wordSizeEighth) :
-                        (Vector.t A (S (pred wordSizeEighth))).
-    rewrite succ_pred_pos. { exact v. }
-    apply wordSizeEighthPos.
-  Defined.
-
   (*"""
   store the least-significant byte of [ri] at the [A]u-th byte in memory
   """*)
@@ -894,27 +888,20 @@ Module TinyRAMState (Params : TinyRAMParameters).
       (*" at the [A]u-th byte "*)
       + exact (bitvector_fin_big A).
       (*" the least-significant byte of [ri] "*)
-      + exact (last (wbcast (WordBytes ri))).
+      + exact (snd (splitat _ (wbcast ri))).
   Defined.
 
   Theorem pureOp_store_b_correct :
     forall (ri : regId) (A : Word) (m : MachineState),
      nth (memory (pureOp_store_b ri A m)) (bitvector_fin_big A)
-      = (last (wbcast (WordBytes (nth (registers m) ri)))).
+      = snd (splitat _ (wbcast (nth (registers m) ri))).
   Proof.
     intros [ri ltri] A m; destruct m; simpl.
     apply nth_replace.
   Qed.
 
-  Theorem wordMax8 : 8 <= wordSize.
-  Proof.
-    unfold wordSize.
-    assert (0 < wordSizeEighth). { apply wordSizeEighthPos. }
-    destruct wordSizeEighth; lia.
-  Qed.
-
   Theorem pureOp_load_b_lem : wordSize = (wordSize - 8 + 8).
-  Proof. assert (8 <= wordSize). { exact wordMax8. } lia. Qed.
+  Proof. assert (8 <= wordSize). { exact wordSizeMin8. } lia. Qed.
 
   (*"""
   store into ri (with zero-padding in front) the [A]u-th byte in memory

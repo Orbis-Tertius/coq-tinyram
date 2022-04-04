@@ -30,7 +30,7 @@ Module Type TinyRAMParameters.
     lia.
   Qed.
 
-  Theorem wordSizeMin : 5 < wordSize.
+  Theorem wordSizeMin5 : 5 < wordSize.
   Proof.
     assert (6 + 2 * log2_up registerCount <= wordSize).
     { exact encodingAxiom. }
@@ -41,6 +41,13 @@ Module Type TinyRAMParameters.
   Proof.
     assert (0 < wordSizeEighth * 8). { apply wordSizePos. }
     lia.
+  Qed.
+
+  Theorem wordSizeMin8 : 8 <= wordSize.
+  Proof.
+    unfold wordSize.
+    assert (0 < wordSizeEighth). { apply wordSizeEighthPos. }
+    destruct wordSizeEighth; lia.
   Qed.
 
   Definition wordSizeEighthFin : fin (2 ^ wordSize).

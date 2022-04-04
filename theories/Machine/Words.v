@@ -21,6 +21,20 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   Definition wuncast (v : Vector.t bool (S (pred wordSize))) :=
     cast v (succ_pred_pos _ wordSizePos).
 
+  Definition wbcast {A} (v : Vector.t A wordSize) :
+                        Vector.t A (wordSize - 8 + 8).
+    assert (8 <= wordSize). { exact wordSizeMin8. }
+    replace (_ + _) with wordSize. { exact v. }
+    lia.
+  Defined.
+
+  Definition wbuncast {A} (v : Vector.t A (wordSize - 8 + 8)) :
+                          Vector.t A wordSize.
+    assert (8 <= wordSize). { exact wordSizeMin8. }
+    replace (_ + _) with wordSize in v. { exact v. }
+    lia.
+  Defined.
+
   (*Registers can be cleanly split into bytes.*) 
   Definition WordBytes (r : Word) : 
     Vector.t Byte wordSizeEighth :=

@@ -230,7 +230,7 @@ Module TinyRAMCoding (Params : TinyRAMParameters).
       exists 1.
       transitivity wordSize.
       2: { apply PeanoNat.Nat.pow_gt_lin_r. lia. }
-      assert (5 < wordSize). { apply wordSizeMin. }
+      assert (5 < wordSize). { apply wordSizeMin5. }
       lia.
   Defined.
 
