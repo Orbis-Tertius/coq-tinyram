@@ -46,7 +46,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Registers *)
     - exact (replace registers0 ri res).
     (* Flag *)
-    - exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (const false _)).
     (* Memory *)
     - exact memory0.
   Defined.
@@ -76,7 +76,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Registers *)
     - exact (replace registers0 ri res).
     (* Flag *)
-    - exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (const false _)).
     (* Memory *)
     - exact memory0.
   Defined.
@@ -106,7 +106,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Registers *)
     - exact (replace registers0 ri res).
     (* Flag *)
-    - exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (const false _)).
     (* Memory *)
     - exact memory0.
   Defined.
@@ -135,7 +135,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Registers *)
     - exact (replace registers0 ri res).
     (* Flag *)
-    - exact (bv_eq res (Vector.const false _)).
+    - exact (bv_eq res (const false _)).
     (* Memory *)
     - exact memory0.
   Defined.
