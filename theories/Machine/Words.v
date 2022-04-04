@@ -50,6 +50,6 @@ Module TinyRAMWords (Params : TinyRAMParameters).
     reflexivity.
   Qed.
 
+  Definition Address : Type := fin (2 ^ wordSize).
+  Definition Register : Type := fin registerCount.
 End TinyRAMWords.
-
-
