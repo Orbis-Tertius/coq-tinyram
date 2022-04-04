@@ -7,7 +7,7 @@ Import PeanoNat.Nat(log2_up, ltb_lt).
 From TinyRAM.Machine Require Import
   Parameters Words.
 
-Module TinyRAMDecodOps (Params : TinyRAMParameters).
+Module TinyRAMCoding (Params : TinyRAMParameters).
   Module TRWords := TinyRAMWords Params.
   Import TRWords.
 
@@ -126,15 +126,17 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   | readI : regId -> OpcodeI
   | answerI : OpcodeI.
 
-  Definition Opcode : Type := OpcodeI * (Word + regId).
+  Definition operand : Type := Word + regId.
+
+  Definition Opcode : Type := OpcodeI * operand.
 
   Definition ijTr (con : regId -> regId -> OpcodeI)
-                   (ri rj : regId) (A : Word + regId) : Opcode := (con ri rj, A).
+                   (ri rj : regId) (A : operand) : Opcode := (con ri rj, A).
 
   Definition iTr (con : regId -> OpcodeI)
-                   (ri : regId) (A : Word + regId) : Opcode := (con ri, A).
+                   (ri : regId) (A : operand) : Opcode := (con ri, A).
 
-  Definition Tr (con : OpcodeI) (A : Word + regId) : Opcode := (con, A).
+  Definition Tr (con : OpcodeI) (A : operand) : Opcode := (con, A).
 
   Definition oreg {n} (v : Vector.t bool n) : option regId.
     destruct (bitvector_fin_big v).
@@ -243,7 +245,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
      anyway.
   *)
   Definition OpcodeDecodeA : forall
-    (code : Word + regId -> Opcode)
+    (code : operand -> Opcode)
     (isReg : bool) (w2: Word) (w2reg: option regId),
     Opcode.
     intros code isReg w2 w2reg.
@@ -254,7 +256,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   Defined.
 
   Definition OpcodeDecodeRiA : forall
-    (code : regId -> Word + regId -> Opcode)
+    (code : regId -> operand -> Opcode)
     (isReg : bool) (ri : option regId)
     (w2: Word) (w2reg: option regId),
     Opcode.
@@ -267,7 +269,7 @@ Module TinyRAMDecodOps (Params : TinyRAMParameters).
   Defined.
 
   Definition OpcodeDecodeRiRjA : forall
-    (code : regId -> regId -> Word + regId -> Opcode)
+    (code : regId -> regId -> operand -> Opcode)
     (isReg : bool) (ri rj : option regId)
     (w2: Word) (w2reg: option regId),
     Opcode.
@@ -1076,7 +1078,7 @@ Theorem or_decode_register_correct :
     (answerI, inl A).
   Proof. unfold answer_code. AProof_word. Qed.
 
-  Definition option_word : Word + regId -> Word.
+  Definition option_word : operand -> Word.
     intros [w|[rid ridp]].
     - exact w. 
     - apply fin_bitvector_big.
@@ -1086,7 +1088,7 @@ Theorem or_decode_register_correct :
       lia.
   Defined.
 
-  Definition option_bool (o : Word + regId) : bool :=
+  Definition option_bool (o : operand) : bool :=
     if o then b1 else b0.
 
   Definition reg_vect : regId -> t bool (log2_up registerCount).
@@ -1326,6 +1328,4 @@ Theorem or_decode_register_correct :
     - rewrite (answer_decode_register_correct _ _ _ H1); encode_decode_fin.
   Qed.
 
-End TinyRAMDecodOps.
-
-
+End TinyRAMCoding.
