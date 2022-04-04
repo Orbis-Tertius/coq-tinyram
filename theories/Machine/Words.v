@@ -1,13 +1,7 @@
 From Coq Require Import
   Lia VectorEq.
 From TinyRAM.Utils Require Import
-  Vectors.
-From TinyRAM.Utils Require Import
-  BitVectors.
-From TinyRAM.Utils Require Import
-  Fin.
-From TinyRAM.Machine Require Import
-  Parameters.
+  Vectors BitVectors Fin Parameters.
 Import PeanoNat.Nat.
 
 Module TinyRAMWords (Params : TinyRAMParameters).
