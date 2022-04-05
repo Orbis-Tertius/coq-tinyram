@@ -14,7 +14,7 @@ From TinyRAM.Utils Require Import
   Fin BitVectors.
 Import BinInt.Z PeanoNat.Nat Monads MonadNotation VectorNotations.
 
-Module TinyRAMIMach (Params : TinyRAMParameters).
+Module TinyRAMDenotations (Params : TinyRAMParameters).
   Module TRMem := TinyRAMMem Params.
   Import TRMem.
   Export TRMem.
@@ -327,4 +327,4 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
 
   End with_event.
 
-End TinyRAMIMach.
+End TinyRAMDenotations.
