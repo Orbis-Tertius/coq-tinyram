@@ -48,9 +48,6 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
   | ReadMain : ReadE (option Word)
   | ReadAux : ReadE (option Word).
 
-  Variant AnswerE : Type -> Type :=
-  | ReturnAnswer (v : Word) : AnswerE void.
-
   Section with_event.
     Local Open Scope monad_scope.
 
@@ -59,7 +56,6 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
     Context {HasFlag : FlagE -< E}.
     Context {HasProgramCounter : ProgramCounterE -< E}.
     Context {HasMemory : MemoryE -< E}.
-    Context {HasAnswer : AnswerE -< E}.
     Context {HasRead : ReadE -< E}.
     Context {HasOpcode : OpcodeE -< E}.
 
@@ -312,22 +308,22 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
 
         | answerI =>
           (*""" The instruction answer A causes the machine to [...] halt """*)
-          null <- trigger (ReturnAnswer A) ;;
-          match null : void with end
+          ret tt
 
         end
     end.
 
-  Definition run_body (a : Word) : itree (callE Word Word +' E) Word :=
-    w2code <- trigger (ReadOp a) ;;
-    let instr := uncurry OpcodeDecode w2code in
-    translate inr1 (denote_opcode instr) ;;
-    a <- trigger GetPC ;;
-    call a.
+    Definition run_body : itree (callE unit Word +' E) Word :=
+      a <- trigger GetPC ;;
+      w2code <- trigger (ReadOp a) ;;
+      let instr := uncurry OpcodeDecode w2code in
+      match instr with
+      | (answerI, op) => translate inr1 (denote_operand op)
+      | i => translate inr1 (denote_opcode i) ;;
+            call tt
+      end.
 
-  Definition run : itree E Word := 
-    a <- trigger GetPC ;;
-    rec run_body a.
+    Definition run : itree E Word := rec (fun _ => run_body) tt.
 
   End with_event.
 
