@@ -5,7 +5,7 @@ From Coq Require Import
 From ExtLib Require Import
      Monad.
 From ITree Require Import
-     ITree.
+     ITree Simple.
 From ITree.Basics Require Import
      CategorySub.
 From TinyRAM.Machine Require Import
@@ -34,7 +34,11 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
 
   Variant ProgramCounterE : Type -> Type :=
   | SetPC (v : Word) : ProgramCounterE unit
-  | IncPC : ProgramCounterE unit.
+  | IncPC : ProgramCounterE unit
+  | GetPC : ProgramCounterE Word.
+
+  Variant OpcodeE : Type -> Type :=
+  | ReadOp (a : Word) : OpcodeE (Word * Word).
 
   Variant FlagE : Type -> Type :=
   | GetFlag : FlagE bool
@@ -56,7 +60,8 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
     Context {HasProgramCounter : ProgramCounterE -< E}.
     Context {HasMemory : MemoryE -< E}.
     Context {HasAnswer : AnswerE -< E}.
-    Context {ReadAnswer : ReadE -< E}.
+    Context {HasRead : ReadE -< E}.
+    Context {HasOpcode : OpcodeE -< E}.
 
     Definition denote_operand (o : operand) : itree E Word :=
       match o with
@@ -312,6 +317,17 @@ Module TinyRAMIMach (Params : TinyRAMParameters).
 
         end
     end.
+
+  Definition run_body (a : Word) : itree (callE Word Word +' E) Word :=
+    w2code <- trigger (ReadOp a) ;;
+    let instr := uncurry OpcodeDecode w2code in
+    translate inr1 (denote_opcode instr) ;;
+    a <- trigger GetPC ;;
+    call a.
+
+  Definition run : itree E Word := 
+    a <- trigger GetPC ;;
+    rec run_body a.
 
   End with_event.
 
