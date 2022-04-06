@@ -24,29 +24,8 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
 
   Definition Program : Type := list (Word * Word).
   Definition Tape : Type := list Word.
+  (*""" [registerCount] general-purpose registers, [...] """*)
   Definition Registers : Type := Vector.t Word registerCount.
-
-  Record MachineState : Type :=
-    mkMachineState {
-        (*"""
-        The program counter, denoted pc; it consists of [wordSize] bits.
-        """*)
-        programCounter : Word;
-        (*"""
-        [registerCount] general-purpose registers, [...]
-        """*)
-        registers : Vector.t Word registerCount;
-        (*"""
-        The (condition) flag [...]; it consists of a single bit.
-        """*)
-        conditionFlag : bool;
-        memory : Memory;
-
-        tapeMain : Tape;
-        tapeAux : Tape;
-
-        program : Program;
-      }.
 
   Definition handle_registers {E: Type -> Type} `{stateE Registers -< E}: 
     RegisterE ~> itree E :=
@@ -76,20 +55,22 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     stateT Memory (itree E) A :=
   run_state (interp (bimap handle_memory (id_ E)) t).
 
-  Definition handle_programCounter {E: Type -> Type} `{stateE nat -< E}: 
+  (*""" The program counter, denoted pc; it consists of [wordSize] bits. """*)
+  Definition handle_programCounter {E: Type -> Type} `{stateE Word -< E}: 
     ProgramCounterE ~> itree E :=
   fun _ e =>
     match e in (ProgramCounterE T) return (itree E T) with
     | SetPC v => put v
     | IncPC => pc <- get;;
-               put (S pc)
+               put (bv_incr 1 pc)
     | GetPC => get
     end.
 
   Definition interp_programCounter {E A} (t : itree (ProgramCounterE +' E) A) :
-    stateT nat (itree E) A :=
+    stateT Word (itree E) A :=
   run_state (interp (bimap handle_programCounter (id_ E)) t).
 
+  (*""" The (condition) flag [...]; it consists of a single bit. """*)
   Definition handle_flag {E: Type -> Type} `{stateE bool -< E}: 
     FlagE ~> itree E :=
   fun _ e =>
@@ -155,7 +136,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
               (bimap handle_programCounter (bimap handle_memory (bimap handle_registers
               (id_ E)))))))
               run) 
-              s) (t1, t2)) b0) 0) (const (const b0 _) _)) (const (const b0 _) _))) ;;
+              s) (t1, t2)) b0) (const b0 _)) (const (const b0 _) _)) (const (const b0 _) _))) ;;
     ret (snd (snd (snd (snd (snd (snd state)))))).
 
 End TinyRAMHandlers.

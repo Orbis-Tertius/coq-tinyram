@@ -33,9 +33,9 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
   | StoreWord (a : Address) (val : Word) : MemoryE unit.
 
   Variant ProgramCounterE : Type -> Type :=
-  | SetPC (v : nat) : ProgramCounterE unit
+  | SetPC (v : Word) : ProgramCounterE unit
   | IncPC : ProgramCounterE unit
-  | GetPC : ProgramCounterE nat.
+  | GetPC : ProgramCounterE Word.
 
   Variant InstructionE : Type -> Type :=
   | ReadInst (a : nat) : InstructionE (Word * Word).
@@ -239,13 +239,13 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
 
         | jmpI =>
           (*""" set pc to [A] """*)
-          trigger (SetPC (bitvector_nat_big A))
+          trigger (SetPC A)
 
         | cjmpI =>
           flag <- trigger GetFlag ;;
           (*""" if flag = 1, set pc to [A] (else increment pc as usual) """*)
           if (flag : bool)
-          then trigger (SetPC (bitvector_nat_big A))
+          then trigger (SetPC A)
           else trigger IncPC
 
         | cnjmpI =>
@@ -253,7 +253,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           (*""" if flag = 0, set pc to [A] (else increment pc as usual) """*)
           if (flag : bool)
           then trigger IncPC
-          else trigger (SetPC (bitvector_nat_big A))
+          else trigger (SetPC A)
 
         | store_bI ri =>
           regi <- trigger (GetReg ri) ;;
@@ -315,7 +315,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
 
     Definition run_body : itree (callE unit Word +' E) Word :=
       a <- trigger GetPC ;;
-      w2code <- trigger (ReadInst a) ;;
+      w2code <- trigger (ReadInst (bitvector_nat_big a)) ;;
       let instr := uncurry InstructionDecode w2code in
       match instr with
       | (answerI, op) => translate inr1 (denote_operand op)
