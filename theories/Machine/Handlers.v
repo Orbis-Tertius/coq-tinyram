@@ -130,13 +130,13 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
 
   Definition eval_prog (s: Program) (t1 t2 : Tape) : itree void1 Word :=
     let E : Type -> Type := void1 in 
-    state <- ((run_state (run_state (run_state (run_state (run_state (run_state
-              (interp
-              (bimap handle_instruction (bimap handle_read (bimap handle_flag
-              (bimap handle_programCounter (bimap handle_memory (bimap handle_registers
-              (id_ E)))))))
-              run) 
-              s) (t1, t2)) b0) (const b0 _)) (const (const b0 _) _)) (const (const b0 _) _))) ;;
+    state <- (run_state (run_state (run_state (run_state (run_state (run_state
+             (interp
+             (bimap handle_instruction (bimap handle_read (bimap handle_flag
+             (bimap handle_programCounter (bimap handle_memory (bimap handle_registers
+             (id_ E)))))))
+             run)
+             s) (t1, t2)) b0) (const b0 _)) (const (const b0 _) _)) (const (const b0 _) _)) ;;
     ret (snd (snd (snd (snd (snd (snd state)))))).
 
 End TinyRAMHandlers.
