@@ -138,7 +138,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       (* """ If pc is not an integer in {0, . . . , L-1}, where L is 
             the number of instructions in [program], then the instruction
             answer 1 is fetched as default. """ *)
-      | None => ret (OpcodeEncode answer1)
+      | None => ret (InstructionEncode answer1)
       | Some x => ret x
       end
     end.

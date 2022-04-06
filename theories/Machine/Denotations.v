@@ -57,7 +57,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
     Context {HasProgramCounter : ProgramCounterE -< E}.
     Context {HasMemory : MemoryE -< E}.
     Context {HasRead : ReadE -< E}.
-    Context {HasOpcode : InstructionE -< E}.
+    Context {HasInstruction : InstructionE -< E}.
 
     Definition denote_operand (o : operand) : itree E Word :=
       match o with
@@ -65,7 +65,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
       | inr v => trigger (GetReg v)
       end.
 
-    Definition denote_opcode (o : Opcode) : itree E unit :=
+    Definition denote_opcode (o : Instruction) : itree E unit :=
       match o with
       | (o, op) => 
         A <- denote_operand op ;;
@@ -316,7 +316,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
     Definition run_body : itree (callE unit Word +' E) Word :=
       a <- trigger GetPC ;;
       w2code <- trigger (ReadInst a) ;;
-      let instr := uncurry OpcodeDecode w2code in
+      let instr := uncurry InstructionDecode w2code in
       match instr with
       | (answerI, op) => translate inr1 (denote_operand op)
       | i => translate inr1 (denote_opcode i) ;;
