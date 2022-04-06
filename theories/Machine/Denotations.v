@@ -33,12 +33,12 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
   | StoreWord (a : Address) (val : Word) : MemoryE unit.
 
   Variant ProgramCounterE : Type -> Type :=
-  | SetPC (v : Word) : ProgramCounterE unit
+  | SetPC (v : nat) : ProgramCounterE unit
   | IncPC : ProgramCounterE unit
-  | GetPC : ProgramCounterE Word.
+  | GetPC : ProgramCounterE nat.
 
-  Variant OpcodeE : Type -> Type :=
-  | ReadOp (a : Word) : OpcodeE (Word * Word).
+  Variant InstructionE : Type -> Type :=
+  | ReadInst (a : nat) : InstructionE (Word * Word).
 
   Variant FlagE : Type -> Type :=
   | GetFlag : FlagE bool
@@ -57,7 +57,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
     Context {HasProgramCounter : ProgramCounterE -< E}.
     Context {HasMemory : MemoryE -< E}.
     Context {HasRead : ReadE -< E}.
-    Context {HasOpcode : OpcodeE -< E}.
+    Context {HasOpcode : InstructionE -< E}.
 
     Definition denote_operand (o : operand) : itree E Word :=
       match o with
@@ -239,13 +239,13 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
 
         | jmpI =>
           (*""" set pc to [A] """*)
-          trigger (SetPC A)
+          trigger (SetPC (bitvector_nat_big A))
 
         | cjmpI =>
           flag <- trigger GetFlag ;;
           (*""" if flag = 1, set pc to [A] (else increment pc as usual) """*)
           if (flag : bool)
-          then trigger (SetPC A)
+          then trigger (SetPC (bitvector_nat_big A))
           else trigger IncPC
 
         | cnjmpI =>
@@ -253,7 +253,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           (*""" if flag = 0, set pc to [A] (else increment pc as usual) """*)
           if (flag : bool)
           then trigger IncPC
-          else trigger (SetPC A)
+          else trigger (SetPC (bitvector_nat_big A))
 
         | store_bI ri =>
           regi <- trigger (GetReg ri) ;;
@@ -315,7 +315,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
 
     Definition run_body : itree (callE unit Word +' E) Word :=
       a <- trigger GetPC ;;
-      w2code <- trigger (ReadOp a) ;;
+      w2code <- trigger (ReadInst a) ;;
       let instr := uncurry OpcodeDecode w2code in
       match instr with
       | (answerI, op) => translate inr1 (denote_operand op)

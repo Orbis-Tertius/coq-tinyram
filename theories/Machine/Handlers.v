@@ -3,7 +3,10 @@ From Coq Require Import
 From ExtLib Require Import
      Monad.
 From ITree Require Import
-     ITree Simple.
+     ITree
+     ITreeFacts
+     Events.State
+     Events.StateFacts.
 From ITree.Basics Require Import
      CategorySub.
 From TinyRAM.Machine Require Import
@@ -16,6 +19,11 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
   Module TRDen := TinyRAMDenotations Params.
   Import TRDen.
   Export TRDen.
+
+  Local Open Scope monad_scope.
+
+  Definition Program : Type := list (Word * Word).
+  Definition Tape : Type := list Word.
 
   Record MachineState : Type :=
     mkMachineState {
@@ -33,239 +41,90 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
         conditionFlag : bool;
         memory : Memory;
 
-        tapeMain : list Word;
-        tapeAux : list Word;
+        tapeMain : Tape;
+        tapeAux : Tape;
 
-        program : list (Word * Word);
+        program : Program;
       }.
 
-  Definition handle_registers R (e : RegisterE R) :
-    Monads.stateT MachineState (itree void1) R := 
-    fun m =>
-    match e with
-    | GetReg x => ret (m, nth (registers m) x)
-    | SetReg x v => 
-        match m with
-        | {|
-            programCounter := programCounter0;
-            registers := registers0;
-            conditionFlag := conditionFlag0;
-            memory := memory0;
-            tapeMain := tapeMain0;
-            tapeAux := tapeAux0;
-            program := program0
-          |} =>
-            ret ({|
-              programCounter := programCounter0;
-              registers := replace registers0 x v;
-              conditionFlag := conditionFlag0;
-              memory := memory0;
-              tapeMain := tapeMain0;
-              tapeAux := tapeAux0;
-              program := program0
-            |}, tt)
-        end
+  Definition handle_registers {E: Type -> Type} `{stateE (Vector.t Word registerCount) -< E}: 
+    RegisterE ~> itree E :=
+  fun _ e =>
+    reg <- get;;
+    match e in (RegisterE T) return (itree E T) with
+    | GetReg x => ret (nth reg x)
+    | SetReg x v => put (replace reg x v)
     end.
 
-  Definition handle_memory R (e : MemoryE R) :
-    Monads.stateT MachineState (itree void1) R := 
-    fun m =>
-    match e with
-    | LoadByte x => ret (m, nth (memory m) x)
-    | StoreByte x v => 
-        match m with
-        | {|
-            programCounter := programCounter0;
-            registers := registers0;
-            conditionFlag := conditionFlag0;
-            memory := memory0;
-            tapeMain := tapeMain0;
-            tapeAux := tapeAux0;
-            program := program0
-          |} =>
-            ret ({|
-              programCounter := programCounter0;
-              registers := registers0;
-              conditionFlag := conditionFlag0;
-              memory := replace memory0 x v;
-              tapeMain := tapeMain0;
-              tapeAux := tapeAux0;
-              program := program0
-            |}, tt)
-        end
-    | LoadWord x => ret (m, Memory_Word_Load (memory m) x)
-    | StoreWord x v => 
-        match m with
-        | {|
-            programCounter := programCounter0;
-            registers := registers0;
-            conditionFlag := conditionFlag0;
-            memory := memory0;
-            tapeMain := tapeMain0;
-            tapeAux := tapeAux0;
-            program := program0
-          |} =>
-            ret ({|
-              programCounter := programCounter0;
-              registers := registers0;
-              conditionFlag := conditionFlag0;
-              memory := Memory_Word_Store memory0 x v;
-              tapeMain := tapeMain0;
-              tapeAux := tapeAux0;
-              program := program0
-            |}, tt)
-        end
+  Definition handle_memory {E: Type -> Type} `{stateE Memory -< E}: 
+    MemoryE ~> itree E :=
+  fun _ e =>
+    m <- get;;
+    match e in (MemoryE T) return (itree E T) with
+    | LoadByte x => ret (nth m x)
+    | StoreByte x v => put (replace m x v)
+    | LoadWord x => ret (Memory_Word_Load m x)
+    | StoreWord x v => put (Memory_Word_Store m x v)
     end.
 
-  Definition handle_programCounter R (e : ProgramCounterE R) :
-    Monads.stateT MachineState (itree void1) R := 
-    fun m =>
-    match e with
-    | SetPC v => 
-        match m with
-        | {|
-            programCounter := programCounter0;
-            registers := registers0;
-            conditionFlag := conditionFlag0;
-            memory := memory0;
-            tapeMain := tapeMain0;
-            tapeAux := tapeAux0;
-            program := program0
-          |} =>
-            ret ({|
-              programCounter := v;
-              registers := registers0;
-              conditionFlag := conditionFlag0;
-              memory := memory0;
-              tapeMain := tapeMain0;
-              tapeAux := tapeAux0;
-              program := program0
-            |}, tt)
-        end
-    | IncPC => 
-        match m with
-        | {|
-            programCounter := programCounter0;
-            registers := registers0;
-            conditionFlag := conditionFlag0;
-            memory := memory0;
-            tapeMain := tapeMain0;
-            tapeAux := tapeAux0;
-            program := program0
-          |} =>
-            ret ({|
-              programCounter := bv_incr 1 programCounter0;
-              registers := registers0;
-              conditionFlag := conditionFlag0;
-              memory := memory0;
-              tapeMain := tapeMain0;
-              tapeAux := tapeAux0;
-              program := program0
-            |}, tt)
-        end
-    | GetPC => ret (m, programCounter m)
+  Definition handle_programCounter {E: Type -> Type} `{stateE nat -< E}: 
+    ProgramCounterE ~> itree E :=
+  fun _ e =>
+    match e in (ProgramCounterE T) return (itree E T) with
+    | SetPC v => put v
+    | IncPC => pc <- get;;
+               put (S pc)
+    | GetPC => get
     end.
 
-  Definition handle_opcode R (e : OpcodeE R) :
-    Monads.stateT MachineState (itree void1) R := 
-    fun m =>
-    match e with
-    | ReadOp x => ret (m, 
-      match List.nth_error (program m) (bitvector_nat_big x) with
+  Definition handle_flag {E: Type -> Type} `{stateE bool -< E}: 
+    FlagE ~> itree E :=
+  fun _ e =>
+    match e in (FlagE T) return (itree E T) with
+    | SetFlag b => put b
+    | GetFlag => get
+    end.
+
+  Definition handle_read {E: Type -> Type} `{stateE (Tape * Tape) -< E}: 
+    ReadE ~> itree E :=
+  fun _ e =>
+    tapes <- get;;
+    let (main, aux) := (tapes : Tape * Tape) in
+    match e in (ReadE T) return (itree E T) with
+    | ReadMain => 
+      match main with
+      | List.nil => ret None
+      | List.cons x xs =>
+        put (xs, aux) ;;
+        ret (Some x)
+      end
+    | ReadAux => 
+      match aux with
+      | List.nil => ret None
+      | List.cons x xs =>
+        put (main, xs) ;;
+        ret (Some x)
+      end
+    end.
+
+  Definition handle_instruction {E: Type -> Type} `{stateE Program -< E}: 
+    InstructionE ~> itree E :=
+  fun _ e =>
+    match e in (InstructionE T) return (itree E T) with
+    | ReadInst x => 
+      prog <- get;;
+      match List.nth_error prog x with
       (* """ If pc is not an integer in {0, . . . , L-1}, where L is 
             the number of instructions in [program], then the instruction
             answer 1 is fetched as default. """ *)
-      | None => OpcodeEncode answer1
-      | Some x => x
-      end)
-    end.
-
-
-  Definition handle_flag R (e : FlagE R) :
-    Monads.stateT MachineState (itree void1) R := 
-    fun m =>
-    match e with
-    | SetFlag b => 
-        match m with
-        | {|
-            programCounter := programCounter0;
-            registers := registers0;
-            conditionFlag := conditionFlag0;
-            memory := memory0;
-            tapeMain := tapeMain0;
-            tapeAux := tapeAux0;
-            program := program0
-          |} =>
-            ret ({|
-              programCounter := programCounter0;
-              registers := registers0;
-              conditionFlag := b;
-              memory := memory0;
-              tapeMain := tapeMain0;
-              tapeAux := tapeAux0;
-              program := program0
-            |}, tt)
-        end
-    | GetFlag => ret (m, conditionFlag m)
-    end.
-
-  Definition handle_read R (e : ReadE R) :
-    Monads.stateT MachineState (itree void1) R := 
-    fun m =>
-    match m with
-    | {|
-        programCounter := programCounter0;
-        registers := registers0;
-        conditionFlag := conditionFlag0;
-        memory := memory0;
-        tapeMain := tapeMain0;
-        tapeAux := tapeAux0;
-        program := program0
-      |} =>
-      match e with
-      | ReadMain => 
-        match tapeMain0 with
-        | List.nil => ret ({|
-                      programCounter := programCounter0;
-                      registers := registers0;
-                      conditionFlag := conditionFlag0;
-                      memory := memory0;
-                      tapeMain := List.nil;
-                      tapeAux := tapeAux0;
-                      program := program0
-                    |}, None)
-        | List.cons x xs => ret ({|
-                              programCounter := programCounter0;
-                              registers := registers0;
-                              conditionFlag := conditionFlag0;
-                              memory := memory0;
-                              tapeMain := xs;
-                              tapeAux := tapeAux0;
-                              program := program0
-                            |}, Some x)
-        end
-      | ReadAux => 
-        match tapeAux0 with
-        | List.nil => ret ({|
-                      programCounter := programCounter0;
-                      registers := registers0;
-                      conditionFlag := conditionFlag0;
-                      memory := memory0;
-                      tapeMain := tapeMain0;
-                      tapeAux := List.nil;
-                      program := program0
-                    |}, None)
-        | List.cons x xs => ret ({|
-                              programCounter := programCounter0;
-                              registers := registers0;
-                              conditionFlag := conditionFlag0;
-                              memory := memory0;
-                              tapeMain := tapeMain0;
-                              tapeAux := xs;
-                              program := program0
-                            |}, Some x)
-        end
+      | None => ret (OpcodeEncode answer1)
+      | Some x => ret x
       end
     end.
+
+  (*
+  Definition eval_prog (s: Program) (t1 t2 : Tape) : itree void1 Word :=
+    interp_imp (denote_imp s) empty.
+  *)
 
 End TinyRAMHandlers.
