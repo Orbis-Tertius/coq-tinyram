@@ -24,6 +24,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
 
   Definition Program : Type := list (Word * Word).
   Definition Tape : Type := list Word.
+  Definition Registers : Type := Vector.t Word registerCount.
 
   Record MachineState : Type :=
     mkMachineState {
@@ -47,7 +48,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
         program : Program;
       }.
 
-  Definition handle_registers {E: Type -> Type} `{stateE (Vector.t Word registerCount) -< E}: 
+  Definition handle_registers {E: Type -> Type} `{stateE Registers -< E}: 
     RegisterE ~> itree E :=
   fun _ e =>
     reg <- get;;
@@ -55,6 +56,10 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     | GetReg x => ret (nth reg x)
     | SetReg x v => put (replace reg x v)
     end.
+
+  Definition interp_registers {E A} (t : itree (RegisterE +' E) A) :
+    stateT Registers (itree E) A :=
+  run_state (interp (bimap handle_registers (id_ E)) t).
 
   Definition handle_memory {E: Type -> Type} `{stateE Memory -< E}: 
     MemoryE ~> itree E :=
@@ -67,6 +72,10 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     | StoreWord x v => put (Memory_Word_Store m x v)
     end.
 
+  Definition interp_memory {E A} (t : itree (MemoryE +' E) A) :
+    stateT Memory (itree E) A :=
+  run_state (interp (bimap handle_memory (id_ E)) t).
+
   Definition handle_programCounter {E: Type -> Type} `{stateE nat -< E}: 
     ProgramCounterE ~> itree E :=
   fun _ e =>
@@ -77,6 +86,10 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     | GetPC => get
     end.
 
+  Definition interp_programCounter {E A} (t : itree (ProgramCounterE +' E) A) :
+    stateT nat (itree E) A :=
+  run_state (interp (bimap handle_programCounter (id_ E)) t).
+
   Definition handle_flag {E: Type -> Type} `{stateE bool -< E}: 
     FlagE ~> itree E :=
   fun _ e =>
@@ -84,6 +97,10 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     | SetFlag b => put b
     | GetFlag => get
     end.
+
+  Definition interp_flag {E A} (t : itree (FlagE +' E) A) :
+    stateT bool (itree E) A :=
+  run_state (interp (bimap handle_flag (id_ E)) t).
 
   Definition handle_read {E: Type -> Type} `{stateE (Tape * Tape) -< E}: 
     ReadE ~> itree E :=
@@ -107,6 +124,10 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       end
     end.
 
+  Definition interp_read {E A} (t : itree (ReadE +' E) A) :
+    stateT (Tape * Tape) (itree E) A :=
+  run_state (interp (bimap handle_read (id_ E)) t).
+
   Definition handle_instruction {E: Type -> Type} `{stateE Program -< E}: 
     InstructionE ~> itree E :=
   fun _ e =>
@@ -122,9 +143,19 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       end
     end.
 
-  (*
+  Definition interp_instruction {E A} (t : itree (InstructionE +' E) A) :
+    stateT Program (itree E) A :=
+  run_state (interp (bimap handle_instruction (id_ E)) t).
+
   Definition eval_prog (s: Program) (t1 t2 : Tape) : itree void1 Word :=
-    interp_imp (denote_imp s) empty.
-  *)
+    let E : Type -> Type := void1 in 
+    state <- ((run_state (run_state (run_state (run_state (run_state (run_state
+              (interp
+              (bimap handle_instruction (bimap handle_read (bimap handle_flag
+              (bimap handle_programCounter (bimap handle_memory (bimap handle_registers
+              (id_ E)))))))
+              run) 
+              s) (t1, t2)) b0) 0) (const (const b0 _) _)) (const (const b0 _) _))) ;;
+    ret (snd (snd (snd (snd (snd (snd state)))))).
 
 End TinyRAMHandlers.
