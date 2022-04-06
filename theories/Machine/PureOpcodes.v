@@ -948,7 +948,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     (* Flag *)
     - exact conditionFlag0.
     (* Memory *)
-    - apply (Memory_Register_Store_from_Reg memory0).
+    - apply (Memory_Word_Store_from_Reg memory0).
       (*" at the word in memory that is aligned to the [A]w-th byte "*)
       + exact A. 
       (* store [ri] *)
@@ -966,7 +966,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
                  (PeanoNat.Nat.mod_upper_bound _ _ pureOp_store_w_correct_lem)).
   Proof.
     intros bid; destruct m; simpl.
-    unfold Memory_Register_Store_from_Reg, Memory_Register_Store, Memory_Block_Store.
+    unfold Memory_Word_Store_from_Reg, Memory_Word_Store, Memory_Block_Store.
     replace (WordBytes (nth registers0 ri))
        with (rev (rev (WordBytes (nth registers0 ri)))).
     2: { apply vector_rev_rev_id. }
@@ -989,7 +989,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
     - exact (bv_incr pcIncrement programCounter0).
     (* Registers *)
     - apply (replace registers0 ri).
-      apply (Memory_Register_Load_from_Reg memory0).
+      apply (Memory_Word_Load_from_Reg memory0).
       exact A.
     (* Flag *)
     - exact conditionFlag0. 
@@ -1004,7 +1004,7 @@ Module TinyRAMState (Params : TinyRAMParameters).
                             (PeanoNat.Nat.mod_upper_bound _ _ pureOp_store_w_correct_lem)).
   Proof.
     intros bid; destruct m; simpl.
-    unfold Memory_Register_Load_from_Reg, Memory_Register_Load, Memory_Block_Load.
+    unfold Memory_Word_Load_from_Reg, Memory_Word_Load, Memory_Block_Load.
     rewrite nth_replace; unfold WordBytes; rewrite vector_concat_inv2, nth_rev.
     rewrite (Block_Load_Spec pureOp_store_w_correct_lem
                              memory0

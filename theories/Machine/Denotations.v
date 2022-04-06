@@ -320,7 +320,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
       match instr with
       | (answerI, op) => translate inr1 (denote_operand op)
       | i => translate inr1 (denote_opcode i) ;;
-            call tt
+             call tt
       end.
 
     Definition run : itree E Word := rec (fun _ => run_body) tt.

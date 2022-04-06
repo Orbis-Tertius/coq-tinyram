@@ -49,7 +49,7 @@ Module TinyRAMMem (Params : TinyRAMParameters).
     Block_Store m idx blksz (Vector.rev block).
 
   (* Since a Word is a memory block, it can be loaded as well. *)
-  Definition Memory_Register_Load
+  Definition Memory_Word_Load
     (m : Memory)
     (idx : fin (2 ^ wordSize)) :
     Word.
@@ -59,7 +59,7 @@ Module TinyRAMMem (Params : TinyRAMParameters).
   Defined.
 
   (* Since a Word is a memory block, it can be stored as well. *)
-  Definition Memory_Register_Store 
+  Definition Memory_Word_Store 
     (m : Memory)
     (idx : fin (2 ^ wordSize))
     (reg : Word) :
@@ -71,13 +71,13 @@ Module TinyRAMMem (Params : TinyRAMParameters).
   Definition Register_Index (w : Word) : fin (2 ^ wordSize) :=
     bitvector_fin_big w.
 
-  Definition Memory_Register_Load_from_Reg 
+  Definition Memory_Word_Load_from_Reg 
     (m : Memory) (idx : Word) : Word :=
-    Memory_Register_Load m (Register_Index idx).
+    Memory_Word_Load m (Register_Index idx).
 
-  Definition Memory_Register_Store_from_Reg 
+  Definition Memory_Word_Store_from_Reg 
     (m : Memory) (idx reg : Word) : Memory :=
-    Memory_Register_Store m (Register_Index idx) reg.
+    Memory_Word_Store m (Register_Index idx) reg.
 
 End TinyRAMMem.
 
