@@ -7,8 +7,9 @@ From TinyRAM.Machine Require Import
 Import PeanoNat.Nat.
 
 Module TinyRAMWords (Params : TinyRAMParameters).
-  Import Params.
-  Export Params.
+  Module TRThrms := TinyRAMThrms Params.
+  Import TRThrms.
+  Export TRThrms.
 
   (*"""
   each Word consists of [wordSize] bits

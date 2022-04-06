@@ -22,6 +22,11 @@ Module Type TinyRAMParameters.
   The binary encoding assumes that 6 + 2 · ceil(log_2 K) ≤ [wordSize]
   """*)
   Axiom encodingAxiom : 6 + 2 * log2_up registerCount <= wordSize.
+End TinyRAMParameters.
+
+Module TinyRAMThrms (Params : TinyRAMParameters).
+  Import Params.
+  Export Params.
 
   Theorem wordSizePos : 0 < wordSize.
   Proof.
@@ -91,4 +96,4 @@ Module Type TinyRAMParameters.
   Definition pcIncrement : nat := 2 * wordSizeEighth.
 
   Definition regId : Type := fin registerCount.
-End TinyRAMParameters.
+End TinyRAMThrms.
