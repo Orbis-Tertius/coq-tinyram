@@ -1,67 +1,78 @@
 From Coq Require Import
-     Lia
-     List.
-From TinyRAM Require
-     Types.
+     Lia VectorDef VectorEq List.
 From TinyRAM.Utils Require Import
-     Fin.
-Import ListNotations.
+     Fin BitVectors.
+From TinyRAM.Machine Require Import
+     Parameters Coding Handlers.
+Import PeanoNat.Nat VectorNotations.
 
-(*
-Module TwelveEight <: Types.TinyRAMParameters.
-  Definition wordSize : nat := 12.
-  Definition registerCount : nat := 8.
-  Lemma H0 : exists k, wordSize = 4 * k.
-  Proof.
-    exists 3.
-    unfold wordSize.
-    lia.
-  Defined.
-  Lemma H1 : 6 + 2 * Nat.log2 registerCount <= wordSize.
-  Proof.
-    unfold wordSize, registerCount.
-    simpl.
-    lia.
-  Defined.
-  Lemma H2 : 0 < wordSize. Proof. lia. Defined.
-  Lemma H3 : wordSize - 1 < wordSize. Proof. lia. Defined.
-  Definition modulus : nat := Nat.pow 2 wordSize.
-  Definition incrAmount : nat := Nat.div wordSize 4.
-End TwelveEight.
+From ITree Require Import
+     ITree
+     ITreeFacts
+     Events.State
+     Events.StateFacts.
 
-Module TwelveEightTypes := Types.TinyRAMTypes TwelveEight.
-Import TwelveEightTypes.
+(* Example archetecture with 4 registers and a wordsize of 16 bits. *)
+Module SixteenFour <: TinyRAMParameters.
+  Definition wordSizeEighth : nat := 2.
+  Definition registerCount : nat := 4.
+  Definition wordSize := wordSizeEighth * 8.
+  Definition wordSizeLength : nat := 4.
+  Theorem wordSizePow2 : wordSize = 2 ^ wordSizeLength.
+  Proof. unfold wordSize. simpl. reflexivity. Qed.
+  Theorem encodingAxiom : 6 + 2 * log2_up registerCount <= wordSize.
+  Proof. unfold registerCount. unfold wordSize. simpl. lia. Qed.
+End SixteenFour.
 
-Lemma zerolt8 : 0 < 8. Proof. lia. Qed.
-Lemma onelt8 : 1 < 8. Proof. lia. Qed.
-Lemma twolt8 : 2 < 8. Proof. lia. Qed.
-Lemma threelt8 : 3 < 8. Proof. lia. Qed.
-Lemma fourlt8 : 4 < 8. Proof. lia. Qed.
-Lemma fivelt8 : 5 < 8. Proof. lia. Qed.
-Lemma sixlt8 : 6 < 8. Proof. lia. Qed.
-Lemma sevenlt8 : 7 < 8. Proof. lia. Qed.
+Module TRHand := TinyRAMHandlers SixteenFour.
+Import TRHand.
 
-Definition f1 : Register := exist _ 1 onelt8.
-Definition f2 : Register := exist _ 2 twolt8.
-Definition f3 : Register := exist _ 3 threelt8.
-Definition f4 : Register := exist _ 4 fourlt8.
-Definition f5 : Register := exist _ 5 fivelt8.
-Definition f6 : Register := exist _ 6 sixlt8.
-Definition f7 : Register := exist _ 7 sevenlt8.
+Definition FibProgram : Program.
+  apply (List.map InstructionEncode).
 
-Definition instr : Type := Operand -> Register -> Register -> Instruction.
-Definition Iandb : instr := mkInstruction (mkOpcode 0 zerolt29).
-Definition Iorb : instr := mkInstruction (mkOpcode 1 onelt29).
-Definition Ixorb : instr := mkInstruction (mkOpcode 2 twolt29).
-Definition Inot : instr := mkInstruction (mkOpcode 3 threelt29).
-Definition Icmpe : instr := mkInstruction (mkOpcode 13 thirteenlt29).
+  (* Store 1 into address 0001 *)
+    (*0: Store 1 into register 00 *)
+  apply (cons (movI (bitvector_fin_big [b0; b0]), inl (nat_bitvector_big _ 1))).
+    (*1: Store [00] into address 0001 *)
+  apply (cons (store_bI (bitvector_fin_big [b0; b0]), inl (nat_bitvector_big _ 1))).
 
-Section Examples.
-(*
-  Definition p1 : list Instruction :=
-    [
-      (Inot )
-    ]
- *)
-End Examples.
-*)
+  (*2: Read input from main tape into register 00. *)
+  apply (cons (readI (bitvector_fin_big [b0; b0]), inl (nat_bitvector_big _ 0))).
+
+  (*3: Check if 00 is 0*)
+  apply (cons (cmpeI (bitvector_fin_big [b0; b0]), inl (nat_bitvector_big _ 0))).
+
+  (*4: If flag is set, jump.*)
+  apply (cons (cjmpI, inl (nat_bitvector_big _ 12))).
+
+  (* Read two addresses into registers *)
+  (*5: read address 0 into 01 *)
+  apply (cons (load_bI (bitvector_fin_big [b0; b1]), inl (nat_bitvector_big _ 0))).
+  (*6: read address 1 into 10  *)
+  apply (cons (load_bI (bitvector_fin_big [b1; b0]), inl (nat_bitvector_big _ 1))).
+
+  (*7: add two registers together; [01] := [01] + [10] *)
+  apply (cons (addI (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b0; b1]),
+                    (inr (bitvector_fin_big [b1; b0])))).
+
+  (* Store both registers *)
+  (*8: store [10] into adress 0 *)
+  apply (cons (store_bI (bitvector_fin_big [b1; b0]), inl (nat_bitvector_big _ 0))).
+  (*9: store [01] into adress 1 *)
+  apply (cons (store_bI (bitvector_fin_big [b0; b1]), inl (nat_bitvector_big _ 1))).
+
+  (*10: decriment [00] *)
+  apply (cons (subI (bitvector_fin_big [b0; b0]) (bitvector_fin_big [b0; b0]),
+                    (inl (nat_bitvector_big _ 1)))).
+
+  (*11: jump back to 0 check. *)
+  apply (cons (jmpI, inl (nat_bitvector_big _ 3))).
+
+  (*12: Output sum. *)
+  apply (cons (answerI, inr (bitvector_fin_big [b1; b0]))).
+
+  apply nil.
+Defined.
+
+Definition fibFun (n : nat) : itree void1 Word :=
+  eval_prog FibProgram (cons (nat_bitvector_big _ n) nil) nil.
