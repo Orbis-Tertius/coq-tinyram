@@ -1,5 +1,6 @@
 From Coq Require Import
-  ZArith.Int VectorDef BinIntDef VectorEq.
+  VectorDef BinIntDef VectorEq
+  Morphisms Setoid RelationClasses.
 From ExtLib Require Import
      Monad.
 From ITree Require Import
@@ -13,7 +14,7 @@ From TinyRAM.Machine Require Import
   Parameters Words Memory Coding Denotations.
 From TinyRAM.Utils Require Import
   Fin Vectors BitVectors.
-Import BinInt.Z PeanoNat.Nat Monads MonadNotation VectorNotations.
+Import Monads MonadNotation VectorNotations.
 
 Module TinyRAMHandlers (Params : TinyRAMParameters).
   Module TRDen := TinyRAMDenotations Params.
@@ -227,4 +228,43 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     exact (ITree.map snd (interp_machine run init)).
   Defined.
 
+  Section InterpProperties.
+    Context {E': Type -> Type}.
+    Notation E := (MachineE +' E').
+
+    Global Instance eutt_interp_machine {R}:
+    Proper (@eutt E R R eq ==> eq ==> @eutt E' (prod MachineState R) (prod _ R) eq)
+           interp_machine.
+    Proof.
+      repeat intro.
+      repeat unfold interp_machine.
+      rewrite H0.
+      destruct y0.
+      rewrite H.
+      reflexivity.
+    Qed.
+
+    Lemma interp_machine_bind: forall {R S} (t: itree E R) (k: R -> itree E S) (g : MachineState),
+      (interp_machine (ITree.bind t k) g)
+    ≅ (ITree.bind (interp_machine t g) (fun '(g',  x) => interp_machine (k x) g')).
+    Proof.
+      intros.
+      destruct g; simpl.
+      rewrite interp_bind.
+      unfold itree_assoc_r, run_state.
+      rewrite translate_bind, interp_state_bind;
+      rewrite translate_bind, interp_state_bind;
+      rewrite translate_bind, interp_state_bind;
+      rewrite translate_bind, interp_state_bind;
+      rewrite translate_bind, interp_state_bind;
+      rewrite interp_state_bind;
+      rewrite map_bind.
+      rewrite bind_map.
+      apply eqit_bind. { reflexivity. }
+      red; intros [p0 [[t0 t1] [f0 [pc0 [m0 [r0 a]]]]]].
+      simpl; reflexivity.
+    Qed.
+
+
+  End InterpProperties.
 End TinyRAMHandlers.
