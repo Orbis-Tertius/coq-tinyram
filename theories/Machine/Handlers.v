@@ -27,6 +27,28 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
   (*""" [registerCount] general-purpose registers, [...] """*)
   Definition Registers : Type := Vector.t Word registerCount.
 
+  Record MachineState : Type :=
+    mkMachineState {
+        (*"""
+        The program counter, denoted pc; it consists of [wordSize] bits.
+        """*)
+        programCounter : Word;
+        (*"""
+        [registerCount] general-purpose registers, [...]
+        """*)
+        registers : Registers;
+        (*"""
+        The (condition) flag [...]; it consists of a single bit.
+        """*)
+        conditionFlag : bool;
+        memory : Memory;
+
+        tapeMain : Tape;
+        tapeAux : Tape;
+
+        program : Program;
+      }.
+
   Definition handle_registers {E: Type -> Type} `{stateE Registers -< E}: 
     RegisterE ~> itree E :=
   fun _ e =>
@@ -154,30 +176,55 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     apply (assoc_r (C := (fun x y => x ~> y))).
   Defined.
 
-  Definition eval_prog (s: Program) (t0 t1 : Tape) : itree void1 Word.
-    remember (void1 : Type -> Type) as E.
-    remember (interp (bimap handle_machine (id_ E)) run) as v; clear Heqv.
-    (*""" the initial state of the machine is as follows: """*)
+  Definition interp_machine_f {A}
+    (p : Program * (Tape * Tape * (bool * (Word * (Memory * (Registers * A)))))):
+    MachineState * A :=
+  match p with
+  | (p0, ((t0, t1), (f0, (pc0, (m0, (r0, a)))))) =>
+    ({|
+      programCounter := pc0;
+      registers := r0;
+      conditionFlag := f0;
+      memory := m0;
+      tapeMain := t0;
+      tapeAux := t1;
+      program := p0
+     |}, a)
+  end.
+
+  Definition interp_machine {E A} (t : itree (MachineE +' E) A) :
+    stateT MachineState (itree E) A.
+    remember (interp (bimap handle_machine (id_ E)) t) as v; clear Heqv.
+    intro m; destruct m.
     apply itree_assoc_r,
-    (*""" the contents of [...] all general-purpose registers [...] are all 0; """*)
-          (fun x => run_state x (const (const b0 _) _)),
-          (ITree.map snd), itree_assoc_r,
-    (*""" the contents of [...] memory are all 0; """*)
-          (fun x => run_state x (const (const b0 _) _)),
-          (ITree.map snd), itree_assoc_r,
-    (*""" the contents of pc [...] are all 0; """*)
-          (fun x => run_state x (const b0 _)),
-          (ITree.map snd), itree_assoc_r,
-    (*""" the contents of [...] flag [...] are all 0; """*)
-          (fun x => run_state x b0),
-          (ITree.map snd), itree_assoc_r,
-    (*Initialize Tapes*)
-          (fun x => run_state x (t0, t1)),
-          (ITree.map snd),
-    (*Initialize Program*)
-          (fun x => run_state x s),
-          (ITree.map snd) in v.
-    exact v.
+          (fun x => run_state x registers0),
+          itree_assoc_r,
+          (fun x => run_state x memory0),
+          itree_assoc_r,
+          (fun x => run_state x programCounter0),
+          itree_assoc_r,
+          (fun x => run_state x conditionFlag0),
+          itree_assoc_r,
+          (fun x => run_state x (tapeMain0, tapeAux0)),
+          (fun x => run_state x program0) in v.
+    exact (ITree.map interp_machine_f v).
+  Defined.
+
+  Definition eval_prog (s: Program) (t0 t1 : Tape) : itree void1 Word.
+    remember ({|(*""" the initial state of the machine is as follows: """*)
+              (*""" the contents of pc [...] are all 0; """*)
+              programCounter := const b0 _;
+              (*""" the contents of [...] all general-purpose registers [...] are all 0; """*)
+              registers := const (const b0 _) _;
+              (*""" the contents of [...] flag [...] are all 0; """*)
+              conditionFlag := b0;
+              (*""" the contents of [...] memory are all 0; """*)
+              memory := const (const b0 _) _;
+              tapeMain := t0;
+              tapeAux := t1;
+              program := s
+            |}: MachineState) as init; clear Heqinit.
+    exact (ITree.map snd (interp_machine run init)).
   Defined.
 
 End TinyRAMHandlers.
