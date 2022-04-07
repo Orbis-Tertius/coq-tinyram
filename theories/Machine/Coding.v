@@ -1426,13 +1426,11 @@ Theorem or_decode_register_correct :
         apply bitvector_nat_big_inv.
 
   Theorem DecodeEncode_Cannon_id :
-    forall (w1 w2 : Word),
-    CanonicalInstruction (w1, w2) ->
-    InstructionEncode (InstructionDecode w1 w2) = (w1, w2).
+    forall i,
+    CanonicalInstruction i ->
+    InstructionEncode (uncurry InstructionDecode i) = i.
   Proof.
-    intros w1 w2 CIw12.
-    change (InstructionDecode w1 w2)
-      with (uncurry InstructionDecode (w1, w2)).
+    intros i CIw12.
     destruct CIw12; unfold uncurry; destruct b.
     - destruct H.
       + rewrite (and_decode_word_correct _ _ H0 H1); WordDischarge.
