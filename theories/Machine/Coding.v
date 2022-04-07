@@ -1328,4 +1328,182 @@ Theorem or_decode_register_correct :
     - rewrite (answer_decode_register_correct _ _ _ H1); encode_decode_fin.
   Qed.
 
+
+  Variant RiRjACode : t bool 5 -> Prop :=
+  | andRiRjA : RiRjACode and_code
+  | orRiRjA : RiRjACode or_code
+  | xorRiRjA : RiRjACode xor_code
+  | addRiRjA : RiRjACode add_code
+  | subRiRjA : RiRjACode sub_code
+  | mullRiRjA : RiRjACode mull_code
+  | umulhRiRjA : RiRjACode umulh_code
+  | smulhRiRjA : RiRjACode smulh_code
+  | udivRiRjA : RiRjACode udiv_code
+  | umodRiRjA : RiRjACode umod_code
+  | shlRiRjA : RiRjACode shl_code
+  | shrRiRjA : RiRjACode shr_code.
+
+  Variant RiACode : t bool 5 -> Prop :=
+  | notRiA     : RiACode not_code
+  | movRiA     : RiACode mov_code
+  | cmovRiA    : RiACode cmov_code
+  | store_bRiA : RiACode store_b_code
+  | load_bRiA  : RiACode load_b_code
+  | store_wRiA : RiACode store_w_code
+  | load_wRiA  : RiACode load_w_code
+  | readRiA    : RiACode read_code.
+
+  Variant RjACode : t bool 5 -> Prop :=
+  | cmpeRjA  : RjACode cmpe_code
+  | cmpaRjA  : RjACode cmpa_code
+  | cmpaeRjA : RjACode cmpae_code
+  | cmpgRjA  : RjACode cmpg_code
+  | cmpgeRjA : RjACode cmpge_code.
+
+  Variant ACode : t bool 5 -> Prop :=
+  | jmpA    : ACode jmp_code
+  | cjmpA   : ACode cjmp_code
+  | cnjmpA  : ACode cnjmp_code
+  | answerA : ACode answer_code.
+
+  Variant CanonicalInstruction : Word * Word -> Prop :=
+  | CIRiRjA : forall (code : t bool 5) (b : bool) 
+                     (ri rj : t bool (log2_up registerCount))
+                     (A : t bool wordSize),
+              RiRjACode code ->
+              proj1_sig (bitvector_fin_big ri) < registerCount -> 
+              proj1_sig (bitvector_fin_big rj) < registerCount -> 
+              (b = true \/ (b = false /\ proj1_sig (bitvector_fin_big A) < registerCount)) -> 
+              CanonicalInstruction (cast 
+                (code ++ [b] ++ ri ++ rj ++ const b0 _)
+                (eq_sym interpSplitLemRight), A)
+  | CIRiA   : forall (code : t bool 5) (b : bool) 
+                     (ri : t bool (log2_up registerCount))
+                     (A : t bool wordSize),
+              RiACode code ->
+              proj1_sig (bitvector_fin_big ri) < registerCount -> 
+              (b = true \/ (b = false /\ proj1_sig (bitvector_fin_big A) < registerCount)) -> 
+              CanonicalInstruction (cast 
+                (code ++ [b] ++ ri ++ const b0 _ ++ const b0 _)
+                (eq_sym interpSplitLemRight), A)
+  | CIRjA   : forall (code : t bool 5) (b : bool) 
+                     (rj : t bool (log2_up registerCount))
+                     (A : t bool wordSize),
+              RjACode code ->
+              proj1_sig (bitvector_fin_big rj) < registerCount -> 
+              (b = true \/ (b = false /\ proj1_sig (bitvector_fin_big A) < registerCount)) -> 
+              CanonicalInstruction (cast 
+                (code ++ [b] ++ const b0 _ ++ rj ++ const b0 _)
+                (eq_sym interpSplitLemRight), A)
+  | CIRA    : forall (code : t bool 5) (b : bool) 
+                     (A : t bool wordSize),
+              ACode code ->
+              (b = true \/ (b = false /\ proj1_sig (bitvector_fin_big A) < registerCount)) -> 
+              CanonicalInstruction (cast 
+                (code ++ [b] ++ const b0 _ ++ const b0 _ ++ const b0 _)
+                (eq_sym interpSplitLemRight), A).
+
+  Lemma reg_vect_fit_inv :
+    forall (ri : t bool (log2_up registerCount))
+           (H : bitvector_nat_big ri < registerCount),
+    reg_vect (regFit ri H) = ri.
+  Proof.
+    intros.
+    unfold reg_vect, fin_bitvector_big, regFit.
+    change (proj1_sig _) with (bitvector_nat_big ri).
+    apply bitvector_nat_big_inv.
+  Qed.
+
+  Ltac WordDischarge :=
+        unfold InstructionEncode;
+        repeat f_equal; apply reg_vect_fit_inv.
+
+  Ltac RegDischarge :=
+        unfold InstructionEncode, option_bool, option_word;
+        repeat rewrite reg_vect_fit_inv; repeat f_equal;
+        unfold regFit, fin_bitvector_big;
+        change (proj1_sig (bitvector_fin_big ?A)) with (bitvector_nat_big A);
+        apply bitvector_nat_big_inv.
+
+  Theorem DecodeEncode_Cannon_id :
+    forall (w1 w2 : Word),
+    CanonicalInstruction (w1, w2) ->
+    InstructionEncode (InstructionDecode w1 w2) = (w1, w2).
+  Proof.
+    intros w1 w2 CIw12.
+    change (InstructionDecode w1 w2)
+      with (uncurry InstructionDecode (w1, w2)).
+    destruct CIw12; unfold uncurry; destruct b.
+    - destruct H.
+      + rewrite (and_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (or_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (xor_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (add_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (sub_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (mull_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (umulh_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (smulh_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (udiv_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (umod_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (shl_decode_word_correct _ _ H0 H1); WordDischarge.
+      + rewrite (shr_decode_word_correct _ _ H0 H1); WordDischarge.
+    - destruct H2 as [H2|[_ H2]]. { discriminate H2. }
+      destruct H.
+      + rewrite (and_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (or_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (xor_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (add_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (sub_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (mull_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (umulh_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (smulh_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (udiv_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (umod_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (shl_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+      + rewrite (shr_decode_register_correct _ _ H0 H1 _ H2); RegDischarge.
+    - destruct H.
+      + rewrite (not_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (mov_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (cmov_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (store_b_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (load_b_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (store_w_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (load_w_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (read_decode_word_correct _ _ H0); WordDischarge.
+    - destruct H1 as [H1|[_ H1]]. { discriminate H1. }
+      destruct H.
+      + rewrite (not_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (mov_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (cmov_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (store_b_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (load_b_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (store_w_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (load_w_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (read_decode_register_correct _ _ H0 _ H1); RegDischarge.
+    - destruct H.
+      + rewrite (cmpe_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (cmpa_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (cmpae_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (cmpg_decode_word_correct _ _ H0); WordDischarge.
+      + rewrite (cmpge_decode_word_correct _ _ H0); WordDischarge.
+    - destruct H1 as [H1|[_ H1]]. { discriminate H1. }
+      destruct H.
+      + rewrite (cmpe_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (cmpa_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (cmpae_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (cmpg_decode_register_correct _ _ H0 _ H1); RegDischarge.
+      + rewrite (cmpge_decode_register_correct _ _ H0 _ H1); RegDischarge.
+    - destruct H.
+      + rewrite jmp_decode_word_correct; WordDischarge.
+      + rewrite cjmp_decode_word_correct; WordDischarge.
+      + rewrite cnjmp_decode_word_correct; WordDischarge.
+      + rewrite answer_decode_word_correct; WordDischarge.
+    - destruct H0 as [H0|[_ H0]]. { discriminate H0. }
+      destruct H.
+      + rewrite (jmp_decode_register_correct _ _ _ H0); RegDischarge.
+      + rewrite (cjmp_decode_register_correct _ _ _ H0); RegDischarge.
+      + rewrite (cnjmp_decode_register_correct _ _ _ H0); RegDischarge.
+      + rewrite (answer_decode_register_correct _ _ _ H0); RegDischarge.
+  Qed.
+
 End TinyRAMCoding.
