@@ -128,15 +128,56 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     stateT Program (itree E) A :=
   run_state (interp (bimap handle_instruction (id_ E)) t).
 
-  Definition eval_prog (s: Program) (t1 t2 : Tape) : itree void1 Word :=
-    let E : Type -> Type := void1 in 
-    state <- (run_state (run_state (run_state (run_state (run_state (run_state
-             (interp
-             (bimap handle_instruction (bimap handle_read (bimap handle_flag
-             (bimap handle_programCounter (bimap handle_memory (bimap handle_registers
-             (id_ E)))))))
-             run)
-             s) (t1, t2)) b0) (const b0 _)) (const (const b0 _) _)) (const (const b0 _) _)) ;;
-    ret (snd (snd (snd (snd (snd (snd state)))))).
+  Definition MachineE: Type -> Type :=
+    (InstructionE +' ReadE +' FlagE +' ProgramCounterE +' MemoryE +' RegisterE).
+
+  Definition handle_machine {E: Type -> Type} 
+      `{stateE Registers -< E}
+      `{stateE Memory -< E}
+      `{stateE Word -< E}
+      `{stateE bool -< E}
+      `{stateE (Tape * Tape) -< E}
+      `{stateE Program -< E}:
+    MachineE ~> itree E.
+    intros T X.
+    apply (Handler.case_ handle_instruction 
+          (Handler.case_ handle_read 
+          (Handler.case_ handle_flag
+          (Handler.case_ handle_programCounter 
+          (Handler.case_ handle_memory handle_registers))))).
+    exact X.
+  Defined.
+
+  Definition itree_assoc_r {a b c} :
+    itree ((a +' b) +' c) ~> itree (a +' b +' c).
+    apply translate.
+    apply (assoc_r (C := (fun x y => x ~> y))).
+  Defined.
+
+  Definition eval_prog (s: Program) (t0 t1 : Tape) : itree void1 Word.
+    remember (void1 : Type -> Type) as E.
+    remember (interp (bimap handle_machine (id_ E)) run) as v; clear Heqv.
+    (*""" the initial state of the machine is as follows: """*)
+    apply itree_assoc_r,
+    (*""" the contents of [...] all general-purpose registers [...] are all 0; """*)
+          (fun x => run_state x (const (const b0 _) _)),
+          (ITree.map snd), itree_assoc_r,
+    (*""" the contents of [...] memory are all 0; """*)
+          (fun x => run_state x (const (const b0 _) _)),
+          (ITree.map snd), itree_assoc_r,
+    (*""" the contents of pc [...] are all 0; """*)
+          (fun x => run_state x (const b0 _)),
+          (ITree.map snd), itree_assoc_r,
+    (*""" the contents of [...] flag [...] are all 0; """*)
+          (fun x => run_state x b0),
+          (ITree.map snd), itree_assoc_r,
+    (*Initialize Tapes*)
+          (fun x => run_state x (t0, t1)),
+          (ITree.map snd),
+    (*Initialize Program*)
+          (fun x => run_state x s),
+          (ITree.map snd) in v.
+    exact v.
+  Defined.
 
 End TinyRAMHandlers.
