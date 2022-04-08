@@ -252,17 +252,11 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       destruct g; simpl.
       rewrite interp_bind.
       unfold itree_assoc_r, run_state.
-      rewrite translate_bind, interp_state_bind;
-      rewrite translate_bind, interp_state_bind;
-      rewrite translate_bind, interp_state_bind;
-      rewrite translate_bind, interp_state_bind;
-      rewrite translate_bind, interp_state_bind;
-      rewrite interp_state_bind;
-      rewrite map_bind.
-      rewrite bind_map.
-      apply eqit_bind. { reflexivity. }
+      repeat rewrite translate_bind, interp_state_bind.
+      rewrite interp_state_bind, map_bind, bind_map.
+      apply eqit_bind; [ reflexivity | ].
       red; intros [p0 [[t0 t1] [f0 [pc0 [m0 [r0 a]]]]]].
-      simpl; reflexivity.
+      reflexivity.
     Qed.
 
 

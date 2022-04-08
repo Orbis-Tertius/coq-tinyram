@@ -211,7 +211,7 @@ Proof.
   intros; induction v.
   - destruct p; lia.
   - destruct p as [p pP].
-    destruct p. { reflexivity. }
+    destruct p; [ reflexivity | ].
     apply IHv.
 Qed.
 
@@ -234,7 +234,7 @@ Proof.
   induction vn.
   - lia.
   - simpl; intros.
-    destruct o. { reflexivity. }
+    destruct o; [ reflexivity | ].
     assert (o < n) as H2. { lia. }
     rewrite (IHvn _ _ H2). 
     repeat f_equal; apply proof_irrelevance.
@@ -269,13 +269,13 @@ Proof.
   destruct v.
   - unfold rev_append.
     simpl.
-    replace (Plus.plus_tail_plus 0 0) with (eq_refl 0).
-    { reflexivity. } { apply proof_irrelevance. }
+    replace (Plus.plus_tail_plus 0 0) with (eq_refl 0);
+    [ reflexivity | apply proof_irrelevance ].
   - unfold rev_append.
     simpl rev_append_tail.
     replace (Plus.plus_tail_plus 0 (S n))
-       with (eq_refl (S n)).
-    { reflexivity. } { apply proof_irrelevance. }
+       with (eq_refl (S n));
+    [ reflexivity | apply proof_irrelevance ].
 Qed.
 
 Theorem rev_coerce_unfold : forall {A n}
@@ -293,8 +293,8 @@ Proof.
   intros A.
   rewrite rev_coerce_unfold.
   rewrite vector_rev_append_nil_o.
-  replace (plus_n_O 0) with (eq_refl 0).
-  { reflexivity. } { apply proof_irrelevance. }
+  replace (plus_n_O 0) with (eq_refl 0);
+  [ reflexivity | apply proof_irrelevance ].
 Qed.
 
 Theorem vector_rev_sing_sing : forall {A} (h : A),
@@ -303,12 +303,12 @@ Proof.
   intros A h.
   rewrite rev_coerce_unfold.
   replace (rev_append [h] []) with [h].
-  { replace (plus_n_O 1) with (eq_refl 1).
-    { reflexivity. } { apply proof_irrelevance. } }
+  { replace (plus_n_O 1) with (eq_refl 1);
+    [ reflexivity | apply proof_irrelevance ]. }
   unfold rev_append.
   simpl. 
-  replace (Plus.plus_tail_plus 1 0) with (eq_refl 1).
-  { reflexivity. } { apply proof_irrelevance. }
+  replace (Plus.plus_tail_plus 1 0) with (eq_refl 1);
+  [ reflexivity | apply proof_irrelevance ].
 Qed.
 
 Definition last_ : forall {A n}, t A (n + 1) -> A.
@@ -580,7 +580,7 @@ Proof.
     + assert (n <= n + 1 - 0 - 1) as H. { lia. }
       rewrite (nth_app_r _ H).
       assert (0 < 1) as H0. { lia. }
-      transitivity (nth [h] (exist _ 0 H0)). { reflexivity. }
+      transitivity (nth [h] (exist _ 0 H0)); [ reflexivity | ].
       f_equal; apply subset_eq_compat; lia.
     + assert (n + 1 - S i - 1 < n) as H. { lia. }
       rewrite (nth_app_l _ H).

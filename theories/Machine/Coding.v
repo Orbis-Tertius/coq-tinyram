@@ -217,8 +217,8 @@ Module TinyRAMCoding (Params : TinyRAMParameters).
     destruct (bitvector_fin_big v) as [bfv bfvProp].
     simpl; simpl in lt.
     unfold regId, fin.
-    rewrite (reg2powProp_lem (bfv <? registerCount) bfv _ lt).
-    { reflexivity. }
+    rewrite (reg2powProp_lem (bfv <? registerCount) bfv _ lt);
+      [ reflexivity | ].
     rewrite ltb_lt.
     exact lt.
   Qed.

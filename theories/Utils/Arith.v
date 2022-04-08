@@ -131,7 +131,7 @@ Defined.
 Theorem log2_upS_Slog2 : forall x,
   x > 1 -> log2_up (S x) = S (log2 x).
 Proof.
-  intro x; destruct x. { lia. }
+  intro x; destruct x; [ lia | ].
   reflexivity.
 Qed.
 
@@ -140,7 +140,7 @@ Proof.
   intro x; induction x as [|x IHx].
   - simpl; lia.
   - intro. apply IHx. 
-    transitivity (2 ^ S x). 2: { assumption. }
+    transitivity (2 ^ S x); [ | assumption ].
     simpl; lia.
 Qed.
 
@@ -154,8 +154,8 @@ Proof.
     rewrite ltb_lt in g0y.
     assumption.
   - rewrite ltb_ge in g0y.
-    destruct y. 2: { lia. }
-    split. { lia. }
+    destruct y; [ | lia ].
+    split; [ lia | ].
     unfold log2_up; simpl.
     lia.
 Qed.
@@ -165,8 +165,8 @@ Proof.
   intro.
   induction n as [|n IHn].
   - auto.
-  - replace (S n) with (1 + n). 2: { reflexivity. }
-    rewrite add_mod. 2: { lia. }
+  - replace (S n) with (1 + n); [ | reflexivity ].
+    rewrite add_mod; [ | lia ].
     destruct IHn.
     + right.
       rewrite H.
@@ -180,8 +180,8 @@ Theorem neq0_div_lt : forall a b c,
   b <> 0 -> a < c -> a / b < c.
 Proof.
   intros.
-  apply div_lt_upper_bound. { assumption. }
-  apply (lt_le_trans _ c). { assumption. }
+  apply div_lt_upper_bound; [ assumption | ].
+  apply (lt_le_trans _ c); [ assumption | ].
   destruct (Mult.mult_O_le c b).
   + destruct (H H1).
   + exact H1.
@@ -194,7 +194,7 @@ Proof.
   intros n m p lpm lmpn.
   apply add_sub_eq_r.
   rewrite <- add_assoc.
-  rewrite le_plus_minus_r. 2: { assumption. }
+  rewrite le_plus_minus_r; [ | assumption ].
   rewrite sub_add; trivial.
 Qed.
 
@@ -202,9 +202,9 @@ Theorem div_bet_1 :
   forall {n m}, m <= n < 2 * m -> n / m = 1.
 Proof.
   intros n m [lmn ln2m].
-  assert (m <> 0). { lia. }
+  assert (m <> 0); [ lia | ].
   apply (div_le_mono _ _ _ H) in lmn.
-  rewrite div_same in lmn. 2: { lia. }
+  rewrite div_same in lmn; [ | lia ].
   rewrite mul_comm in ln2m.
   apply (div_lt_upper_bound _ _ _ H) in ln2m.
   lia.
@@ -346,8 +346,8 @@ Theorem le_opp_mul_mul : forall p1 p2 t1 t2,
   le (opp (mul p1 p2)) (mul t1 t2).
 Proof.
   intros.
-  assert (lt Z0 p1). { lia. }
-  assert (lt Z0 p2). { lia. }
+  assert (lt Z0 p1); [ lia | ].
+  assert (lt Z0 p2); [ lia | ].
   destruct (ltb t1 Z0) eqn:zt1; 
   destruct (ltb t2 Z0) eqn:zt2;
   try rewrite Z_ltb_lt in zt1;
@@ -367,8 +367,8 @@ Theorem lt_mul_mul : forall p1 p2 t1 t2,
   lt (mul t1 t2) (mul p1 p2).
 Proof. 
   intros.
-  assert (lt Z0 p1). { lia. }
-  assert (lt Z0 p2). { lia. }
+  assert (lt Z0 p1); [ lia | ].
+  assert (lt Z0 p2); [ lia | ].
   destruct (ltb t1 Z0) eqn:zt1; 
   destruct (ltb t2 Z0) eqn:zt2;
   try rewrite Z_ltb_lt in zt1;
@@ -387,8 +387,8 @@ Theorem le_mul_mul : forall p1 p2 t1 t2,
   le (mul t1 t2) (mul p1 p2).
 Proof. 
   intros.
-  assert (lt Z0 p1). { lia. }
-  assert (lt Z0 p2). { lia. }
+  assert (lt Z0 p1); [ lia | ].
+  assert (lt Z0 p2); [ lia | ].
   destruct (ltb t1 Z0) eqn:zt1; 
   destruct (ltb t2 Z0) eqn:zt2;
   try rewrite Z_ltb_lt in zt1;
