@@ -211,6 +211,13 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     exact (ITree.map interp_machine_f v).
   Defined.
 
+
+  Definition machine_h {E}: (MachineE +' E ~> stateT MachineState (itree E)).
+    intros T X.
+    apply interp_machine.
+    exact (trigger X).
+  Defined.
+
   Definition eval_prog (s: Program) (t0 t1 : Tape) : itree void1 Word.
     remember ({|(*""" the initial state of the machine is as follows: """*)
               (*""" the contents of pc [...] are all 0; """*)
@@ -259,6 +266,34 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       reflexivity.
     Qed.
 
+    Lemma interp_machine_ret:
+      forall {R : Type} (s : MachineState) (r : R),
+      interp_machine (Ret r: itree E R) s ≅ Ret (s, r).
+    Proof.
+      intros.
+      unfold interp_machine.
+      destruct s.
+      rewrite interp_ret.
+      unfold itree_assoc_r, run_state.
+      repeat rewrite translate_ret, interp_state_ret.
+      rewrite interp_state_ret, map_ret.
+      reflexivity.
+    Qed.
+
+    Lemma interp_machine_tau:
+      forall {F : Type -> Type} {T : Type} 
+      (t : itree E T) (s : MachineState), 
+      interp_machine (Tau t) s ≅ Tau (interp_machine t s).
+    Proof.
+      intros.
+      unfold interp_machine.
+      destruct s.
+      rewrite interp_tau.
+      unfold itree_assoc_r, run_state.
+      repeat rewrite translate_tau, interp_state_tau.
+      rewrite interp_state_tau, map_tau.
+      reflexivity.
+    Qed.
 
   End InterpProperties.
 End TinyRAMHandlers.
