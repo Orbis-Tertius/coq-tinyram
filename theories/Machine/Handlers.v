@@ -193,9 +193,9 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
      |}, a)
   end.
 
-  Definition interp_machine {E A} (t : itree (MachineE +' E) A) :
-    stateT MachineState (itree E) A.
-    remember (interp (bimap handle_machine (id_ E)) t) as v; clear Heqv.
+  Definition machine_h {E}: (MachineE +' E ~> stateT MachineState (itree E)).
+    intros T X.
+    remember (bimap handle_machine (id_ E)) as f; apply (f T) in X; clear Heqf f.
     intro m; destruct m.
     apply itree_assoc_r,
           (fun x => run_state x registers0),
@@ -207,15 +207,15 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
           (fun x => run_state x conditionFlag0),
           itree_assoc_r,
           (fun x => run_state x (tapeMain0, tapeAux0)),
-          (fun x => run_state x program0) in v.
-    exact (ITree.map interp_machine_f v).
+          (fun x => run_state x program0) in X.
+    apply (ITree.map interp_machine_f).
+    exact X.
   Defined.
 
-
-  Definition machine_h {E}: (MachineE +' E ~> stateT MachineState (itree E)).
-    intros T X.
-    apply interp_machine.
-    exact (trigger X).
+  Definition interp_machine {E A} (t : itree (MachineE +' E) A) :
+    stateT MachineState (itree E) A.
+    apply (interp_state machine_h).
+    exact t.
   Defined.
 
   Definition eval_prog (s: Program) (t0 t1 : Tape) : itree void1 Word.
@@ -246,7 +246,6 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       repeat intro.
       repeat unfold interp_machine.
       rewrite H0.
-      destruct y0.
       rewrite H.
       reflexivity.
     Qed.
@@ -255,14 +254,11 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       (interp_machine (ITree.bind t k) g)
     ≅ (ITree.bind (interp_machine t g) (fun '(g',  x) => interp_machine (k x) g')).
     Proof.
-      intros.
-      destruct g; simpl.
-      rewrite interp_bind.
-      unfold itree_assoc_r, run_state.
-      repeat rewrite translate_bind, interp_state_bind.
-      rewrite interp_state_bind, map_bind, bind_map.
+      intros R S t k g.
+      unfold interp_machine.
+      rewrite interp_state_bind.
       apply eqit_bind; [ reflexivity | ].
-      red; intros [p0 [[t0 t1] [f0 [pc0 [m0 [r0 a]]]]]].
+      red; intros [m r].
       reflexivity.
     Qed.
 
@@ -273,10 +269,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       intros.
       unfold interp_machine.
       destruct s.
-      rewrite interp_ret.
-      unfold itree_assoc_r, run_state.
-      repeat rewrite translate_ret, interp_state_ret.
-      rewrite interp_state_ret, map_ret.
+      rewrite interp_state_ret.
       reflexivity.
     Qed.
 
@@ -287,11 +280,30 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     Proof.
       intros.
       unfold interp_machine.
-      destruct s.
-      rewrite interp_tau.
-      unfold itree_assoc_r, run_state.
-      repeat rewrite translate_tau, interp_state_tau.
-      rewrite interp_state_tau, map_tau.
+      rewrite interp_state_tau.
+      reflexivity.
+    Qed.
+
+    Lemma interp_machine_trigger : 
+      forall (R : Type) (e : E R) (s : MachineState), 
+         interp_machine (ITree.trigger e) s ≈ machine_h R e s.
+    Proof.
+      intros.
+      unfold interp_machine.
+      rewrite interp_state_trigger.
+      reflexivity.
+    Qed.
+
+    Lemma interp_machine_vis:
+      forall {T U : Type} (e : E T) (k : T -> itree E U)
+         (s : MachineState),
+       interp_machine (Vis e k) s
+       ≅ ITree.bind (machine_h T e s)
+           (fun sx : MachineState * T => Tau (interp_machine (k (snd sx)) (fst sx))).
+    Proof.
+      intros.
+      unfold interp_machine.
+      rewrite interp_state_vis.
       reflexivity.
     Qed.
 
