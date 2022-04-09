@@ -65,7 +65,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
       | inr v => trigger (GetReg v)
       end.
 
-    Definition denote_opcode (o : Instruction) : itree E unit :=
+    Definition denote_instruction (o : Instruction) : itree E unit :=
       match o with
       | (o, op) => 
         A <- denote_operand op ;;
@@ -313,17 +313,17 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
         end
     end.
 
-    Definition run_body : itree (callE unit Word +' E) Word :=
+    Definition run_step : itree E (unit + Word) :=
       a <- trigger GetPC ;;
       w2code <- trigger (ReadInst (bitvector_nat_big a)) ;;
       let instr := uncurry InstructionDecode w2code in
       match instr with
-      | (answerI, op) => translate inr1 (denote_operand op)
-      | i => translate inr1 (denote_opcode i) ;;
-             call tt
+      | (answerI, op) => (ITree.map inr (denote_operand op))
+      | i => (ITree.map inl (denote_instruction i))
       end.
 
-    Definition run : itree E Word := rec (fun _ => run_body) tt.
+    Definition run : itree E Word :=
+      ITree.iter (fun _ => run_step) tt.
 
   End with_event.
 
