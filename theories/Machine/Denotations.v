@@ -1,11 +1,16 @@
 From Coq Require Import
-  ZArith.Int VectorDef BinIntDef VectorEq.
+  ZArith.Int List VectorDef BinIntDef VectorEq.
 From Coq Require Import
   VectorDef.
 From ExtLib Require Import
      Monad.
 From ITree Require Import
-     ITree Simple.
+     ITree
+     Simple
+     ITreeFacts
+     ITreeMonad
+     Basics.Category
+     Basics.CategorySub.
 From ITree.Basics Require Import
      CategorySub.
 From TinyRAM.Machine Require Import
@@ -14,6 +19,8 @@ From TinyRAM.Utils Require Import
   Fin BitVectors.
 Import BinInt.Z PeanoNat.Nat Monads MonadNotation VectorNotations.
 
+
+
 Module TinyRAMDenotations (Params : TinyRAMParameters).
   Module TRMem := TinyRAMMem Params.
   Import TRMem.
@@ -21,6 +28,13 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
   Module TRCod := TinyRAMCoding Params.
   Import TRCod.
   Export TRCod.
+
+  Definition traverse_ {A: Type} {M: Type -> Type} `{Monad M} (f: A -> M unit): list A -> M unit :=
+    fix traverse__ l: M unit :=
+      match l with
+      | List.nil => ret tt
+      | List.cons a l => (f a;; traverse__ l)%monad
+      end.
 
   Variant RegisterE : Type -> Type :=
   | GetReg (x : Register) : RegisterE Word
@@ -324,6 +338,24 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
 
     Definition run : itree E Word :=
       ITree.iter (fun _ => run_step) tt.
+
+    (* programs *)
+
+    Definition denote_program : list Instruction -> itree E unit :=
+      traverse_ denote_instruction.
+
+    Theorem denote_list_app:
+    forall is1 is2,
+      denote_program (is1 ++ is2) ≅ (denote_program is1;; denote_program is2).
+    Proof.
+      induction is1; intro.
+      - cbn.
+        rewrite bind_ret_l; reflexivity.
+      - cbn.
+        rewrite bind_bind.
+        setoid_rewrite IHis1; reflexivity.
+    Qed.
+
 
   End with_event.
 
