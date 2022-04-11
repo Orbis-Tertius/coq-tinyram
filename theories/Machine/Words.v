@@ -66,4 +66,8 @@ Module TinyRAMWords (Params : TinyRAMParameters).
 
   Definition Address : Type := fin (2 ^ wordSize).
   Definition Register : Type := fin registerCount.
+  Definition Program : Type := list (Word * Word).
+  Definition Tape : Type := list Word.
+  (*""" [registerCount] general-purpose registers, [...] """*)
+  Definition Registers : Type := Vector.t Word registerCount.
 End TinyRAMWords.

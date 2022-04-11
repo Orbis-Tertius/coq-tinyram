@@ -21,4 +21,4 @@ End SixteenFour.
 Module TRHand := TinyRAMHandlers SixteenFour.
 Import TRHand.
 
-(*Extraction "tinyram_vm.hs" eval_prog.*)
+(*Extraction "tinyram_vm.hs" interp_program.*)

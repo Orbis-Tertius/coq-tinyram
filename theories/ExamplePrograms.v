@@ -75,4 +75,4 @@ Definition FibProgram : Program.
 Defined.
 
 Definition fibFun (n : nat) : itree void1 Word :=
-  eval_prog FibProgram (cons (nat_bitvector_big _ n) nil) nil.
+  interp_program FibProgram (cons (nat_bitvector_big _ n) nil) nil.

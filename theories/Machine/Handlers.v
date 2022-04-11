@@ -13,7 +13,7 @@ From ITree.Basics Require Import
 From TinyRAM.Machine Require Import
   Parameters Words Memory Coding Denotations.
 From TinyRAM.Utils Require Import
-  Fin Vectors BitVectors.
+  Fin Vectors KTreeFin BitVectors.
 Import Monads MonadNotation VectorNotations.
 
 Module TinyRAMHandlers (Params : TinyRAMParameters).
@@ -22,11 +22,6 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
   Export TRDen.
 
   Local Open Scope monad_scope.
-
-  Definition Program : Type := list (Word * Word).
-  Definition Tape : Type := list Word.
-  (*""" [registerCount] general-purpose registers, [...] """*)
-  Definition Registers : Type := Vector.t Word registerCount.
 
   Record MachineState : Type :=
     mkMachineState {
@@ -41,7 +36,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
         (*"""
         The (condition) flag [...]; it consists of a single bit.
         """*)
-        conditionFlag : bool;
+        flag : bool;
         memory : Memory;
 
         tapeMain : Tape;
@@ -50,94 +45,117 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
         program : Program;
       }.
 
-  Definition handle_registers {E: Type -> Type} `{stateE Registers -< E}: 
+  Definition updtPC (n : Word) (m : MachineState) : MachineState :=
+    match m with
+    | {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0|} => 
+      {| programCounter := n; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0 |}
+    end.
+
+  Definition updtReg (n : Registers) (m : MachineState) : MachineState :=
+    match m with
+    | {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0|} => 
+      {| programCounter := pc0; registers := n; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0 |}
+    end.
+
+  Definition updtFlag (n : bool) (m : MachineState) : MachineState :=
+    match m with
+    | {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0|} => 
+      {| programCounter := pc0; registers := r0; flag := n; memory := m0; tapeMain := t0; tapeAux := t1; program := p0 |}
+    end.
+
+  Definition updtMem (n : Memory) (m : MachineState) : MachineState :=
+    match m with
+    | {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0|} => 
+      {| programCounter := pc0; registers := r0; flag := f0; memory := n; tapeMain := t0; tapeAux := t1; program := p0 |}
+    end.
+
+  Definition updtMTape (n : Tape) (m : MachineState) : MachineState :=
+    match m with
+    | {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0|} => 
+      {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := n; tapeAux := t1; program := p0 |}
+    end.
+
+  Definition updtATape (n : Tape) (m : MachineState) : MachineState :=
+    match m with
+    | {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := t1; program := p0|} => 
+      {| programCounter := pc0; registers := r0; flag := f0; memory := m0; tapeMain := t0; tapeAux := n; program := p0 |}
+    end.
+
+  Definition handle_registers {E: Type -> Type} `{stateE MachineState -< E}: 
     RegisterE ~> itree E :=
   fun _ e =>
-    reg <- get;;
+    s <- get;;
+    let reg := registers s in
     match e in (RegisterE T) return (itree E T) with
     | GetReg x => ret (nth reg x)
-    | SetReg x v => put (replace reg x v)
+    | SetReg x v => put (updtReg (replace reg x v) s)
     end.
 
-  Definition interp_registers {E A} (t : itree (RegisterE +' E) A) :
-    stateT Registers (itree E) A :=
-  run_state (interp (bimap handle_registers (id_ E)) t).
-
-  Definition handle_memory {E: Type -> Type} `{stateE Memory -< E}: 
+  Definition handle_memory {E: Type -> Type} `{stateE MachineState -< E}: 
     MemoryE ~> itree E :=
   fun _ e =>
-    m <- get;;
+    s <- get;;
+    let m := memory s in
     match e in (MemoryE T) return (itree E T) with
     | LoadByte x => ret (nth m x)
-    | StoreByte x v => put (replace m x v)
+    | StoreByte x v => put (updtMem (replace m x v) s)
     | LoadWord x => ret (Memory_Word_Load m x)
-    | StoreWord x v => put (Memory_Word_Store m x v)
+    | StoreWord x v => put (updtMem (Memory_Word_Store m x v) s)
     end.
-
-  Definition interp_memory {E A} (t : itree (MemoryE +' E) A) :
-    stateT Memory (itree E) A :=
-  run_state (interp (bimap handle_memory (id_ E)) t).
 
   (*""" The program counter, denoted pc; it consists of [wordSize] bits. """*)
-  Definition handle_programCounter {E: Type -> Type} `{stateE Word -< E}: 
+  Definition handle_programCounter {E: Type -> Type} `{stateE MachineState -< E}: 
     ProgramCounterE ~> itree E :=
   fun _ e =>
+    s <- get;;
+    let pc := programCounter s in
     match e in (ProgramCounterE T) return (itree E T) with
-    | SetPC v => put v
-    | IncPC => pc <- get;;
-               put (bv_incr 1 pc)
-    | GetPC => get
+    | SetPC v => put (updtPC v s)
+    | IncPC => put (updtPC (bv_incr 1 pc) s)
+    | GetPC => ret pc
     end.
-
-  Definition interp_programCounter {E A} (t : itree (ProgramCounterE +' E) A) :
-    stateT Word (itree E) A :=
-  run_state (interp (bimap handle_programCounter (id_ E)) t).
 
   (*""" The (condition) flag [...]; it consists of a single bit. """*)
-  Definition handle_flag {E: Type -> Type} `{stateE bool -< E}: 
+  Definition handle_flag {E: Type -> Type} `{stateE MachineState -< E}: 
     FlagE ~> itree E :=
   fun _ e =>
+    s <- get;;
+    let fl := flag s in
     match e in (FlagE T) return (itree E T) with
-    | SetFlag b => put b
-    | GetFlag => get
+    | SetFlag b => put (updtFlag b s)
+    | GetFlag => ret fl
     end.
 
-  Definition interp_flag {E A} (t : itree (FlagE +' E) A) :
-    stateT bool (itree E) A :=
-  run_state (interp (bimap handle_flag (id_ E)) t).
-
-  Definition handle_read {E: Type -> Type} `{stateE (Tape * Tape) -< E}: 
+  Definition handle_read {E: Type -> Type} `{stateE MachineState -< E}: 
     ReadE ~> itree E :=
   fun _ e =>
-    tapes <- get;;
-    let (main, aux) := (tapes : Tape * Tape) in
+    s <- get;;
+    let main := tapeMain s in
+    let aux := tapeAux s in
     match e in (ReadE T) return (itree E T) with
     | ReadMain => 
       match main with
       | List.nil => ret None
       | List.cons x xs =>
-        put (xs, aux) ;;
+        put (updtMTape xs s) ;;
         ret (Some x)
       end
     | ReadAux => 
       match aux with
       | List.nil => ret None
       | List.cons x xs =>
-        put (main, xs) ;;
+        put (updtATape xs s) ;;
         ret (Some x)
       end
     end.
 
-  Definition interp_read {E A} (t : itree (ReadE +' E) A) :
-    stateT (Tape * Tape) (itree E) A :=
-  run_state (interp (bimap handle_read (id_ E)) t).
-
-  Definition handle_instruction {E: Type -> Type} `{stateE Program -< E}: 
+  Definition handle_instruction {E: Type -> Type} `{stateE MachineState -< E}: 
     InstructionE ~> itree E :=
   fun _ e =>
+    s <- get;;
+    let prog := program s in
     match e in (InstructionE T) return (itree E T) with
     | ReadInst x => 
-      prog <- get;;
       match List.nth_error prog x with
       (* """ If pc is not an integer in {0, . . . , L-1}, where L is 
             the number of instructions in [program], then the instruction
@@ -147,69 +165,96 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       end
     end.
 
-  Definition interp_instruction {E A} (t : itree (InstructionE +' E) A) :
-    stateT Program (itree E) A :=
-  run_state (interp (bimap handle_instruction (id_ E)) t).
-
   Definition MachineE: Type -> Type :=
     (InstructionE +' ReadE +' FlagE +' ProgramCounterE +' MemoryE +' RegisterE).
 
   Definition handle_machine {E: Type -> Type} 
-      `{stateE Registers -< E}
-      `{stateE Memory -< E}
-      `{stateE Word -< E}
-      `{stateE bool -< E}
-      `{stateE (Tape * Tape) -< E}
-      `{stateE Program -< E}:
-    MachineE ~> itree E.
-    intros T X.
-    apply (Handler.case_ handle_instruction 
-          (Handler.case_ handle_read 
-          (Handler.case_ handle_flag
-          (Handler.case_ handle_programCounter 
-          (Handler.case_ handle_memory handle_registers))))).
-    exact X.
-  Defined.
+      `{stateE MachineState -< E}: 
+    MachineE ~> itree E :=
+    (case_ handle_instruction 
+    (case_ handle_read 
+    (case_ handle_flag
+    (case_ handle_programCounter 
+    (case_ handle_memory handle_registers))))).
 
-  Definition itree_assoc_r {a b c} :
-    itree ((a +' b) +' c) ~> itree (a +' b +' c).
-    apply translate.
-    apply (assoc_r (C := (fun x y => x ~> y))).
-  Defined.
+  Theorem handle_machine_GetReg : forall r,
+    handle_machine _ (subevent _ (GetReg r)) 
+    ≅ handle_registers _ (GetReg r).
+  Proof. cat_auto. Qed.
 
-  Definition interp_machine_f {A}
-    (p : Program * (Tape * Tape * (bool * (Word * (Memory * (Registers * A)))))):
-    MachineState * A :=
-  match p with
-  | (p0, ((t0, t1), (f0, (pc0, (m0, (r0, a)))))) =>
-    ({|
-      programCounter := pc0;
-      registers := r0;
-      conditionFlag := f0;
-      memory := m0;
-      tapeMain := t0;
-      tapeAux := t1;
-      program := p0
-     |}, a)
-  end.
+  Theorem handle_machine_SetReg : forall r x,
+    handle_machine _ (subevent _ (SetReg r x)) 
+    ≅ handle_registers _ (SetReg r x).
+  Proof. cat_auto. Qed.
 
-  Definition machine_h {E}: (MachineE +' E ~> stateT MachineState (itree E)).
-    intros T X.
-    remember (bimap handle_machine (id_ E)) as f; apply (f T) in X; clear Heqf f.
-    intro m; destruct m.
-    apply itree_assoc_r,
-          (fun x => run_state x registers0),
-          itree_assoc_r,
-          (fun x => run_state x memory0),
-          itree_assoc_r,
-          (fun x => run_state x programCounter0),
-          itree_assoc_r,
-          (fun x => run_state x conditionFlag0),
-          itree_assoc_r,
-          (fun x => run_state x (tapeMain0, tapeAux0)),
-          (fun x => run_state x program0) in X.
-    apply (ITree.map interp_machine_f).
-    exact X.
+  Theorem handle_machine_LoadByte : forall a,
+    handle_machine _ (subevent _ (LoadByte a)) 
+    ≅ handle_memory _ (LoadByte a).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_StoreByte : forall a v,
+    handle_machine _ (subevent _ (StoreByte a v)) 
+    ≅ handle_memory _ (StoreByte a v).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_LoadWord : forall a,
+    handle_machine _ (subevent _ (LoadWord a)) 
+    ≅ handle_memory _ (LoadWord a).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_StoreWord : forall a v,
+    handle_machine _ (subevent _ (StoreWord a v)) 
+    ≅ handle_memory _ (StoreWord a v).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_SetPC : forall a,
+    handle_machine _ (subevent _ (SetPC a)) 
+    ≅ handle_programCounter _ (SetPC a).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_IncPC :
+    handle_machine _ (subevent _ IncPC) 
+    ≅ handle_programCounter _ IncPC.
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_GetPC :
+    handle_machine _ (subevent _ GetPC) 
+    ≅ handle_programCounter _ GetPC.
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_ReadInst : forall a,
+    handle_machine _ (subevent _ (ReadInst a)) 
+    ≅ handle_instruction _ (ReadInst a).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_GetFlag :
+    handle_machine _ (subevent _ GetFlag) 
+    ≅ handle_flag _ GetFlag.
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_SetFlag : forall a,
+    handle_machine _ (subevent _ (SetFlag a)) 
+    ≅ handle_flag _ (SetFlag a).
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_ReadMain :
+    handle_machine _ (subevent _ ReadMain) 
+    ≅ handle_read _ ReadMain.
+  Proof. cat_auto. Qed.
+
+  Theorem handle_machine_ReadAux :
+    handle_machine _ (subevent _ ReadAux) 
+    ≅ handle_read _ ReadAux.
+  Proof. cat_auto. Qed.
+
+  Definition machine_h {E: Type -> Type}: 
+    (MachineE +' E ~> stateT MachineState (itree E)).
+    eapply (cat (C := fun x y => x ~> y)
+                (a := (MachineE +' E))
+                (b := itree (stateE MachineState +' E))
+                (c := stateT MachineState (itree E))).
+    - exact (bimap handle_machine (id_ E)).
+    - exact run_state.
   Defined.
 
   Definition interp_machine {E A} (t : itree (MachineE +' E) A) :
@@ -217,15 +262,19 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     apply (interp_state machine_h).
     exact t.
   Defined.
+  
+  (* Equality of machine denotaions. *)
+  Definition eq_machine_denotations {E A} (t1 t2 : itree (MachineE +' E) A) : Prop :=
+    forall s, interp_machine t1 s ≈ interp_machine t2 s.
 
-  Definition eval_prog (s: Program) (t0 t1 : Tape) : itree void1 Word.
+  Definition interp_program {E} (s: Program) (t0 t1 : Tape) : itree E Word.
     remember ({|(*""" the initial state of the machine is as follows: """*)
               (*""" the contents of pc [...] are all 0; """*)
               programCounter := const b0 _;
               (*""" the contents of [...] all general-purpose registers [...] are all 0; """*)
               registers := const (const b0 _) _;
               (*""" the contents of [...] flag [...] are all 0; """*)
-              conditionFlag := b0;
+              flag := b0;
               (*""" the contents of [...] memory are all 0; """*)
               memory := const (const b0 _) _;
               tapeMain := t0;
@@ -235,13 +284,20 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     exact (ITree.map snd (interp_machine run init)).
   Defined.
 
+  (* Equality between programs. *)
+  Definition eq_machine (s1 s2 : Program) : Prop :=
+    forall t1 t2,
+    eq_machine_denotations
+      (E := void1)
+      (interp_program s1 t1 t2)
+      (interp_program s2 t1 t2).
+
   Section InterpProperties.
     Context {E': Type -> Type}.
     Notation E := (MachineE +' E').
 
     Global Instance eutt_interp_machine {R}:
-    Proper (@eutt E R R eq ==> eq ==> @eutt E' (prod MachineState R) (prod _ R) eq)
-           interp_machine.
+    Proper (@eutt E R R eq ==> eq ==> eutt eq) interp_machine.
     Proof.
       repeat intro.
       repeat unfold interp_machine.
@@ -249,6 +305,15 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       rewrite H.
       reflexivity.
     Qed.
+
+    Global Instance eq_itree_interp_machine {R}:
+      Proper (@eq_itree E R R eq ==> eq ==> eq_itree eq) interp_machine.
+    Proof. apply eq_itree_interp_state. Qed.
+
+
+    Global Instance eutt_prod_rel_interp_machine {R} {RR : R -> R -> Prop}:
+      Proper (@eutt E R R RR ==> eq ==> eutt (HeterogeneousRelations.prod_rel eq RR)) interp_machine.
+    Proof. apply eutt_interp_state. Qed.
 
     Lemma interp_machine_bind: forall {R S} (t: itree E R) (k: R -> itree E S) (g : MachineState),
       (interp_machine (ITree.bind t k) g)
@@ -291,6 +356,17 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
       intros.
       unfold interp_machine.
       rewrite interp_state_trigger.
+      reflexivity.
+    Qed.
+
+    Lemma interp_machine_trigger_eqit : 
+      forall (R : Type) (e : E R) (s : MachineState), 
+         interp_machine (ITree.trigger e) s ≅ 
+         ITree.bind (machine_h R e s) (fun x : MachineState * R => Tau (Ret x)).
+    Proof.
+      intros.
+      unfold interp_machine.
+      rewrite interp_state_trigger_eqit.
       reflexivity.
     Qed.
 
