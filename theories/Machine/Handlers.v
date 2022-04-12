@@ -13,7 +13,7 @@ From ITree.Basics Require Import
 From TinyRAM.Machine Require Import
   Parameters Words Memory Coding Denotations.
 From TinyRAM.Utils Require Import
-  Fin Vectors KTreeFin BitVectors.
+  Fin Vectors BitVectors.
 Import Monads MonadNotation VectorNotations.
 
 Module TinyRAMHandlers (Params : TinyRAMParameters).
