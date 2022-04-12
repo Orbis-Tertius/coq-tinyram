@@ -141,7 +141,9 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
         | mullI ri rj =>
           regj <- trigger (GetReg rj) ;;
           (*""" compute [rj]u * [A]u and store least significant bits of result in ri """ *)
-          let (resh, resl) := splitat _ (bv_mul regj A) in
+          let res := splitat _ (bv_mul regj A) in
+          let resh := fst res in
+          let resl := snd res in
           trigger (SetReg ri resl) ;;
           (*""" flag is set to 1 if [rj]u * [A]u ∈ U_W and to 0 otherwise. """*)
           trigger (SetFlag (bv_eq resh (const b0 _))) ;;
@@ -150,7 +152,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
         | umulhI ri rj =>
           regj <- trigger (GetReg rj) ;;
           (*""" compute [rj]u * [A]u and store most significant bits of result in ri """ *)
-          let (resh, _) := splitat _ (bv_mul regj A) in
+          let resh := fst (splitat _ (bv_mul regj A)) in
           trigger (SetReg ri resh) ;;
           (*""" flag is set to 1 if [rj]u * [A]u ∈ U_W and to 0 otherwise. """*)
           trigger (SetFlag (bv_eq resh (const b0 _))) ;;
@@ -163,7 +165,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           let mjA := (twos_complement wrej * twos_complement wA)%Z in
           let sres := twos_complement_inv (pred wordSize + pred wordSize) mjA in
           let sign := hd sres in
-          let (resh, _) := splitat _ (bv_abs sres) in
+          let resh := fst (splitat _ (bv_abs sres)) in
           trigger (SetReg ri (wuncast (sign :: resh))) ;;
           (*""" flag is set to 1 if [rj]s x [A]s ∈ [...] {-2^(W-1), ..., 0, 1, ..., 2^(W-1) - 1} """ *)
           trigger (SetFlag (andb (- 2 ^ (of_nat wordSize - 1) <=? mjA) 
@@ -209,7 +211,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
         | cmpeI ri =>
           regi <- trigger (GetReg ri) ;;
           (*""" [flag:] [ri] = [A] """*)
-          trigger (SetFlag (bv_eq A regi)) ;;
+          trigger (SetFlag (bv_eq regi A)) ;;
           trigger IncPC
 
         | cmpaI ri =>
@@ -243,11 +245,11 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           trigger IncPC
 
         | cmovI ri =>
-          flag <- trigger GetFlag ;;
+          flag <- (trigger GetFlag) ;;
           (*""" if flag = 1, store [A] in ri """*)
           (if (flag : bool)
            then (regi <- trigger (GetReg ri) ;;
-                 trigger (SetReg ri A))
+                trigger (SetReg ri A))
            else ret tt) ;;
           trigger IncPC
 
@@ -256,14 +258,14 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           trigger (SetPC A)
 
         | cjmpI =>
-          flag <- trigger GetFlag ;;
+          flag <- (trigger GetFlag : itree _ bool) ;;
           (*""" if flag = 1, set pc to [A] (else increment pc as usual) """*)
           if (flag : bool)
           then trigger (SetPC A)
           else trigger IncPC
 
         | cnjmpI =>
-          flag <- trigger GetFlag ;;
+          flag <- (trigger GetFlag : itree _ bool) ;;
           (*""" if flag = 0, set pc to [A] (else increment pc as usual) """*)
           if (flag : bool)
           then trigger IncPC
@@ -298,8 +300,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
                  and set flag = 0; """ *)
           (* """ if there are no remaining input words on the [A]u-th tape store
                  0_W in ri and set flag = 1. """ *)
-          let An := bitvector_nat_big A in
-          match An with
+          match bitvector_nat_big A with
           | 0 => mtWord <- trigger ReadMain ;;
                  match mtWord with
                  | None => trigger (SetReg ri (const b0 _)) ;;
