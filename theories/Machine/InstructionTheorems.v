@@ -1772,103 +1772,103 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       + reflexivity. 
   Qed.
 
-    (* When the program reaches an immediate answer, it halts. *)
-    Lemma interp_machine_run_halt_imm:
-      forall (s : MachineState) op r,
-        (List.nth_error (program s)
-                        (bitvector_nat_big (programCounter s)))
-        = Some r ->
-        uncurry InstructionDecode r = (answerI, inl op) ->
-        interp_machine (E := E') run s ≈ Ret (s, op).
-    Proof.
-      intros.
-      unfold run; rewrite unfold_iter; unfold run_step at 1.
-      do 2 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
-      assert (machine_h (E := E') _ (subevent _ GetPC) s
-        ≈ Ret (s, programCounter s)) as AH;
-      [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
-      rewrite bind_ret_l; change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word));
-      rewrite interp_machine_bind, interp_machine_trigger.
-      assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
-        ≈ Ret (s, r)) as AH;
-      [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
-        rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
-      rewrite AH; clear AH.
-      rewrite bind_bind, bind_ret_l; rewrite H0.
-      assert (interp_machine (E := E') (ITree.map (inr (A := unit)) (denote_operand (inl op))) s
-        ≈ Ret (s, inr op)) as AH; [ tau_steps; reflexivity | ];
-      rewrite AH; clear AH.
-      rewrite bind_ret_l, interp_machine_ret.
-      reflexivity.
-    Qed.
+  (* When the program reaches an immediate answer, it halts. *)
+  Lemma interp_machine_run_halt_imm:
+    forall (s : MachineState) op r,
+      (List.nth_error (program s)
+                      (bitvector_nat_big (programCounter s)))
+      = Some r ->
+      uncurry InstructionDecode r = (answerI, inl op) ->
+      interp_machine (E := E') run s ≈ Ret (s, op).
+  Proof.
+    intros.
+    unfold run; rewrite unfold_iter; unfold run_step at 1.
+    do 2 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
+    assert (machine_h (E := E') _ (subevent _ GetPC) s
+      ≈ Ret (s, programCounter s)) as AH;
+    [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
+    rewrite bind_ret_l; change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word));
+    rewrite interp_machine_bind, interp_machine_trigger.
+    assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
+      ≈ Ret (s, r)) as AH;
+    [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
+      rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
+    rewrite AH; clear AH.
+    rewrite bind_bind, bind_ret_l; rewrite H0.
+    assert (interp_machine (E := E') (ITree.map (inr (A := unit)) (denote_operand (inl op))) s
+      ≈ Ret (s, inr op)) as AH; [ tau_steps; reflexivity | ];
+    rewrite AH; clear AH.
+    rewrite bind_ret_l, interp_machine_ret.
+    reflexivity.
+  Qed.
 
-    (* When run gets a register answer, it halts with that value. *)
-    Lemma interp_machine_run_halt_reg:
-      forall (s : MachineState) op r,
-        (List.nth_error (program s)
-                        (bitvector_nat_big (programCounter s)))
-        = Some r ->
-        uncurry InstructionDecode r = (answerI, inr op) ->
-        interp_machine (E := E') run s ≈ Ret (s, nth (registers s) op).
-    Proof.
-      intros.
-      unfold run; rewrite unfold_iter; unfold run_step at 1.
-      do 2 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
-      assert (machine_h (E := E') _ (subevent _ GetPC) s
-        ≈ Ret (s, programCounter s)) as AH;
-      [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
-      rewrite bind_ret_l; change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word));
-      rewrite interp_machine_bind, interp_machine_trigger.
-      assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
-        ≈ Ret (s, r)) as AH;
-      [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
-        rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
-      rewrite AH; clear AH.
-      rewrite bind_bind, bind_ret_l; rewrite H0.
-      assert (interp_machine (E := E') (ITree.map (inr (A := unit)) (denote_operand (inr op))) s
-        ≈ Ret (s, inr (nth (registers s) op))) as AH; [ tau_steps; reflexivity | ];
-      rewrite AH; clear AH.
-      rewrite bind_ret_l, interp_machine_ret.
-      reflexivity.
-    Qed.
+  (* When run gets a register answer, it halts with that value. *)
+  Lemma interp_machine_run_halt_reg:
+    forall (s : MachineState) op r,
+      (List.nth_error (program s)
+                      (bitvector_nat_big (programCounter s)))
+      = Some r ->
+      uncurry InstructionDecode r = (answerI, inr op) ->
+      interp_machine (E := E') run s ≈ Ret (s, nth (registers s) op).
+  Proof.
+    intros.
+    unfold run; rewrite unfold_iter; unfold run_step at 1.
+    do 2 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
+    assert (machine_h (E := E') _ (subevent _ GetPC) s
+      ≈ Ret (s, programCounter s)) as AH;
+    [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
+    rewrite bind_ret_l; change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word));
+    rewrite interp_machine_bind, interp_machine_trigger.
+    assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
+      ≈ Ret (s, r)) as AH;
+    [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
+      rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
+    rewrite AH; clear AH.
+    rewrite bind_bind, bind_ret_l; rewrite H0.
+    assert (interp_machine (E := E') (ITree.map (inr (A := unit)) (denote_operand (inr op))) s
+      ≈ Ret (s, inr (nth (registers s) op))) as AH; [ tau_steps; reflexivity | ];
+    rewrite AH; clear AH.
+    rewrite bind_ret_l, interp_machine_ret.
+    reflexivity.
+  Qed.
 
-    Lemma interp_machine_run_step:
-      forall (s : MachineState) k op r,
-        (List.nth_error (program s)
-                        (bitvector_nat_big (programCounter s)))
-        = Some r ->
-        uncurry InstructionDecode r = (k, op) ->
-        k <> answerI ->
-        interp_machine (E := E') run s ≈
-        interp_machine (denote_instruction (k, op) ;; run) s.
-    Proof.
-      intros.
-      unfold run; rewrite unfold_iter; unfold run_step at 1.
-      do 2 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
-      assert (machine_h (E := E') _ (subevent _ GetPC) s
-        ≈ Ret (s, programCounter s)) as AH;
-      [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
-      rewrite bind_ret_l;
-      change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word)) at 1;
-      rewrite interp_machine_bind, interp_machine_trigger.
-      assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
-        ≈ Ret (s, r)) as AH;
-      [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
-        rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
-      rewrite AH; clear AH.
-      rewrite bind_bind, bind_ret_l. rewrite H0.
-      remember (interp_machine _) as gg;
-      replace gg with (interp_machine (E := E') (ITree.map (inl (B := Word)) (denote_instruction (k, op))));
-      [ | rewrite Heqgg; f_equal; destruct k; try reflexivity; contradiction ]; clear Heqgg gg.
-      unfold ITree.map.
-      rewrite interp_machine_bind, bind_bind.
-      change bind with (ITree.bind (E := E) (T := unit) (U := Word)).
-      rewrite interp_machine_bind.
-      apply eqit_bind; [ reflexivity | ].
-      intros [s2 []].
-      rewrite interp_machine_ret, bind_ret_l.
-      rewrite tau_eutt.
-      reflexivity.
-    Qed.
+  Lemma interp_machine_run_step:
+    forall (s : MachineState) k op r,
+      (List.nth_error (program s)
+                      (bitvector_nat_big (programCounter s)))
+      = Some r ->
+      uncurry InstructionDecode r = (k, op) ->
+      k <> answerI ->
+      interp_machine (E := E') run s ≈
+      interp_machine (denote_instruction (k, op) ;; run) s.
+  Proof.
+    intros.
+    unfold run; rewrite unfold_iter; unfold run_step at 1.
+    do 2 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
+    assert (machine_h (E := E') _ (subevent _ GetPC) s
+      ≈ Ret (s, programCounter s)) as AH;
+    [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
+    rewrite bind_ret_l;
+    change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word)) at 1;
+    rewrite interp_machine_bind, interp_machine_trigger.
+    assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
+      ≈ Ret (s, r)) as AH;
+    [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
+      rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
+    rewrite AH; clear AH.
+    rewrite bind_bind, bind_ret_l. rewrite H0.
+    remember (interp_machine _) as gg;
+    replace gg with (interp_machine (E := E') (ITree.map (inl (B := Word)) (denote_instruction (k, op))));
+    [ | rewrite Heqgg; f_equal; destruct k; try reflexivity; contradiction ]; clear Heqgg gg.
+    unfold ITree.map.
+    rewrite interp_machine_bind, bind_bind.
+    change bind with (ITree.bind (E := E) (T := unit) (U := Word)).
+    rewrite interp_machine_bind.
+    apply eqit_bind; [ reflexivity | ].
+    intros [s2 []].
+    rewrite interp_machine_ret, bind_ret_l.
+    rewrite tau_eutt.
+    reflexivity.
+  Qed.
 
 End TinyRAMInstThm.
