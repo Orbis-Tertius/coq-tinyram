@@ -235,7 +235,7 @@ Proof.
   - lia.
   - simpl; intros.
     destruct o; [ reflexivity | ].
-    assert (o < n) as H2. { lia. }
+    assert (o < n) as H2;[lia|].
     rewrite (IHvn _ _ H2). 
     repeat f_equal; apply proof_irrelevance.
 Qed.
@@ -255,8 +255,8 @@ Proof.
   - intros; simpl; simpl in H; f_equal.
     apply subset_eq_compat; lia.
   - simpl; intros.
-    destruct o. { lia. }
-    assert (n <= o) as H2. { lia. }
+    destruct o;[lia|].
+    assert (n <= o) as H2;[lia|].
     rewrite (IHvn _ _ H2). 
     repeat f_equal; apply proof_irrelevance.
 Qed.
@@ -577,12 +577,12 @@ Proof.
   - rewrite rev_cons.
     rewrite cast_rew, nth_rew_l, fin_rew.
     destruct i; simpl.
-    + assert (n <= n + 1 - 0 - 1) as H. { lia. }
+    + assert (n <= n + 1 - 0 - 1) as H;[lia|].
       rewrite (nth_app_r _ H).
-      assert (0 < 1) as H0. { lia. }
+      assert (0 < 1) as H0;[lia|].
       transitivity (nth [h] (exist _ 0 H0)); [ reflexivity | ].
       f_equal; apply subset_eq_compat; lia.
-    + assert (n + 1 - S i - 1 < n) as H. { lia. }
+    + assert (n + 1 - S i - 1 < n) as H;[lia|].
       rewrite (nth_app_l _ H).
       rewrite IHv.
       f_equal; apply subset_eq_compat; simpl; lia.
@@ -818,17 +818,17 @@ Proof.
   destruct (splitat _ _) as [v1 v2] eqn:speq2;
   apply VectorSpec.append_splitat in speq2;
   rewrite speq2 in speq; clear speq2.
-  - assert (bid + idx < memsz) as H. { lia. }
+  - assert (bid + idx < memsz) as H;[lia|].
     replace (fi' ((bid + idx) mod memsz))
        with (exist (fun x => x < memsz) (bid + idx) H).
     2: { apply subset_eq_compat; rewrite mod_small; lia. }
-    assert (bid + idx < idx + blksz + tl) as H2. { lia. }
+    assert (bid + idx < idx + blksz + tl) as H2;[lia|].
     transitivity (nth ((v1 ++ v2) ++ v3) (exist _ (bid + idx) H2)).
     2: { rewrite <- speq, nth_rew_l, fin_rew; 
          repeat f_equal; apply proof_irrelevance. }
-    assert (bid + idx < idx + blksz) as H3. { lia. }
+    assert (bid + idx < idx + blksz) as H3;[lia|].
     rewrite (nth_app_l H2 H3).
-    assert (idx <= bid + idx) as H4. { lia. }
+    assert (idx <= bid + idx) as H4;[lia|].
     rewrite (nth_app_r H3 H4).
     f_equal; apply subset_eq_compat; lia.
   - unfold eq_rect_r.
@@ -842,7 +842,7 @@ Proof.
     rewrite speq.
     destruct (bid + idx <? memsz) eqn:bim.
     + rewrite ltb_lt in bim.
-      assert (bid < blk1) as H1. { lia. }
+      assert (bid < blk1) as H1;[lia|].
       rewrite (nth_app_l _ H1).
       assert (blk2 + idx2 <= (bid + idx) mod memsz) as H2.
       { rewrite mod_small; lia. }
@@ -854,15 +854,15 @@ Proof.
       { rewrite PeanoNat.Nat.mod_eq; try lia.
         replace (_ / _) with 1. { rewrite PeanoNat.Nat.mul_1_r; lia. }
         symmetry; apply div_bet_1; lia. }
-      assert (bid - blk1 < blk2 + idx2 + blk1) as H1. { lia. }
+      assert (bid - blk1 < blk2 + idx2 + blk1) as H1;[lia|].
       transitivity (nth ((v1 ++ v2) ++ v3)
                         (exist _ (bid - blk1) H1)).
       2: { f_equal; apply subset_eq_compat; lia. }
-      assert (blk1 <= bid) as H2. { lia. }
+      assert (blk1 <= bid) as H2;[lia|].
       rewrite (nth_app_r _ H2).
-      assert (bid - blk1 < blk2 + idx2) as H3. { lia. }
+      assert (bid - blk1 < blk2 + idx2) as H3;[lia|].
       rewrite (nth_app_l _ H3). 
-      assert (bid - blk1 < blk2) as H4. { lia. }
+      assert (bid - blk1 < blk2) as H4;[lia|].
       rewrite (nth_app_l _ H4).
       f_equal; apply subset_eq_compat; reflexivity.
 Qed.
@@ -911,14 +911,14 @@ Proof.
   apply VectorSpec.append_splitat in speq2;
   rewrite speq2 in speq; clear speq2; simpl.
   - unfold eq_rect_r; rewrite nth_rew_l, fin_rew.
-    assert (bid + idx < idx + blksz + tl) as H0. { lia. }
+    assert (bid + idx < idx + blksz + tl) as H0;[lia|].
     transitivity (nth ((v1 ++ block) ++ v3)
                       (exist _ (bid + idx) H0)).
     2: { f_equal; apply subset_eq_compat;
          symmetry; apply mod_small; lia. }
-    assert (bid + idx < idx + blksz) as H1. { lia. }
+    assert (bid + idx < idx + blksz) as H1;[lia|].
     rewrite (nth_app_l _ H1).
-    assert (idx <= bid + idx) as H2. { lia. }
+    assert (idx <= bid + idx) as H2;[lia|].
     rewrite (nth_app_r _ H2).
     f_equal; apply subset_eq_compat; lia.
   - repeat rewrite <- cast_rew.
@@ -928,7 +928,7 @@ Proof.
     rewrite nth_rew_l, fin_rew.
     unfold eq_rect_r in spblk.
     rewrite cast_rew, rew_compose in spblk.
-    assert (bid < blk1 + blk2) as H0. { lia. }
+    assert (bid < blk1 + blk2) as H0;[lia|].
     transitivity (nth (block1 ++ block2)
                       (exist _ bid H0)).
     { rewrite <- spblk, nth_rew_l, fin_rew;
@@ -936,13 +936,13 @@ Proof.
     clear spblk speq v12 v1 v3.
     destruct (bid + idx <? memsz) eqn:bim.
     + rewrite ltb_lt in bim.
-      assert (bid + idx < blk2 + idx2 + blk1) as H1. { lia. }
+      assert (bid + idx < blk2 + idx2 + blk1) as H1;[lia|].
       transitivity (nth ((block2 ++ v2) ++ block1)
                    (exist _ (bid + idx) H1)).
       2: { f_equal; apply subset_eq_compat; rewrite mod_small; lia. }
-      assert (blk2 + idx2 <= bid + idx) as H2. { lia. }
+      assert (blk2 + idx2 <= bid + idx) as H2;[lia|].
       rewrite (nth_app_r _ H2).
-      assert (bid < blk1) as H3. { lia. }
+      assert (bid < blk1) as H3;[lia|].
       rewrite (nth_app_l _ H3).
       f_equal; apply subset_eq_compat; lia.
     + rewrite ltb_ge in bim.
@@ -950,16 +950,16 @@ Proof.
       { rewrite PeanoNat.Nat.mod_eq; try lia.
         replace (_ / _) with 1. { rewrite PeanoNat.Nat.mul_1_r; lia. }
         symmetry; apply div_bet_1; lia. }
-      assert (bid - blk1 < blk2 + idx2 + blk1) as H1. { lia. }
+      assert (bid - blk1 < blk2 + idx2 + blk1) as H1;[lia|].
       transitivity (nth ((block2 ++ v2) ++ block1)
                         (exist _ (bid - blk1) H1)).
       2: { f_equal; apply subset_eq_compat; lia. }
       clear H.
-      assert (blk1 <= bid) as H2. { lia. }
+      assert (blk1 <= bid) as H2;[lia|].
       rewrite (nth_app_r _ H2).
-      assert (bid - blk1 < blk2 + idx2) as H3. { lia. }
+      assert (bid - blk1 < blk2 + idx2) as H3;[lia|].
       rewrite (nth_app_l _ H3). 
-      assert (bid - blk1 < blk2) as H4. { lia. }
+      assert (bid - blk1 < blk2) as H4;[lia|].
       rewrite (nth_app_l _ H4).
       f_equal; apply subset_eq_compat; reflexivity.
 Qed.

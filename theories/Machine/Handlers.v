@@ -267,22 +267,23 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
   Definition eq_machine_denotations {E A} (t1 t2 : itree (MachineE +' E) A) : Prop :=
     forall s, interp_machine t1 s ≈ interp_machine t2 s.
 
-  Definition interp_program {E} (s: Program) (t0 t1 : Tape) : itree E Word.
-    remember ({|(*""" the initial state of the machine is as follows: """*)
-              (*""" the contents of pc [...] are all 0; """*)
-              programCounter := const b0 _;
-              (*""" the contents of [...] all general-purpose registers [...] are all 0; """*)
-              registers := const (const b0 _) _;
-              (*""" the contents of [...] flag [...] are all 0; """*)
-              flag := b0;
-              (*""" the contents of [...] memory are all 0; """*)
-              memory := const (const b0 _) _;
-              tapeMain := t0;
-              tapeAux := t1;
-              program := s
-            |}: MachineState) as init; clear Heqinit.
-    exact (ITree.map snd (interp_machine run init)).
-  Defined.
+  Definition initialState (s : Program) (t0 t1 : Tape) : MachineState :=
+    {|(*""" the initial state of the machine is as follows: """*)
+      (*""" the contents of pc [...] are all 0; """*)
+      programCounter := const b0 _;
+      (*""" the contents of [...] all general-purpose registers [...] are all 0; """*)
+      registers := const (const b0 _) _;
+      (*""" the contents of [...] flag [...] are all 0; """*)
+      flag := b0;
+      (*""" the contents of [...] memory are all 0; """*)
+      memory := const (const b0 _) _;
+      tapeMain := t0;
+      tapeAux := t1;
+      program := s
+    |}.
+
+  Definition interp_program {E} (s: Program) (t0 t1 : Tape) : itree E Word :=
+    ITree.map snd (interp_machine run (initialState s t0 t1)).
 
   (* Equality between programs. *)
   Definition eq_machine (s1 s2 : Program) : Prop :=
