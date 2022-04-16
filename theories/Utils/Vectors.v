@@ -97,8 +97,6 @@ Proof.
   apply proof_irrelevance.
 Qed.
 
-
-
 Theorem cast_app_right_lem :
   forall n m o, m = o -> m + n = o + n.
 Proof. intros n m o eq; destruct eq; reflexivity. Qed.
@@ -162,6 +160,34 @@ Proof.
     apply proof_irrelevance.
 Qed.
 
+Theorem cast_app_distribute : forall {A n m k l} {eq : n + m = k + l}
+  {v : Vector.t A n} {u : Vector.t A m} (eq1 : n = k) (eq2 : m = l),
+  cast (v ++ u) eq = cast v eq1 ++ cast u eq2.
+Proof.
+  intros; destruct eq1, eq2.
+  repeat rewrite cast_id.
+  reflexivity.
+Qed.
+
+Theorem cast_swap : forall {A n m} (v : Vector.t A n) (u : Vector.t A m)
+  (eq : n = m),
+  cast v eq = u <-> v = cast u (eq_sym eq).
+Proof.
+  intros.
+  split.
+  - intros; rewrite <- H, cast_trans, cast_id; reflexivity.
+  - intros; rewrite H, cast_trans, cast_id; reflexivity.
+Qed.
+
+Theorem cast_f_apply: forall {A n m} (v u : Vector.t A n) (eq : n = m),
+  v = u <-> cast v eq = cast u eq.
+Proof.
+  intros.
+  split.
+  - intro H; rewrite H; reflexivity.
+  - apply cast_inj.
+Qed.
+
 Theorem vector_nil_eq : forall {A} (v : t A 0),
   v = [].
 Proof.
@@ -213,6 +239,51 @@ Proof.
   - destruct p as [p pP].
     destruct p; [ reflexivity | ].
     apply IHv.
+Qed.
+
+Theorem replace_unfold : forall {A n} (l : Vector.t A n) h f x
+  (lt : S f < S n),
+  replace (h :: l) (mk_fin (S f) lt) x
+  = h :: replace l (mk_fin f (Lt.lt_S_n _ _ lt)) x.
+Proof.
+  intros.
+  simpl. repeat f_equal.
+  apply subset_eq_compat.
+  reflexivity.
+Qed.
+
+Theorem replace_replace : forall {A n} (l : Vector.t A n) f x y,
+  replace (replace l f x) f y = replace l f y.
+Proof.
+  induction l; [ reflexivity | ].
+  intros [f flt] x y.
+  destruct f; [ reflexivity | ].
+  simpl.
+  rewrite IHl.
+  reflexivity.
+Qed.
+
+Theorem replace_swap : forall {A n} (l : Vector.t A n) f g x y,
+  proj1_sig f <> proj1_sig g ->
+  replace (replace l f x) g y = replace (replace l  g y) f x.
+Proof.
+  induction l; [ intros [f lt]; lia | ].
+  intros [f flt] [g glt] x y neq; simpl in neq.
+  destruct f.
+  - destruct g; [ contradiction | reflexivity ].
+  - destruct g; [ reflexivity | ].
+    simpl; rewrite IHl; [ reflexivity |  simpl; lia].
+Qed.
+
+Theorem replace_nth_irr : forall {A n} (l : Vector.t A n) f g x,
+  proj1_sig f <> proj1_sig g ->
+  nth (replace l f x) g = nth l g.
+Proof.
+  induction l; [ reflexivity | ].
+  intros [f flt] [g glt] x neq; simpl in neq.
+  destruct f.
+  - destruct g; [ contradiction | reflexivity ].
+  - destruct g; [ reflexivity | simpl; rewrite IHl; auto ].
 Qed.
 
 Theorem nth_rew_l : forall {A n m} (eq : n = m)
@@ -745,6 +816,81 @@ Proof.
     exact H0.
 Qed.
 
+Theorem const_cons_snoc: forall {B} {b : B} {n},
+  b :: const b n = cast (const b n ++ [b]) (add_comm n 1).
+Proof.
+  intros.
+  induction n;[reflexivity|].
+  simpl.
+  replace (cast _ _)
+     with (cast (const b n ++ [b]) (add_comm n 1)).
+  - rewrite <- IHn; reflexivity.
+  - f_equal; apply proof_irrelevance.
+Qed.
+
+Theorem rev_const: forall {B} {b : B} {n},
+  Vector.rev (const b n) = const b n.
+Proof.
+  intros.
+  induction n.
+  - simpl; apply vector_rev_nil_nil.
+  - simpl.
+    rewrite rev_snoc.
+    rewrite IHn.
+    rewrite const_cons_snoc; reflexivity.
+Qed.
+
+Theorem const_split: forall {B} {b : B} {n m},
+  const b (n + m) = const b n ++ const b m.
+Proof.
+  intros.
+  induction n; intros; [reflexivity|].
+  simpl.
+  rewrite IHn; reflexivity.
+Qed.
+
+Theorem const_cast_split: forall {B} {b : B} {n k m}
+  (eq : k = n + m),
+  cast (const b k) eq = const b n ++ const b m.
+Proof.
+  intros.
+  rewrite eq, cast_id.
+  apply const_split.
+Qed.
+
+Ltac vector_bubble :=
+  match goal with
+  | |- context[cast (cast _ _) _] =>
+      rewrite cast_trans
+  | |- context[?x ++ cast ?y _] =>
+      rewrite cast_app_left
+  | |- context[cast ?x _ ++ ?y] =>
+      rewrite cast_app_right
+  | |- context[?h :: cast ?y _] =>
+      rewrite cast_cons_in
+  | |- context[(?vn ++ ?vm) ++ ?vo] =>
+      rewrite <- cast_app_assoc_1
+  | |- context[rev []] =>
+      rewrite vector_rev_nil_nil
+  | |- context[rev (rev ?x)] =>
+      rewrite vector_rev_rev_id
+  | |- context[rev (?h :: ?x)] =>
+      rewrite rev_snoc
+  | |- context[rev (?x ++ [?h])] =>
+      rewrite rev_cons
+  end.
+
+Ltac vector_simp :=
+  repeat vector_bubble;
+  repeat rewrite cast_id.
+
+Example test : rev [false ; false ; false ; false ; false ]
+                 = [ false ; false ; false ; false ; false ].
+Proof.
+  vector_simp.
+  reflexivity.
+Qed. 
+
 Definition Block_Lem : forall idx blksz memsz,
     (idx < memsz) -> (blksz < memsz) ->
     { tl | memsz = idx + blksz + tl } + 
@@ -964,35 +1110,763 @@ Proof.
       f_equal; apply subset_eq_compat; reflexivity.
 Qed.
 
-Ltac vector_bubble :=
-  match goal with
-  | |- context[cast (cast _ _) _] =>
-      rewrite cast_trans
-  | |- context[?x ++ cast ?y _] =>
-      rewrite cast_app_left
-  | |- context[cast ?x _ ++ ?y] =>
-      rewrite cast_app_right
-  | |- context[?h :: cast ?y _] =>
-      rewrite cast_cons_in
-  | |- context[(?vn ++ ?vm) ++ ?vo] =>
-      rewrite <- cast_app_assoc_1
-  | |- context[rev []] =>
-      rewrite vector_rev_nil_nil
-  | |- context[rev (rev ?x)] =>
-      rewrite vector_rev_rev_id
-  | |- context[rev (?h :: ?x)] =>
-      rewrite rev_snoc
-  | |- context[rev (?x ++ [?h])] =>
-      rewrite rev_cons
-  end.
-
-Ltac vector_simp :=
-  repeat vector_bubble;
-  repeat rewrite cast_id.
-
-Example test : rev [false ; false ; false ; false ; false ]
-                 = [ false ; false ; false ; false ; false ].
+(* Storing then loading a block at the same address gives the same block back. *)
+Theorem Block_Store_Load : forall {B memsz}
+    (m : Vector.t B memsz)
+    (idx blksz: fin memsz)
+    (block : Vector.t B (proj1_sig blksz)),
+    Block_Load 
+      (Block_Store m idx blksz block)
+      idx blksz
+    = block.
 Proof.
-  vector_simp.
-  reflexivity.
-Qed. 
+  intros B memsz m [idx idxLT] [blksz blkszLT] block.
+  simpl in block.
+  unfold Block_Store, Block_Load.
+  destruct (Block_Lem idx blksz memsz idxLT blkszLT) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]].
+  - destruct (splitat _ (eq_rect _ _ m _ eq)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    destruct (splitat idx v12) as [v1 v2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    rewrite speq2 in speq; clear speq2 v12.
+    unfold eq_rect_r; repeat rewrite <- cast_rew.
+    rewrite cast_trans, cast_id.
+    destruct (splitat _ ) as [v12 v3'] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    destruct (splitat _ ) as [v1' v2'] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite speq3 in speq2; clear speq3 v12.
+    apply app_eq_l, app_eq_r in speq2.
+    symmetry; assumption.
+  - destruct (splitat _ (eq_rect _ _ m _ _)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    unfold eq_rect_r; repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat blk1 _) as [block1 block2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    destruct (splitat blk2 _) as [v1 v2] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite <- cast_rew, cast_trans, cast_id.
+    destruct (splitat _ _) as [v12' v3'] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    destruct (splitat blk2 _) as [v1' v2'] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5.
+    rewrite <- cast_rew, cast_trans.
+    rewrite speq5 in speq4; clear speq5 v12'.
+    assert (block2 = v1'); [repeat apply app_eq_l in speq4; assumption|].
+    apply app_eq_r in speq4.
+    rewrite <- speq4, <- H.
+    clear H speq4 v1' v3' v2' speq3 v1 v2 speq v3 v12.
+    rewrite <- speq2.
+    rewrite cast_trans, cast_id; reflexivity.
+Qed.
+
+(*Storing twice at the same place is the same as storing once.*)
+Theorem Block_Store_Store : forall {B memsz}
+    (m : Vector.t B memsz)
+    (idx blksz: fin memsz)
+    (block block' : Vector.t B (proj1_sig blksz)),
+    Block_Store 
+      (Block_Store m idx blksz block)
+      idx blksz block'
+    = Block_Store m idx blksz block'.
+Proof.
+  intros B memsz m [idx idxLT] [blksz blkszLT] block block'.
+  simpl in block, block'.
+  unfold Block_Store.
+  destruct (Block_Lem idx blksz memsz idxLT blkszLT) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]].
+  - destruct (splitat _ (eq_rect _ _ m _ eq)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    destruct (splitat idx v12) as [v1 v2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    rewrite speq2 in speq; clear speq2 v12.
+    unfold eq_rect_r; repeat rewrite <- cast_rew.
+    rewrite cast_trans, cast_id.
+    destruct (splitat _ ) as [v12 v3'] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    destruct (splitat _ ) as [v1' v2'] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite speq3 in speq2; clear speq3 v12.
+    rewrite <- cast_rew.
+    symmetry; repeat f_equal.
+    + repeat apply app_eq_l in speq2; assumption.
+    + apply app_eq_r in speq2; assumption.
+  - destruct (splitat _ (eq_rect _ _ m _ _)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    unfold eq_rect_r; repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat blk1 _) as [block1 block2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    destruct (splitat blk2 _) as [v1 v2] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite <- cast_rew, cast_trans, cast_id.
+    destruct (splitat _ _) as [v12' v3'] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    destruct (splitat blk2 _) as [v1' v2'] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5.
+    rewrite cast_trans.
+    destruct (splitat blk1 _) as [block1' block2'] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6.
+    rewrite speq5 in speq4; clear speq5 v12'.
+    apply app_eq_l, app_eq_r in speq4.
+    rewrite speq4; reflexivity.
+Qed.
+
+(*If searching for a block in a memory after a different block was
+  stored, we can ignore that storage. *)
+Theorem Block_Store_Load_Irr : forall {B memsz}
+    (m : Vector.t B memsz)
+    (idx1 idx2 blksz: fin memsz)
+    (block : Vector.t B (proj1_sig blksz)),
+    (*  |----------------|
+          |--|      |--|
+          1  1+     2  2+   *)
+    (((proj1_sig idx1 + proj1_sig blksz) <= proj1_sig idx2 /\
+      (proj1_sig idx2 + proj1_sig blksz) < memsz) \/
+    (*  |----------------|
+          |--|      |--|
+          2  2+     1  1+   *)
+     ((proj1_sig idx2 + proj1_sig blksz) <= proj1_sig idx1 /\
+      (proj1_sig idx1 + proj1_sig blksz) < memsz) \/
+    (*  |----------------|
+        -|    |--|      |-
+         2+   1  1+     2   *)
+     ((proj1_sig idx1 + proj1_sig blksz) <= proj1_sig idx2 /\
+      (proj1_sig idx2 + proj1_sig blksz) mod memsz <= proj1_sig idx1 /\
+      memsz < proj1_sig idx2 + proj1_sig blksz) \/
+    (*  |----------------|
+        -|    |--|      |-
+         1+   2  2+     1   *)
+     ((proj1_sig idx2 + proj1_sig blksz) <= proj1_sig idx1 /\
+      (proj1_sig idx1 + proj1_sig blksz) mod memsz <= proj1_sig idx2/\
+      memsz < proj1_sig idx1 + proj1_sig blksz)) ->
+    Block_Load 
+      (Block_Store m idx1 blksz block)
+      idx2 blksz
+    = Block_Load m idx2 blksz.
+Proof.
+  intros B memsz m [idx idxLT] [idx2 idx2LT] 
+         [blksz blkszLT] block H.
+  simpl in H, block.
+  unfold Block_Store, Block_Load.
+  destruct (Block_Lem idx blksz memsz idxLT blkszLT) as 
+    [[tl1 eq1]|[blk21[blk11[idx21[eq11 [eq21 eq31]]]]]];
+  destruct (Block_Lem idx2 blksz memsz idx2LT blkszLT) as 
+    [[tl2 eq2]|[blk22[blk12[idx22[eq12 [eq22 eq32]]]]]]; try lia.
+  - destruct (splitat _ (eq_rect _ _ m _ eq1)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq;
+    rewrite <- cast_rew, cast_swap in speq.
+    destruct (splitat idx v12) as [v1 v2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    rewrite speq2 in speq; clear speq2 v12.
+    unfold eq_rect_r; repeat rewrite <- cast_rew.
+    destruct (splitat _ _) as [v12 v3'] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    destruct (splitat _ _) as [v1' v2'] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite speq3 in speq2; clear speq3 v12.
+    destruct (splitat _ _) as [v4 v5] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite cast_swap in speq3.
+    rewrite speq3 in speq; clear speq3 m.
+    destruct (splitat _ _) as [v6 v7] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    rewrite speq4 in speq; clear speq4 v4.
+    destruct H as [[H0 H1]|[[H0 H1]|[[H0[H1 H2]]|[H0[H1 H2]]]]]; try lia.
+    * (*  idx|---| idx2|---|
+        |--------idx2--|blk|-tl2|
+        |-idx|blk|----tl1-------| *)
+      assert (tl1 = (idx2 - blksz - idx) + blksz + tl2);[lia|].
+      destruct (splitat _ (cast v3 H)) as [v8 v9] eqn:speq4;
+      apply VectorSpec.append_splitat in speq4.
+      destruct (splitat _ v8) as [v10 v11] eqn:speq5;
+      apply VectorSpec.append_splitat in speq5.
+      rewrite speq5, cast_swap in speq4; clear speq5 v8.
+      rewrite speq4, cast_app_left, <- cast_app_assoc_2 in speq2.
+      rewrite <- cast_app_assoc_2, cast_app_right in speq2.
+      repeat rewrite cast_trans in speq2.
+      rewrite cast_app_r, cast_app_r in speq2.
+      apply app_eq_l, app_eq_r in speq2.
+      rewrite speq2 in speq4; clear speq2.
+      symmetry in speq; rewrite cast_swap, cast_trans in speq.
+      assert (idx + blksz + tl1 = idx + blksz + idx2 - blksz - idx + blksz + tl2);[lia|].
+      rewrite (cast_f_apply _ _ H2) in speq.
+      rewrite speq4 in speq; clear speq4.
+      rewrite cast_app_left, <- cast_app_assoc_2,
+              <- cast_app_assoc_2, cast_app_right in speq.
+      repeat rewrite cast_trans in speq.
+      repeat rewrite cast_app_r in speq.
+      apply app_eq_l, app_eq_r in speq; assumption.
+    * (* idx2|---|  idx|---|
+        |---------idx--|blk|-tl1|
+        |idx2|blk|----tl2-------| *)
+      assert (idx = idx2 + blksz + (tl2 - blksz - tl1));[lia|].
+      destruct (splitat _ (cast v1 H)) as [v8 v9] eqn:speq4;
+      apply VectorSpec.append_splitat in speq4.
+      destruct (splitat _ v8) as [v10 v11] eqn:speq5;
+      apply VectorSpec.append_splitat in speq5;
+      rewrite speq5 in speq4; clear speq5 v8.
+      rewrite cast_swap in speq4.
+      rewrite <- cast_app_assoc_1 in speq2.
+      rewrite speq4, cast_app_right in speq2.
+      rewrite <- cast_app_assoc_1 in speq2.
+      repeat rewrite cast_trans in speq2.
+      rewrite cast_app_l in speq2.
+      apply app_eq_l, app_eq_r in speq2.
+      rewrite speq2 in speq4; clear speq2.
+      symmetry in speq; rewrite cast_swap in speq.
+      rewrite cast_trans in speq.
+      assert ((idx + blksz) + tl1 = (idx2 + blksz) + ((tl2 - blksz - tl1) + blksz + tl1));[lia|].
+      rewrite (cast_f_apply _ _ H2) in speq.
+      rewrite speq4 in speq; clear speq4.
+      rewrite cast_app_right, <- cast_app_assoc_1 in speq.
+      repeat rewrite cast_app_right in speq.
+      rewrite <- cast_app_assoc_1 in speq.
+      repeat rewrite cast_trans in speq.
+      repeat rewrite cast_app_l in speq.
+      apply app_eq_l, app_eq_r in speq; assumption.
+  - repeat rewrite <- cast_rew.
+    destruct (splitat _ (cast m _)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    rewrite cast_swap in speq.
+    destruct (splitat idx _) as [v4 v5] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    unfold eq_rect_r; repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat _ _) as [v8 v9] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    destruct (splitat blk22 _) as [block12 block22] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    unfold eq_rect_r; rewrite <- cast_rew, cast_trans.
+    destruct (splitat (_ + _) _) as [v10 v11] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5.
+    rewrite cast_swap in speq5; rewrite speq5 in speq; clear speq5.
+    destruct (splitat blk22 v10) as [block12' block22'] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6.
+    unfold eq_rect_r; rewrite <- cast_rew, cast_trans.
+    f_equal.
+    rewrite speq6 in speq; clear speq6 v10.
+    rewrite speq4 in speq3; clear speq4 v8.
+    rewrite speq2 in speq; clear speq2 v12.
+    destruct H as [[H0 H1]|[[H0 H1]|[[H0[H1 H2]]|[H0[H1 H2]]]]]; try lia.
+    (* ----|  idx|---|  idx2|----
+       |---idx---|bks|---tl1----|
+       |b22|-----idx22------|b12| *)
+    assert (blk22 = (idx2 + blksz) mod memsz);[
+    rewrite PeanoNat.Nat.mod_eq; try rewrite Arith.div_bet_1; lia|].
+    assert (idx22 = (idx - blk22) + blksz + (tl1 - blk12));[lia|].
+    destruct (splitat _ (cast block22 H3)) as [vAB vC] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5; rewrite cast_swap in speq5.
+    destruct (splitat _ vAB) as [vA vB] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6;
+    rewrite speq6 in speq5; clear speq6 vAB.
+    destruct (splitat _ (cast block22' H3)) as [vXY vZ] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6; rewrite cast_swap in speq6.
+    destruct (splitat _ vXY) as [vX vY] eqn:speq7;
+    apply VectorSpec.append_splitat in speq7;
+    rewrite speq7 in speq6; clear speq7 vXY.
+    assert (idx = blk22 + (idx22 - (blksz + (tl1 - blk12))));[lia|].
+    destruct (splitat _ (cast v4 H4)) as [v1 v2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2; rewrite cast_swap in speq2.
+    assert (tl1 = idx22 - ((idx - blk22) + blksz) + blk12);[lia|].
+    destruct (splitat _ (cast v3 H5)) as [v6 v7] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4; rewrite cast_swap in speq4.
+    rewrite speq4 in speq3, speq; clear speq4 v3.
+    rewrite speq2 in speq3, speq; clear speq2 v4.
+    rewrite speq5 in speq3; clear speq5 block22.
+    rewrite speq6 in speq; clear speq6 block22'.
+    f_equal.
+    + repeat (rewrite <- cast_app_assoc_2 in speq||rewrite cast_app_left in speq||rewrite cast_app_right in speq);
+      repeat rewrite cast_trans in speq.
+      repeat (rewrite <- cast_app_assoc_2 in speq3||rewrite cast_app_left in speq3||rewrite cast_app_right in speq3);
+      repeat rewrite cast_trans in speq3.
+      rewrite cast_swap, cast_trans in speq.
+      rewrite cast_swap, cast_trans in speq3.
+      rewrite cast_app_r in speq; apply app_eq_r in speq.
+      rewrite cast_app_r in speq3; apply app_eq_r in speq3.
+      rewrite speq, speq3; reflexivity.      
+    + repeat (rewrite <- cast_app_assoc_1 in speq||rewrite cast_app_left in speq||rewrite cast_app_right in speq);
+      repeat rewrite cast_trans in speq.
+      repeat (rewrite <- cast_app_assoc_1 in speq3||rewrite cast_app_left in speq3||rewrite cast_app_right in speq3);
+      repeat rewrite cast_trans in speq3.
+      rewrite cast_swap, cast_trans in speq.
+      rewrite cast_swap, cast_trans in speq3.
+      rewrite cast_app_l in speq; apply app_eq_l in speq.
+      rewrite cast_app_l in speq3; apply app_eq_l in speq3.
+      rewrite speq, speq3; reflexivity.
+  - repeat rewrite <- cast_rew.
+    destruct (splitat _ (cast m _)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    rewrite cast_swap in speq.
+    destruct (splitat blk21 _) as [v4 v5] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    unfold eq_rect_r; repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat blk11 _) as [v8 v9] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite <- cast_rew, cast_trans.
+    destruct (splitat _ _) as [v6 v7] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    destruct (splitat idx2 _) as [v10 v11] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5.
+    destruct (splitat _ _) as [v13 v14] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6.
+    destruct (splitat idx2 _) as [v15 v16] eqn:speq7;
+    apply VectorSpec.append_splitat in speq7.
+    rewrite cast_swap in speq6; rewrite speq6 in speq; clear speq6 m.
+    rewrite speq5 in speq4; clear speq5 v6.
+    rewrite speq7 in speq; clear speq7 v13.
+    rewrite speq2 in speq; clear speq2 v12.
+    destruct H as [[H0 H1]|[[H0 H1]|[[H0[H1 H2]]|[H0[H1 H2]]]]]; try lia.
+    (* ----| idx2|---|   idx|----
+       |---idx2--|bks|---tl2----|
+       |b21|-----idx21------|b11| *)
+    assert (blk21 = (idx + blksz) mod memsz);[
+    rewrite PeanoNat.Nat.mod_eq; try rewrite Arith.div_bet_1; lia|].
+    assert (idx21 = (idx2 - blk21) + blksz + (tl2 - blk11));[lia|].
+    destruct (splitat _ (cast v5 H3)) as [vAB vC] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2; rewrite cast_swap in speq2.
+    destruct (splitat _ vAB) as [vA vB] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6;
+    rewrite speq6 in speq2; clear speq6 vAB.
+    assert (tl2 = (idx21 - (idx2 - blk21) - blksz) + blk11);[lia|].
+    destruct (splitat _ (cast v7 H4)) as [v20 v21] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6; rewrite cast_swap in speq6.
+    destruct (splitat _ (cast v14 H4)) as [v22 v23] eqn:speq7;
+    apply VectorSpec.append_splitat in speq7; rewrite cast_swap in speq7.
+    assert (idx2 = blk21 + (idx21 - blksz - (tl2 - blk11)));[lia|].
+    destruct (splitat _ (cast v10 H5)) as [v30 v31] eqn:speq8;
+    apply VectorSpec.append_splitat in speq8; rewrite cast_swap in speq8.
+    destruct (splitat _ (cast v15 H5)) as [v32 v33] eqn:speq9;
+    apply VectorSpec.append_splitat in speq9; rewrite cast_swap in speq9.
+    rewrite speq2 in speq, speq4; clear speq2 v5.
+    rewrite speq6 in speq4; clear speq6 v7.
+    rewrite speq7 in speq; clear speq7 v14.
+    rewrite speq8 in speq4; clear speq8 v10.
+    rewrite speq9 in speq; clear speq9 v15.
+    repeat (rewrite <- cast_app_assoc_2 in speq||rewrite cast_app_left in speq||rewrite cast_app_right in speq);
+    repeat rewrite cast_trans in speq.
+    rewrite cast_swap, cast_trans in speq.
+    rewrite cast_app_r in speq.
+    apply app_eq_l in speq.
+    repeat (rewrite <- cast_app_assoc_1 in speq||rewrite cast_app_left in speq||rewrite cast_app_right in speq);
+    repeat rewrite cast_trans in speq.
+    rewrite cast_swap, cast_trans in speq.
+    rewrite cast_app_l in speq.
+    apply app_eq_r in speq.
+    remember (Plus.plus_reg_l _ _ _ _) as cool eqn:cool2; clear cool2.
+    repeat (rewrite <- cast_app_assoc_2 in speq4||rewrite cast_app_left in speq4||rewrite cast_app_right in speq4);
+    repeat rewrite cast_trans in speq4.
+    rewrite cast_swap, cast_trans in speq4.
+    rewrite cast_app_r in speq4.
+    apply app_eq_l in speq4.
+    repeat (rewrite <- cast_app_assoc_1 in speq4||rewrite cast_app_left in speq4||rewrite cast_app_right in speq4);
+    repeat rewrite cast_trans in speq4.
+    rewrite cast_swap, cast_trans in speq4.
+    rewrite cast_app_l in speq4.
+    apply app_eq_r in speq4.
+    remember (Plus.plus_reg_l _ _ _ _) as cool2 eqn:cool3; clear cool3.
+    rewrite speq4, cast_trans in speq; clear speq4 vA vB vC.
+    repeat rewrite cast_app_l in speq.
+    apply app_eq_r, app_eq_l in speq.
+    symmetry; exact speq.
+Qed.
+
+Ltac shake_vect_eq speq :=
+  repeat (rewrite <- cast_app_assoc_1 in speq||rewrite cast_app_left in speq||rewrite cast_app_right in speq);
+  repeat rewrite cast_trans in speq; rewrite cast_swap, cast_trans in speq;
+  repeat rewrite cast_app_l in speq;
+  repeat (
+    match goal with
+    | [ speq : ?x ++ ?r = ?y ++ ?s |- _ ]  =>
+      assert (x = y) as coolH;[apply app_eq_l in speq; assumption|]; apply app_eq_r in speq;
+      destruct coolH
+    end);
+  repeat (rewrite <- cast_app_assoc_2 in speq||rewrite cast_app_left in speq||rewrite cast_app_right in speq);
+  repeat rewrite cast_trans in speq; rewrite cast_swap, cast_trans in speq;
+  repeat rewrite cast_app_r in speq;
+  repeat (
+    match goal with
+    | [ speq : ?r ++ ?x = ?s ++ ?y |- _ ]  =>
+      assert (x = y) as coolH;[apply app_eq_r in speq; assumption|]; apply app_eq_l in speq;
+      destruct coolH
+    end).
+
+(*If storing a block in a memory after a different block was
+  stored, we can ignore the order of storage. *)
+Theorem Block_Store_Store_Swap : forall {B memsz}
+    (m : Vector.t B memsz)
+    (idx1 idx2 blksz: fin memsz)
+    (block block' : Vector.t B (proj1_sig blksz)),
+    (*  |----------------|
+          |--|      |--|
+          1  1+     2  2+   *)
+    (((proj1_sig idx1 + proj1_sig blksz) <= proj1_sig idx2 /\
+      (proj1_sig idx2 + proj1_sig blksz) < memsz) \/
+    (*  |----------------|
+          |--|      |--|
+          2  2+     1  1+   *)
+     ((proj1_sig idx2 + proj1_sig blksz) <= proj1_sig idx1 /\
+      (proj1_sig idx1 + proj1_sig blksz) < memsz) \/
+    (*  |----------------|
+        -|    |--|      |-
+         2+   1  1+     2   *)
+     ((proj1_sig idx1 + proj1_sig blksz) <= proj1_sig idx2 /\
+      (proj1_sig idx2 + proj1_sig blksz) mod memsz <= proj1_sig idx1 /\
+      memsz < proj1_sig idx2 + proj1_sig blksz) \/
+    (*  |----------------|
+        -|    |--|      |-
+         1+   2  2+     1   *)
+     ((proj1_sig idx2 + proj1_sig blksz) <= proj1_sig idx1 /\
+      (proj1_sig idx1 + proj1_sig blksz) mod memsz <= proj1_sig idx2/\
+      memsz < proj1_sig idx1 + proj1_sig blksz)) ->
+    Block_Store 
+      (Block_Store m idx1 blksz block)
+      idx2 blksz block'
+    = Block_Store 
+        (Block_Store m idx2 blksz block')
+        idx1 blksz block.
+Proof.
+  intros B memsz m [idx idxLT] [idx2 idx2LT] 
+         [blksz blkszLT] block block' H.
+  simpl in H, block.
+  unfold Block_Store.
+  destruct (Block_Lem idx blksz memsz idxLT blkszLT) as 
+    [[tl1 eq1]|[blk21[blk11[idx21[eq11 [eq21 eq31]]]]]];
+  destruct (Block_Lem idx2 blksz memsz idx2LT blkszLT) as 
+    [[tl2 eq2]|[blk22[blk12[idx22[eq12 [eq22 eq32]]]]]]; try lia.
+  - destruct (splitat _ (eq_rect _ _ m _ eq1)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq;
+    rewrite <- cast_rew, cast_swap in speq.
+    destruct (splitat idx v12) as [v1 v2] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    rewrite speq2 in speq; clear speq2 v12.
+    unfold eq_rect_r; repeat rewrite <- cast_rew.
+    destruct (splitat _ _) as [v12 v3'] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    destruct (splitat _ _) as [v1' v2'] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite speq3 in speq2; clear speq3 v12.
+    destruct (splitat (_ + _) (cast m _)) as [v4 v5] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    destruct (splitat idx2 _) as [v10 v11] eqn:speq8;
+    apply VectorSpec.append_splitat in speq8.
+    repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat (_ + _) _) as [v13 v14] eqn:speq9;
+    apply VectorSpec.append_splitat in speq9.
+    destruct (splitat idx _) as [v6 v7] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    repeat rewrite <- cast_rew.
+    destruct H as [[H0 H1]|[[H0 H1]|[[H0[H1 H2]]|[H0[H1 H2]]]]]; try lia.
+    * (*  idx|---| idx2|---|
+        |--------idx2--|blk|-tl2|
+        |-idx|blk|----tl1-------| *)
+      assert (tl1 = (idx2 - blksz - idx) + blksz + tl2);[lia|].
+      destruct (splitat _ (cast v3 H)) as [v8 v9] eqn:speq5;
+      apply VectorSpec.append_splitat in speq5.
+      destruct (splitat _ v8) as [v15 v16] eqn:speq6;
+      apply VectorSpec.append_splitat in speq6.
+      rewrite speq6, cast_swap in speq5; clear speq6 v8.
+      destruct (splitat _ (cast v14 H)) as [v8' v9'] eqn:speq5';
+      apply VectorSpec.append_splitat in speq5'.
+      destruct (splitat _ v8') as [v15' v16'] eqn:speq6';
+      apply VectorSpec.append_splitat in speq6'.
+      assert (idx2 = idx + blksz + (tl1 - blksz - tl2));[lia|].
+      destruct (splitat _ (cast v1' H2)) as [v28 v29] eqn:speq25;
+      apply VectorSpec.append_splitat in speq25.
+      destruct (splitat _ v28) as [v25 v26] eqn:speq26;
+      apply VectorSpec.append_splitat in speq26.
+      rewrite speq26, cast_swap in speq25; clear speq26 v28.
+      destruct (splitat _ (cast v10 H2)) as [v38 v39] eqn:speq35;
+      apply VectorSpec.append_splitat in speq35.
+      destruct (splitat _ v38) as [v35 v36] eqn:speq36;
+      apply VectorSpec.append_splitat in speq36.
+      rewrite speq36, cast_swap in speq35; clear speq36 v38.
+      rewrite speq6', cast_swap in speq5'; clear speq6' v8'.
+      rewrite speq5'; rewrite speq5' in speq9; clear speq5' v14.
+      rewrite speq5 in speq, speq2; clear speq5 v3.
+      rewrite speq4 in speq9; clear speq4 v13.
+      rewrite speq8 in speq3; clear speq8 v4.
+      rewrite speq35 in speq9, speq3; clear speq35 v10.
+      rewrite speq25; rewrite speq25 in speq2; clear speq25 v1'.
+      rewrite cast_swap in speq3; rewrite speq3 in speq; clear speq3 m.
+      shake_vect_eq speq.
+      remember (plus_reg_r _ _ _ _) as cool0 eqn:cool1; clear cool1.
+      rewrite speq in speq9; clear speq v39.
+      shake_vect_eq speq2.
+      remember (plus_reg_r _ _ _ _) as cool1 eqn:cool2; clear cool2.
+      rewrite speq2 in speq9; clear speq2 v15.
+      shake_vect_eq speq9.
+      remember (plus_reg_r _ _ _ _) as cool2 eqn:cool3; clear cool3 cool0 cool1.
+      rewrite speq9; clear speq9 v29.
+      vector_simp; f_equal; apply proof_irrelevance.
+    * (* idx2|---|  idx|---|
+        |---------idx--|blk|-tl1|
+        |idx2|blk|----tl2-------| *)
+      assert (idx = idx2 + blksz + (tl2 - blksz - tl1));[lia|].
+      destruct (splitat _ (cast v1 H)) as [v8 v9] eqn:speq5;
+      apply VectorSpec.append_splitat in speq5.
+      destruct (splitat _ v8) as [v15 v16] eqn:speq6;
+      apply VectorSpec.append_splitat in speq6.
+      rewrite speq6, cast_swap in speq5; clear speq6 v8.
+      destruct (splitat _ (cast v6 H)) as [v8' v9'] eqn:speq5';
+      apply VectorSpec.append_splitat in speq5'.
+      destruct (splitat _ v8') as [v15' v16'] eqn:speq6';
+      apply VectorSpec.append_splitat in speq6'.
+      assert (tl2 = (idx - idx2 - blksz) + blksz + tl1);[lia|].
+      destruct (splitat _ (cast v3' H2)) as [v18 v19] eqn:speq15;
+      apply VectorSpec.append_splitat in speq15.
+      destruct (splitat _ v18) as [v20 v21] eqn:speq16;
+      apply VectorSpec.append_splitat in speq16.
+      rewrite speq16, cast_swap in speq15; clear speq16 v18.
+      destruct (splitat _ (cast v5 H2)) as [v18' v19'] eqn:speq15';
+      apply VectorSpec.append_splitat in speq15'.
+      destruct (splitat _ v18') as [v25' v26'] eqn:speq16';
+      apply VectorSpec.append_splitat in speq16'.
+      rewrite speq16', cast_swap in speq15'; clear speq16' v18'.
+      rewrite speq6', cast_swap in speq5'; clear speq6' v8'.
+      rewrite speq5' in speq4; rewrite speq5'; clear speq5' v6.
+      rewrite speq5 in speq2, speq; clear speq5 v1.
+      rewrite speq4 in speq9; clear speq4 v13.
+      rewrite speq in speq3; clear speq m.
+      rewrite speq15' in speq3, speq9; clear speq15' v5.
+      rewrite speq15; rewrite speq15 in speq2; clear speq15 v3'.
+      rewrite speq8 in speq3; clear speq8 v4.
+      shake_vect_eq speq9.
+      remember (plus_reg_r _ _ _ _) as cool0 eqn:cool1; clear cool1.
+      rewrite speq9 in speq3; clear speq9 v25'.
+      shake_vect_eq speq2.
+      remember (plus_reg_r _ _ _ _) as cool1 eqn:cool2; clear cool2.
+      rewrite speq2 in speq3; clear speq2 v9.
+      shake_vect_eq speq3.
+      remember (plus_reg_r _ _ _ _) as cool2 eqn:cool3; clear cool3 cool1 cool0.
+      rewrite speq3; clear speq3 v20.
+      vector_simp; f_equal; apply proof_irrelevance.
+  - repeat rewrite <- cast_rew.
+    destruct (splitat _ (cast m _)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    rewrite cast_swap in speq.
+    destruct (splitat idx _) as [v4 v5] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    unfold eq_rect_r; repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat _ _) as [v8 v9] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    destruct (splitat blk22 _) as [block12 block22] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    rewrite cast_trans.
+    destruct (splitat blk12 _) as [v10 v11] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5.
+    rewrite <- cast_rew.
+    destruct (splitat (_ + _) (cast m _)) as [v13 v14] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6.
+    destruct (splitat blk22 _) as [v15 v16] eqn:speq7;
+    apply VectorSpec.append_splitat in speq7.
+    rewrite <- cast_rew, cast_trans.
+    destruct (splitat (_ + _) _) as [v17 v18] eqn:speq8;
+    apply VectorSpec.append_splitat in speq8.
+    destruct (splitat idx _) as [v19 v20] eqn:speq9;
+    apply VectorSpec.append_splitat in speq9.
+    rewrite <- cast_rew.
+    destruct H as [[H0 H1]|[[H0 H1]|[[H0[H1 H2]]|[H0[H1 H2]]]]]; try lia.
+    (* ----|  idx|---|  idx2|----
+       |---idx---|bks|---tl1----|
+       |b22|-----idx22------|b12| *)
+    assert (blk22 = (idx2 + blksz) mod memsz);[
+    rewrite PeanoNat.Nat.mod_eq; try rewrite Arith.div_bet_1; lia|].
+    assert (idx22 = (idx - blk22) + blksz + (tl1 - blk12));[lia|].
+    destruct (splitat _ (cast block22 H3)) as [vAB vC] eqn:speq15;
+    apply VectorSpec.append_splitat in speq15; rewrite cast_swap in speq15.
+    destruct (splitat _ vAB) as [vA vB] eqn:speq16;
+    apply VectorSpec.append_splitat in speq16;
+    rewrite speq16 in speq15; clear speq16 vAB.
+    destruct (splitat _ (cast v16 H3)) as [vXY vZ] eqn:speq16;
+    apply VectorSpec.append_splitat in speq16; rewrite cast_swap in speq16.
+    destruct (splitat _ vXY) as [vX vY] eqn:speq17;
+    apply VectorSpec.append_splitat in speq17;
+    rewrite speq17 in speq16; clear speq17 vXY.
+    assert (idx = blk22 + (idx22 - (blksz + (tl1 - blk12))));[lia|].
+    destruct (splitat _ (cast v4 H4)) as [v1 v2] eqn:speq12;
+    apply VectorSpec.append_splitat in speq12; rewrite cast_swap in speq12.
+    destruct (splitat _ (cast v19 H4)) as [v31 v32] eqn:speq32;
+    apply VectorSpec.append_splitat in speq32; rewrite cast_swap in speq32.
+    assert (tl1 = idx22 - ((idx - blk22) + blksz) + blk12);[lia|].
+    destruct (splitat _ (cast v18 H5)) as [v6 v7] eqn:speq14;
+    apply VectorSpec.append_splitat in speq14; rewrite cast_swap in speq14.
+    destruct (splitat _ (cast v3 H5)) as [v36 v37] eqn:speq34;
+    apply VectorSpec.append_splitat in speq34; rewrite cast_swap in speq34.
+    rewrite speq34 in speq, speq3; clear speq34 v3.
+    rewrite speq14; rewrite speq14 in speq8; clear speq14 v18.
+    rewrite speq32; rewrite speq32 in speq9; clear speq32 v19.
+    rewrite speq in speq6; clear speq m.
+    rewrite speq16 in speq8, speq7; clear speq16 v16.
+    rewrite speq12 in speq2, speq3; clear speq12 v4.
+    rewrite speq15; rewrite speq15 in speq4; clear speq15 block22.
+    rewrite speq9 in speq8; clear speq9 v17.
+    rewrite speq7 in speq6; clear speq7 v13.
+    rewrite speq4 in speq3; clear speq4 v8.
+    rewrite speq2 in speq6; clear speq2 v12.
+    clear speq5 block'.
+    shake_vect_eq speq3;
+    remember (plus_reg_r _ _ _ _) as coolG eqn:fdsaf; clear fdsaf.
+    simpl in coolG.
+    assert (idx - blk22 + blksz = idx22 - (blksz + (tl1 - blk12)) + blksz);[lia|].
+    assert (tl1 - blk12 = idx22 - (idx - blk22 + blksz));[lia|].
+    rewrite (cast_app_distribute H6 H7) in speq3.
+    assert (idx - blk22 = idx22 - (blksz + (tl1 - blk12)));[lia|].
+    rewrite (cast_app_distribute H8 (eq_refl _)) in speq3.
+    rewrite cast_id in speq3.
+    assert (v36 = cast vC H7);[apply app_eq_r in speq3; assumption|].
+    apply app_eq_l in speq3.
+    assert (block = vB);[apply app_eq_r in speq3; assumption|].
+    apply app_eq_l in speq3.
+    rewrite speq3 in speq6; clear speq3 v2.
+    rewrite H9 in speq6; clear H9 v36.
+    rewrite H10; clear H10 block.
+    shake_vect_eq speq8.
+    clear coolG; remember (plus_reg_r _ _ _ _) as coolG eqn:fdsaf; clear fdsaf.
+    rewrite (cast_app_distribute (eq_sym H6) (eq_sym H7)) in speq8.
+    rewrite (cast_app_distribute (eq_sym H8) (eq_refl _)) in speq8.
+    rewrite cast_id in speq8.
+    assert (vZ = cast v6 (eq_sym H7));[apply app_eq_r in speq8; assumption|].
+    apply app_eq_l in speq8.
+    assert (vY = v20);[apply app_eq_r in speq8; assumption|].
+    apply app_eq_l in speq8.
+    rewrite H10 in speq6; clear H10 vY.
+    rewrite H9 in speq6; clear H9 vZ.
+    rewrite speq8 in speq6; clear speq8 vX.
+    shake_vect_eq speq6.
+    clear coolG; remember (plus_reg_r _ _ _ _) as coolG eqn:fdsaf; clear fdsaf.
+    rewrite (cast_app_distribute (eq_sym H6) (eq_sym H7)) in speq6.
+    rewrite (cast_app_distribute (eq_sym H8) (eq_refl _)) in speq6.
+    rewrite cast_id in speq6.
+    assert (vC = cast v6 (eq_sym H7));[apply app_eq_r in speq6; assumption|].
+    apply app_eq_l in speq6.
+    assert (v5 = v20);[apply app_eq_r in speq6; assumption|].
+    apply app_eq_l in speq6.
+    rewrite speq6; clear speq6 vA.
+    rewrite H9; clear H9 vC.
+    destruct H10.
+    vector_simp; f_equal; apply proof_irrelevance.
+  - repeat rewrite <- cast_rew.
+    destruct (splitat _ (cast m _)) as [v12 v3] eqn:speq;
+    apply VectorSpec.append_splitat in speq.
+    rewrite cast_swap in speq.
+    destruct (splitat blk21 _) as [v4 v5] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2.
+    unfold eq_rect_r; repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat blk11 _) as [v8 v9] eqn:speq3;
+    apply VectorSpec.append_splitat in speq3.
+    rewrite <- cast_rew, cast_trans.
+    destruct (splitat _ _) as [v6 v7] eqn:speq4;
+    apply VectorSpec.append_splitat in speq4.
+    destruct (splitat idx2 _) as [v10 v11] eqn:speq5;
+    apply VectorSpec.append_splitat in speq5.
+    destruct (splitat _ (cast m _)) as [v15 v16] eqn:speq7;
+    apply VectorSpec.append_splitat in speq7.
+    destruct (splitat idx2 _) as [v25 v26] eqn:speq27;
+    apply VectorSpec.append_splitat in speq27.
+    repeat rewrite <- cast_rew; rewrite cast_trans.
+    destruct (splitat _ _) as [v13 v14] eqn:speq6;
+    apply VectorSpec.append_splitat in speq6.
+    destruct (splitat blk21 _) as [v23 v24] eqn:speq26;
+    apply VectorSpec.append_splitat in speq26.
+    repeat rewrite <- cast_rew.
+    rewrite speq5 in speq4; clear speq5 v6.
+    rewrite speq26 in speq6; clear speq26 v13.
+    rewrite speq27 in speq7; clear speq27 v15.
+    rewrite speq in speq7; clear speq m.
+    rewrite speq2 in speq7; clear speq2 v12.
+    destruct H as [[H0 H1]|[[H0 H1]|[[H0[H1 H2]]|[H0[H1 H2]]]]]; try lia.
+    (* ----| idx2|---|   idx|----
+       |---idx2--|bks|---tl2----|
+       |b21|-----idx21------|b11| *)
+    assert (blk21 = (idx + blksz) mod memsz);[
+    rewrite PeanoNat.Nat.mod_eq; try rewrite Arith.div_bet_1; lia|].
+    assert (idx21 = (idx2 - blk21) + blksz + (tl2 - blk11));[lia|].
+    destruct (splitat _ (cast v5 H3)) as [vAB vC] eqn:speq2;
+    apply VectorSpec.append_splitat in speq2; rewrite cast_swap in speq2.
+    destruct (splitat _ vAB) as [vA vB] eqn:speq36;
+    apply VectorSpec.append_splitat in speq36;
+    rewrite speq36 in speq2; clear speq36 vAB.
+    destruct (splitat _ (cast v24 H3)) as [vXY vZ] eqn:speq23;
+    apply VectorSpec.append_splitat in speq23; rewrite cast_swap in speq23.
+    destruct (splitat _ vXY) as [vX vY] eqn:speq37;
+    apply VectorSpec.append_splitat in speq37;
+    rewrite speq37 in speq23; clear speq37 vXY.
+    assert (tl2 = (idx21 - (idx2 - blk21) - blksz) + blk11);[lia|].
+    destruct (splitat _ (cast v7 H4)) as [v20 v21] eqn:speq86;
+    apply VectorSpec.append_splitat in speq86; rewrite cast_swap in speq86.
+    destruct (splitat _ (cast v16 H4)) as [v32 v33] eqn:speq87;
+    apply VectorSpec.append_splitat in speq87; rewrite cast_swap in speq87.
+    assert (idx2 = blk21 + (idx21 - blksz - (tl2 - blk11)));[lia|].
+    destruct (splitat _ (cast v10 H5)) as [v30 v31] eqn:speq8;
+    apply VectorSpec.append_splitat in speq8; rewrite cast_swap in speq8.
+    destruct (splitat _ (cast v25 H5)) as [v37 v38] eqn:speq9;
+    apply VectorSpec.append_splitat in speq9; rewrite cast_swap in speq9.
+    rewrite speq9 in speq6, speq7; clear speq9 v25.
+    rewrite speq8; rewrite speq8 in speq4; clear speq8 v10.
+    rewrite speq87 in speq6, speq7; clear speq87 v16. 
+    rewrite speq23; rewrite speq23 in speq6; clear speq23 v24.
+    rewrite speq86; rewrite speq86 in speq4; clear speq86 v7.
+    rewrite speq2 in speq4, speq7; clear speq2 v5.
+    shake_vect_eq speq4.
+    remember (plus_reg_r _ _ _ _) as coolG eqn:fdsvd; clear fdsvd.
+    assert (idx21 - blksz - (tl2 - blk11) + blksz = idx2 - blk21 + blksz);[lia|].
+    assert (idx21 - (idx2 - blk21) - blksz = tl2 - blk11);[lia|].
+    rewrite (cast_app_distribute H6 H7) in speq4.
+    assert (idx21 - blksz - (tl2 - blk11) = idx2 - blk21);[lia|].
+    rewrite (cast_app_distribute H8 (eq_refl _)) in speq4.
+    rewrite cast_id in speq4.
+    assert (vC = cast v20 H7);[apply app_eq_r in speq4; assumption|].
+    apply app_eq_l in speq4.
+    assert (vB = v11);[apply app_eq_r in speq4; assumption|].
+    apply app_eq_l in speq4.
+    rewrite speq4 in speq7; clear speq4 vA.
+    rewrite H9 in speq7; clear H9 vC.
+    destruct H10.
+    shake_vect_eq speq6.
+    clear coolG; remember (plus_reg_r _ _ _ _) as coolG eqn:fdsvd; clear fdsvd.
+    rewrite (cast_app_distribute (eq_sym H6) (eq_sym H7)) in speq6.
+    rewrite (cast_app_distribute (eq_sym H8) (eq_refl _)) in speq6.
+    rewrite cast_id in speq6. 
+    assert (v32 = cast vZ (eq_sym H7));[apply app_eq_r in speq6; assumption|].
+    apply app_eq_l in speq6.
+    assert (block' = vY);[apply app_eq_r in speq6; assumption|].
+    apply app_eq_l in speq6.
+    rewrite speq6 in speq7; clear speq6 v38.
+    rewrite H9 in speq7; clear H9 v32.
+    rewrite H10; clear H10 block'.
+    shake_vect_eq speq7.
+    clear coolG; remember (plus_reg_r _ _ _ _) as coolG eqn:fdsvd; clear fdsvd.
+    rewrite (cast_app_distribute (eq_sym H6) (eq_sym H7)) in speq7.
+    rewrite (cast_app_distribute (eq_sym H8) (eq_refl _)) in speq7.
+    rewrite cast_id in speq7.
+    assert (v20 = cast vZ (eq_sym H7));[apply app_eq_r in speq7; assumption|].
+    apply app_eq_l in speq7.
+    assert (vB = v26);[apply app_eq_r in speq7; assumption|].
+    apply app_eq_l in speq7.
+    rewrite speq7; clear speq7 v31.
+    rewrite H9; clear H9 v20.
+    clear H10 vB.
+    vector_simp; f_equal; apply proof_irrelevance.
+Qed.
+
+Theorem Block_Load_const : forall {B memsz}
+    (idx blksz: fin memsz)
+    (val : B),
+    Block_Load (const val _) idx blksz
+    = (const val _).
+Proof.
+  intros B memsz [idx idxLT] [blksz blkszLT] val.
+  unfold proj1_sig.
+  unfold Block_Load.
+  destruct (Block_Lem idx blksz memsz idxLT blkszLT) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite <- cast_rew.
+    rewrite (const_cast_split eq), const_split, vector_append_inv2, vector_append_inv2.
+    reflexivity.
+  - rewrite <- cast_rew.
+    rewrite (const_cast_split eq3), const_split, vector_append_inv2, vector_append_inv2.
+    unfold eq_rect_r; rewrite <- cast_rew.
+    rewrite cast_trans, cast_swap.
+    rewrite (const_cast_split _).
+    reflexivity.
+Qed.

@@ -895,6 +895,14 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       flag (pureOp_cmpe ri A m) = bv_eq (nth (registers m) ri) A.
     Proof. destruct m; reflexivity. Qed.
 
+    Theorem registers_pureOp_cmpe : forall v1 v2 m,
+      registers (pureOp_cmpe v1 v2 m) = registers m.
+    Proof. intros; destruct m; reflexivity. Qed.
+
+    Theorem memory_pureOp_cmpe : forall v1 v2 m,
+      memory (pureOp_cmpe v1 v2 m) = memory m.
+    Proof. intros; destruct m; reflexivity. Qed.
+
     Theorem pureOp_cmpe_interp_imm {S} (k: itree E S) (ri : regId) 
                                   (A : Word) (m : MachineState) :
     interp_machine (denote_instruction (cmpeI ri, inl A) ;; k) m
@@ -1267,6 +1275,14 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       flag m = b1 ->
       programCounter (pureOp_cjmp A m) = A.
     Proof. destruct m; simpl; intro H; rewrite H; reflexivity. Qed.
+
+    Theorem registers_pureOp_cjmp : forall v m,
+      registers (pureOp_cjmp v m) = registers m.
+    Proof. intros; destruct m; reflexivity. Qed.
+
+    Theorem memory_pureOp_cjmp : forall v m,
+      memory (pureOp_cjmp v m) = memory m.
+    Proof. intros; destruct m; reflexivity. Qed.
 
     Theorem pureOp_cjmp_interp_imm {S} (k: itree E S)
                                   (A : Word) (m : MachineState) :

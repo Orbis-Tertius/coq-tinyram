@@ -523,6 +523,25 @@ Proof.
       * rewrite IHv; assumption.
 Qed.
 
+Theorem bv_eq_big_conv : forall k n m,
+  n < 2 ^ k -> m < 2 ^ k ->
+  bv_eq (nat_bitvector_big k n)
+        (nat_bitvector_big k m) =
+  (n =? m).
+Proof.
+  intros.
+  destruct (n =? m) eqn:nqVal.
+  - rewrite eqb_eq in nqVal.
+    rewrite nqVal, bv_eq_equiv.
+    rewrite nat_bitvector_big_inj; auto.
+  - destruct (bv_eq _ _) eqn:bvVal.
+    + rewrite bv_eq_equiv in bvVal.
+      rewrite nat_bitvector_big_inj in bvVal; try assumption.
+      rewrite bvVal, eqb_neq in nqVal.
+      contradiction.
+    + reflexivity.
+Qed.
+
 Theorem bitvector_fin_big_0_const :
   forall {n} (v : t bool n),
     (v = (Vector.const b0 n)) <-> (bitvector_nat_big v = 0).
@@ -577,8 +596,52 @@ Proof.
   simpl; lia.
 Qed.
 
+Theorem bv_add_correct_mod :
+  forall {n : nat} (n1 n2 : nat),
+  n1 < 2 ^ n ->
+  n2 < 2 ^ n ->
+  (n1 + n2) mod 2 ^ n =
+  bitvector_nat_big
+	(VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2))).
+Proof.
+  intros.
+  rewrite bv_add_correct_1.
+  rewrite nat_bitvector_big_inv;[|assumption].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  unfold nat_bitvector_big.
+  simpl VectorDef.tl.
+  fold nat_bitvector_big.
+  rewrite nat_bitvector_big_inv;[reflexivity|].
+  apply PeanoNat.Nat.mod_upper_bound; lia.
+Qed.
+
+Theorem bv_add_correct_mod_2 :
+  forall {n : nat} (n1 n2 : nat),
+  n1 < 2 ^ n ->
+  n2 < 2 ^ n ->
+  nat_bitvector_big _ ((n1 + n2) mod 2 ^ n) =
+	VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2)).
+Proof.
+  intros.
+  apply nat_bitvector_big_inj;try (apply PeanoNat.Nat.mod_upper_bound; lia).
+  rewrite nat_bitvector_big_inv;[|assumption].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  reflexivity.
+Qed.
+
 Definition bv_incr {n} (i : nat) (v : t bool n) : t bool n :=
   nat_bitvector_big n ((i + bitvector_nat_big v) mod (2 ^ n)).
+
+Theorem bv_incr_fold : forall k n m,
+  n + m < 2 ^ k ->
+  bv_incr n (nat_bitvector_big k m) =
+  nat_bitvector_big k (n + m).
+Proof.
+  intros k n m lt.
+  unfold bv_incr.
+  rewrite nat_bitvector_big_inv; [ | lia ].
+  rewrite mod_small; auto.
+Qed.
 
 (*least significant bits of subtraction (unsigned). 
   extra leading bit indicates a borrow, 0 if borrow, 1 if not.*)
@@ -600,6 +663,24 @@ Proof.
   rewrite bv_sub_correct_1.
   repeat rewrite nat_bitvector_big_inv; try lia.
   simpl; lia.
+Qed.
+
+Theorem bv_sub_correct_pos : 
+  forall k n m,
+  n < 2 ^ k -> m < 2 ^ k -> m <= n ->
+  Vector.tl (bv_sub (nat_bitvector_big k n)
+            (nat_bitvector_big k m))
+  = nat_bitvector_big k (n - m).
+  intros k n m nlt mlt le.
+  rewrite bv_sub_correct_1.
+  unfold nat_bitvector_big; fold nat_bitvector_big.
+  simpl; f_equal.
+  repeat rewrite nat_bitvector_big_inv; try assumption.
+  rewrite PeanoNat.Nat.add_sub_swap; [ | assumption ].
+  rewrite <- PeanoNat.Nat.add_mod_idemp_r; [| apply PeanoNat.Nat.pow_nonzero; lia].
+  rewrite PeanoNat.Nat.mod_same; [| apply PeanoNat.Nat.pow_nonzero; lia].
+  rewrite add_0_r.
+  rewrite mod_small; lia.
 Qed.
 
 (*least significant bits of multiplication (unsigned)
