@@ -22,31 +22,40 @@ Module Type TinyRAMParameters.
   The binary encoding assumes that 6 + 2 · ceil(log_2 K) ≤ [wordSize]
   """*)
   Axiom encodingAxiom : 6 + 2 * log2_up registerCount <= wordSize.
+End TinyRAMParameters.
+
+Module TinyRAMThrms (Params : TinyRAMParameters).
+  Import Params.
+  Export Params.
 
   Theorem wordSizePos : 0 < wordSize.
   Proof.
-    assert (6 + 2 * log2_up registerCount <= wordSize).
-    { exact encodingAxiom. }
-    lia.
+    assert (6 + 2 * log2_up registerCount <= wordSize);
+    [ exact encodingAxiom | lia ].
   Qed.
 
-  Theorem wordSizeMin : 5 < wordSize.
+  Theorem wordSizeMin5 : 5 < wordSize.
   Proof.
-    assert (6 + 2 * log2_up registerCount <= wordSize).
-    { exact encodingAxiom. }
-    lia.
+    assert (6 + 2 * log2_up registerCount <= wordSize);
+    [ exact encodingAxiom | lia ].
   Qed.
 
   Theorem wordSizeEighthPos : 0 < wordSizeEighth.
   Proof.
-    assert (0 < wordSizeEighth * 8). { apply wordSizePos. }
-    lia.
+    assert (0 < wordSizeEighth * 8); [ apply wordSizePos | lia ].
+  Qed.
+
+  Theorem wordSizeMin8 : 8 <= wordSize.
+  Proof.
+    unfold wordSize.
+    assert (0 < wordSizeEighth); [ apply wordSizeEighthPos | ].
+    destruct wordSizeEighth; lia.
   Qed.
 
   Definition wordSizeEighthFin : fin (2 ^ wordSize).
     exists wordSizeEighth.
-    assert (0 < wordSizeEighth * 8). { apply wordSizePos. }
-    transitivity (wordSizeEighth * 8). { lia. }
+    assert (0 < wordSizeEighth * 8); [ apply wordSizePos | ].
+    transitivity (wordSizeEighth * 8); [ lia | ].
     apply pow_gt_lin_r.
     lia.
   Defined.
@@ -54,9 +63,9 @@ Module Type TinyRAMParameters.
   Theorem registerCount_lt_2powwordSize :
     registerCount <= 2 ^ wordSize.
   Proof.
-    assert (6 + 2 * log2_up registerCount <= wordSize).
-      { apply encodingAxiom. }
-    destruct registerCount. { lia. }
+    assert (6 + 2 * log2_up registerCount <= wordSize);
+      [ apply encodingAxiom | ].
+    destruct registerCount; [ lia | ].
     rewrite log2_up_le_pow2; lia.
   Qed.
 
@@ -64,9 +73,9 @@ Module Type TinyRAMParameters.
     0 < registerCount -> registerCount < 2 ^ wordSize.
   Proof.
     intro.
-    rewrite log2_lt_pow2. 2: { assumption. }
-    apply (lt_le_trans _ (6 + 2 * log2_up registerCount)).
-    2: { exact encodingAxiom. }
+    rewrite log2_lt_pow2; [ | assumption ].
+    apply (lt_le_trans _ (6 + 2 * log2_up registerCount));
+     [ | exact encodingAxiom ].
     change (6 + ?x) with (S (5 + x)).
     apply le_n_S.
     rewrite add_comm.
@@ -84,4 +93,4 @@ Module Type TinyRAMParameters.
   Definition pcIncrement : nat := 2 * wordSizeEighth.
 
   Definition regId : Type := fin registerCount.
-End TinyRAMParameters.
+End TinyRAMThrms.

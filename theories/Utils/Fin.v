@@ -307,3 +307,6 @@ Theorem fin_rew : forall {n m o} (eq : n = m) (H : o < n),
   (rew eq in (exist (fun x => x < n) o H : fin n)) =
   exist (fun x => x < m) o (rew eq in H).
 Proof. intros n m o eq; destruct eq; reflexivity. Qed.
+
+Definition mk_fin {m} : forall n, n < m -> fin m.
+  intros; exists n; assumption. Defined.

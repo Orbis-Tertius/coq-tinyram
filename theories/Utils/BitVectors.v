@@ -139,9 +139,9 @@ Proof.
     replace (S (f + (f + 0))) with (1 + f * 2).
     2: { lia. }
     replace (((1 + f * 2)) mod 2) with 1.
-    2: { rewrite PeanoNat.Nat.mod_add. { reflexivity. } { lia. } }
+    2: { rewrite PeanoNat.Nat.mod_add; [ reflexivity | lia ]. }
     replace ((1 + f * 2) / 2) with f.
-    2: { rewrite PeanoNat.Nat.div_add. { reflexivity. } { lia. } }
+    2: { rewrite PeanoNat.Nat.div_add; [ reflexivity | lia ]. }
     reflexivity.
 Qed.
 
@@ -159,9 +159,9 @@ Proof.
     replace (f + (f + 0)) with (f * 2).
     2: { lia. }
     replace (f * 2 / 2) with f.
-    2: { rewrite PeanoNat.Nat.div_mul. { reflexivity. } { lia. } }
+    2: { rewrite PeanoNat.Nat.div_mul; [ reflexivity | lia ]. }
     replace ((f * 2) mod 2) with 0.
-    2: { symmetry. rewrite PeanoNat.Nat.mod_mul. { reflexivity. } { lia. } } 
+    2: { symmetry. rewrite PeanoNat.Nat.mod_mul; [ reflexivity | lia ]. } 
     reflexivity.
 Qed.
 
@@ -191,10 +191,10 @@ Proof.
     reflexivity.
   + unfold fin_bitvector_little.
     replace (fin_bitvector_little_fun (S n) f)
-       with (cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_little_fun n (f / 2))).
-    2: { reflexivity. }
+       with (cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_little_fun n (f / 2)));
+      [ | reflexivity ].
     assert (f = (2 * (f / 2) + f mod 2)) as fsplit.
-    { rewrite <- div_mod. { reflexivity. } { lia. } }
+    { rewrite <- div_mod; [ reflexivity | lia ]. }
     assert (f/2 < 2 ^ n) as fhprp.
     { apply PeanoNat.Nat.div_lt_upper_bound. { lia. } exact fprp. } 
     assert (bitvector_fin_little (fin_bitvector_little (exist _ (f/2) fhprp)) 
@@ -302,7 +302,7 @@ Proof.
     f_equal.
     + destruct (bitvector_fin_big v); destruct h; simpl proj1_sig.
       * rewrite PeanoNat.Nat.mul_1_l.
-        replace (_ / _) with 1. { reflexivity. }
+        replace (_ / _) with 1; [ reflexivity | ].
         symmetry; apply div_bet_1; lia.
       * rewrite PeanoNat.Nat.mul_0_l, div_small; simpl; lia.
     + assert (2 ^ n <> 0) as pow0.
@@ -318,7 +318,7 @@ Proof.
       { simpl; rewrite mod_small; trivial. }
       destruct h.
       * simpl. rewrite add_0_r, PeanoNat.Nat.mod_same; trivial.
-      * simpl; rewrite mod_small. { reflexivity. }
+      * simpl; rewrite mod_small; [ reflexivity | ].
         apply zero2pow.
 Qed.
 
@@ -359,7 +359,7 @@ Proof.
     rewrite bitvector_fin_big_split; simpl;
     rewrite (IHn (f mod 2 ^ n) fl2n).
     + rewrite eqb_eq in fDiv0.
-      rewrite mod_small. { reflexivity. }
+      rewrite mod_small; [ reflexivity | ].
       rewrite <- PeanoNat.Nat.div_small_iff; assumption.
     + rewrite eqb_neq in fDiv0.
       rewrite (div_mod f (2 ^ n)) at 2. 2: { assumption. }
@@ -523,6 +523,25 @@ Proof.
       * rewrite IHv; assumption.
 Qed.
 
+Theorem bv_eq_big_conv : forall k n m,
+  n < 2 ^ k -> m < 2 ^ k ->
+  bv_eq (nat_bitvector_big k n)
+        (nat_bitvector_big k m) =
+  (n =? m).
+Proof.
+  intros.
+  destruct (n =? m) eqn:nqVal.
+  - rewrite eqb_eq in nqVal.
+    rewrite nqVal, bv_eq_equiv.
+    rewrite nat_bitvector_big_inj; auto.
+  - destruct (bv_eq _ _) eqn:bvVal.
+    + rewrite bv_eq_equiv in bvVal.
+      rewrite nat_bitvector_big_inj in bvVal; try assumption.
+      rewrite bvVal, eqb_neq in nqVal.
+      contradiction.
+    + reflexivity.
+Qed.
+
 Theorem bitvector_fin_big_0_const :
   forall {n} (v : t bool n),
     (v = (Vector.const b0 n)) <-> (bitvector_nat_big v = 0).
@@ -577,8 +596,52 @@ Proof.
   simpl; lia.
 Qed.
 
+Theorem bv_add_correct_mod :
+  forall {n : nat} (n1 n2 : nat),
+  n1 < 2 ^ n ->
+  n2 < 2 ^ n ->
+  (n1 + n2) mod 2 ^ n =
+  bitvector_nat_big
+	(VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2))).
+Proof.
+  intros.
+  rewrite bv_add_correct_1.
+  rewrite nat_bitvector_big_inv;[|assumption].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  unfold nat_bitvector_big.
+  simpl VectorDef.tl.
+  fold nat_bitvector_big.
+  rewrite nat_bitvector_big_inv;[reflexivity|].
+  apply PeanoNat.Nat.mod_upper_bound; lia.
+Qed.
+
+Theorem bv_add_correct_mod_2 :
+  forall {n : nat} (n1 n2 : nat),
+  n1 < 2 ^ n ->
+  n2 < 2 ^ n ->
+  nat_bitvector_big _ ((n1 + n2) mod 2 ^ n) =
+	VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2)).
+Proof.
+  intros.
+  apply nat_bitvector_big_inj;try (apply PeanoNat.Nat.mod_upper_bound; lia).
+  rewrite nat_bitvector_big_inv;[|assumption].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  reflexivity.
+Qed.
+
 Definition bv_incr {n} (i : nat) (v : t bool n) : t bool n :=
   nat_bitvector_big n ((i + bitvector_nat_big v) mod (2 ^ n)).
+
+Theorem bv_incr_fold : forall k n m,
+  n + m < 2 ^ k ->
+  bv_incr n (nat_bitvector_big k m) =
+  nat_bitvector_big k (n + m).
+Proof.
+  intros k n m lt.
+  unfold bv_incr.
+  rewrite nat_bitvector_big_inv; [ | lia ].
+  rewrite mod_small; auto.
+Qed.
 
 (*least significant bits of subtraction (unsigned). 
   extra leading bit indicates a borrow, 0 if borrow, 1 if not.*)
@@ -600,6 +663,24 @@ Proof.
   rewrite bv_sub_correct_1.
   repeat rewrite nat_bitvector_big_inv; try lia.
   simpl; lia.
+Qed.
+
+Theorem bv_sub_correct_pos : 
+  forall k n m,
+  n < 2 ^ k -> m < 2 ^ k -> m <= n ->
+  Vector.tl (bv_sub (nat_bitvector_big k n)
+            (nat_bitvector_big k m))
+  = nat_bitvector_big k (n - m).
+  intros k n m nlt mlt le.
+  rewrite bv_sub_correct_1.
+  unfold nat_bitvector_big; fold nat_bitvector_big.
+  simpl; f_equal.
+  repeat rewrite nat_bitvector_big_inv; try assumption.
+  rewrite PeanoNat.Nat.add_sub_swap; [ | assumption ].
+  rewrite <- PeanoNat.Nat.add_mod_idemp_r; [| apply PeanoNat.Nat.pow_nonzero; lia].
+  rewrite PeanoNat.Nat.mod_same; [| apply PeanoNat.Nat.pow_nonzero; lia].
+  rewrite add_0_r.
+  rewrite mod_small; lia.
 Qed.
 
 (*least significant bits of multiplication (unsigned)
@@ -903,7 +984,7 @@ Proof.
     rewrite BinInt.Z.sub_opp_r, <- Znat.Nat2Z.inj_add.
     rewrite Znat.Nat2Z.id.
     unfold nat_bitvector_big; f_equal.
-    + replace (_ / _) with 1. { reflexivity. }
+    + replace (_ / _) with 1; [ reflexivity | ].
       symmetry; apply div_bet_1; lia.
     + fold nat_bitvector_big.
       assert (2 ^ n <> 0).
@@ -921,7 +1002,7 @@ Proof.
     rewrite Znat.Nat2Z.id.
     unfold nat_bitvector_big; fold nat_bitvector_big.
     f_equal.
-    + replace (_ / _) with 0. { reflexivity. }
+    + replace (_ / _) with 0; [ reflexivity | ].
       symmetry; apply div_small; assumption.
     + replace (_ mod _) with (twos_complement' (tl v)).
       2: { symmetry; apply mod_small; assumption. }
@@ -978,7 +1059,7 @@ Proof.
   unfold twos_complement_inv.
   destruct (ltb z 0) eqn:ltz0; unfold nat_bitvector_big.
   - rewrite Z_ltb_lt in ltz0.
-    replace (_ / _) with 1. { reflexivity. }
+    replace (_ / _) with 1; [ reflexivity | ].
     rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
     rewrite Znat.Z2Nat.inj_sub. 2: { lia. }
     rewrite Z2_inj_pow; try lia.
@@ -989,7 +1070,7 @@ Proof.
       rewrite opp_le_swap_l, <- Z_inj_pow; lia. }
     symmetry; apply div_bet_1; simpl; lia.
   - rewrite Z_nltb_ge in ltz0.
-    replace (_ / _) with 0. { reflexivity. }
+    replace (_ / _) with 0; [ reflexivity | ].
     assert (to_nat z < 2 ^ n).
     { rewrite Znat.Z2Nat.inj_lt, Z2_inj_pow, Znat.Nat2Z.id in zmax; try lia.
       assumption. }
@@ -1120,7 +1201,7 @@ Proof.
     unfold nat_bitvector_big; change (hd (?x :: _)) with x.
     rewrite Z_inj_pow, <- (BinInt.Z.opp_involutive m), BinInt.Z.add_opp_l,
             Znat.Z2Nat.inj_sub, Znat.Nat2Z.id; try lia.
-    replace (_ / _) with 1. { reflexivity. }
+    replace (_ / _) with 1; [ reflexivity | ].
     assert (to_nat (opp m) <= 2 ^ (n + n)).
     { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_le; try lia.
       rewrite <- Z_inj_pow, Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
@@ -1129,7 +1210,7 @@ Proof.
     symmetry; apply div_bet_1; split; simpl; lia.
   - rewrite BinInt.Z.ltb_ge in ltm.
     unfold nat_bitvector_big; change (hd (?x :: _)) with x.
-    replace (_ / _) with 0. { reflexivity. }
+    replace (_ / _) with 0; [ reflexivity | ].
     symmetry; apply div_small.
     rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_lt; try lia.
     rewrite <- Z_inj_pow, Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
