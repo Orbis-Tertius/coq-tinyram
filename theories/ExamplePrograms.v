@@ -109,6 +109,39 @@ Theorem bv_sub_correct_pos :
   rewrite mod_small; lia.
 Qed.
 
+Theorem bv_add_correct_mod :
+  forall {n : nat} (n1 n2 : nat),
+  n1 < 2 ^ n ->
+  n2 < 2 ^ n ->
+  (n1 + n2) mod 2 ^ n =
+  bitvector_nat_big
+	(VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2))).
+Proof.
+  intros.
+  rewrite bv_add_correct_1.
+  rewrite nat_bitvector_big_inv;[|assumption].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  unfold nat_bitvector_big.
+  simpl VectorDef.tl.
+  fold nat_bitvector_big.
+  rewrite nat_bitvector_big_inv;[reflexivity|].
+  apply mod_upper_bound; lia.
+Qed.
+
+Theorem bv_add_correct_mod_2 :
+  forall {n : nat} (n1 n2 : nat),
+  n1 < 2 ^ n ->
+  n2 < 2 ^ n ->
+  nat_bitvector_big _ ((n1 + n2) mod 2 ^ n) =
+	VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2)).
+Proof.
+  intros.
+  apply nat_bitvector_big_inj;try (apply mod_upper_bound; lia).
+  rewrite nat_bitvector_big_inv;[|assumption].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  reflexivity.
+Qed.
+
 (* Storing then loading a block at the same address gives the same block back. *)
 Theorem Block_Store_Load : forall {B memsz}
     (m : Vector.t B memsz)
@@ -876,7 +909,69 @@ Proof.
     vector_simp; f_equal; apply proof_irrelevance.
 Qed.
 
+Theorem const_cons_snoc: forall {B} {b : B} {n},
+  b :: const b n = cast  (const b n ++ [b]) (add_comm n 1).
+Proof.
+  intros.
+  induction n;[reflexivity|].
+  simpl.
+  replace (cast _ _)
+     with (cast (const b n ++ [b]) (add_comm n 1)).
+  - rewrite <- IHn; reflexivity.
+  - f_equal; apply proof_irrelevance.
+Qed.
 
+Theorem rev_const: forall {B} {b : B} {n},
+  Vector.rev (const b n) = const b n.
+Proof.
+  intros.
+  induction n.
+  - simpl; apply vector_rev_nil_nil.
+  - simpl.
+    rewrite rev_snoc.
+    rewrite IHn.
+    rewrite const_cons_snoc; reflexivity.
+Qed.
+
+Theorem const_split: forall {B} {b : B} {n m},
+  const b (n + m) = const b n ++ const b m.
+Proof.
+  intros.
+  induction n; intros; [reflexivity|].
+  simpl.
+  rewrite IHn; reflexivity.
+Qed.
+
+Theorem const_cast_split: forall {B} {b : B} {n k m}
+  (eq : k = n + m),
+  cast (const b k) eq = const b n ++ const b m.
+Proof.
+  intros.
+  rewrite eq0, cast_id.
+  apply const_split.
+Qed.
+
+Theorem Block_Load_const : forall {B memsz}
+    (idx blksz: fin memsz)
+    (val : B),
+    Block_Load (const val _) idx blksz
+    = (const val _).
+Proof.
+  intros B memsz [idx idxLT] [blksz blkszLT] val.
+  unfold proj1_sig.
+  unfold Block_Load.
+  destruct (Block_Lem idx blksz memsz idxLT blkszLT) as 
+    [[tl eq]|[blk2[blk1[idx2[eq1 [eq2 eq3]]]]]].
+  - rewrite <- cast_rew.
+    rewrite (const_cast_split eq), const_split, vector_append_inv2, vector_append_inv2.
+    reflexivity.
+  - rewrite <- cast_rew.
+    rewrite (const_cast_split eq3), const_split, vector_append_inv2, vector_append_inv2.
+    unfold eq_rect_r; rewrite <- cast_rew.
+    rewrite cast_trans, cast_swap.
+    rewrite (const_cast_split _).
+    reflexivity.
+Qed.
 
 (* This file contains the implementation and formal verification of 
    a TinyRAM implementation of the Fibonacci function. *)
@@ -897,36 +992,69 @@ Fixpoint fib (n : nat) : nat :=
 (* Our implementation is going to use modular arithmetic since
    the output comes in the form of a fixed-length bitvector.
 
+   We also generalize the base arguments to aid in reasoining about
+   the main loop later.
+
    We relate fib to its moded version.
 *)
 
-Fixpoint mfib (m n : nat) : nat :=
+Fixpoint mfib (i j m n : nat) : nat :=
   match n with
-  | 0 => 0
+  | 0 => i
   | S n =>
     match n with
-    | 0 => 1
-    | S n' => (mfib m n' + mfib m n) mod m
+    | 0 => j
+    | S n' => (mfib i j m n' + mfib i j m n) mod m
     end
   end.
 
 Theorem mfib_mod : forall m n, 1 < m ->
-  mfib m n = fib n mod m.
+  mfib 0 1 m n = fib n mod m.
 Proof.
   intros m n lt.
-  assert ( (mfib m n, mfib m (S n))
+  assert ( (mfib 0 1 m n, mfib 0 1 m (S n))
          = (fib n mod m, fib (S n) mod m) ).
   { induction n.
     - simpl.
       rewrite mod_0_l, mod_small; try lia; reflexivity.
-    - change (mfib m (S (S n))) 
-        with ((mfib m n + mfib m (S n)) mod m).
+    - change (mfib 0 1 m (S (S n))) 
+        with ((mfib 0 1 m n + mfib 0 1 m (S n)) mod m).
       change (fib (S (S n))) 
         with (fib n + fib (S n)).
       f_equal.
       + injection IHn; auto.
       + rewrite (add_mod (fib n)); [|lia].
         injection IHn; auto. }
+  rewrite pair_equal_spec in H; destruct H.
+  assumption.
+Qed.
+
+Theorem mfib_upper_bound: forall i j m n, 
+  i < m -> j < m -> m <> 0 ->
+  mfib i j m n < m.
+Proof.
+  intros i j m n.
+  destruct n.
+  - unfold mfib; auto.
+  - destruct n; unfold mfib; fold mfib.
+    + auto.
+    + intros; apply mod_upper_bound; auto.
+Qed.
+
+Theorem mfib_rebase: forall i j m n, 
+  mfib i j m (S n) = mfib (mfib i j m 1) (mfib i j m 2) m n.
+Proof.
+  intros i j m n.
+  assert ( (mfib i j m (S n), mfib i j m (S (S n)))
+         = (mfib (mfib i j m 1) (mfib i j m 2) m n
+           ,mfib (mfib i j m 1) (mfib i j m 2) m (S n))).
+  { induction n.
+    - reflexivity.
+    - change (mfib i j m (S (S (S n))))
+        with ((mfib i j m (S n) + mfib i j m (S (S n))) mod m).
+      rewrite pair_equal_spec in IHn; destruct IHn.
+      rewrite H, H0; clear H H0.
+      reflexivity. }
   rewrite pair_equal_spec in H; destruct H.
   assumption.
 Qed.
@@ -1010,25 +1138,25 @@ Theorem Memory_Word_Store_Load_from_Reg_Irr : forall
     (*  |----------------|
           |--|      |--|
           1  1+     2  2+   *)
-    (((proj1_sig (Register_Index idx1) + wordSizeEighth) <= proj1_sig (Register_Index idx2) /\
-      (proj1_sig (Register_Index idx2) + wordSizeEighth) < 2 ^ wordSize) \/
+    (((bitvector_nat_big idx1 + wordSizeEighth <= bitvector_nat_big idx2) /\
+      (bitvector_nat_big idx2 + wordSizeEighth < 2 ^ wordSize)) \/
     (*  |----------------|
           |--|      |--|
           2  2+     1  1+   *)
-     ((proj1_sig (Register_Index idx2) + wordSizeEighth) <= proj1_sig (Register_Index idx1) /\
-      (proj1_sig (Register_Index idx1) + wordSizeEighth) < 2 ^ wordSize) \/
+     ((bitvector_nat_big idx2 + wordSizeEighth <= bitvector_nat_big idx1) /\
+      (bitvector_nat_big idx1 + wordSizeEighth < 2 ^ wordSize)) \/
     (*  |----------------|
         -|    |--|      |-
          2+   1  1+     2   *)
-     ((proj1_sig (Register_Index idx1) + wordSizeEighth) <= proj1_sig (Register_Index idx2) /\
-      (proj1_sig (Register_Index idx2) + wordSizeEighth) mod 2 ^ wordSize <= proj1_sig (Register_Index idx1) /\
-      2 ^ wordSize < proj1_sig (Register_Index idx2) + wordSizeEighth) \/
+     ((bitvector_nat_big idx1 + wordSizeEighth <= bitvector_nat_big idx2) /\
+      ((bitvector_nat_big idx2 + wordSizeEighth) mod 2 ^ wordSize <= bitvector_nat_big idx1) /\
+      (2 ^ wordSize < bitvector_nat_big idx2 + wordSizeEighth)) \/
     (*  |----------------|
         -|    |--|      |-
          1+   2  2+     1   *)
-     ((proj1_sig (Register_Index idx2) + wordSizeEighth) <= proj1_sig (Register_Index idx1) /\
-      (proj1_sig (Register_Index idx1) + wordSizeEighth) mod 2 ^ wordSize <= proj1_sig (Register_Index idx2)/\
-      2 ^ wordSize < proj1_sig (Register_Index idx1) + wordSizeEighth)) ->
+     ((bitvector_nat_big idx2 + wordSizeEighth <= bitvector_nat_big idx1) /\
+      ((bitvector_nat_big idx1 + wordSizeEighth) mod 2 ^ wordSize <= bitvector_nat_big idx2)/\
+      (2 ^ wordSize < bitvector_nat_big idx1   + wordSizeEighth))) ->
     Memory_Word_Load_from_Reg 
       (Memory_Word_Store_from_Reg m idx1 block)
       idx2
@@ -1047,25 +1175,25 @@ Theorem Memory_Word_Store_Store_from_Reg_Swap : forall
     (*  |----------------|
           |--|      |--|
           1  1+     2  2+   *)
-    (((proj1_sig (Register_Index idx1) + wordSizeEighth) <= proj1_sig (Register_Index idx2) /\
-      (proj1_sig (Register_Index idx2) + wordSizeEighth) < 2 ^ wordSize) \/
+    (((bitvector_nat_big idx1  + wordSizeEighth <= bitvector_nat_big idx2) /\
+      (bitvector_nat_big idx2  + wordSizeEighth < 2 ^ wordSize)) \/
     (*  |----------------|
           |--|      |--|
           2  2+     1  1+   *)
-     ((proj1_sig (Register_Index idx2) + wordSizeEighth) <= proj1_sig (Register_Index idx1) /\
-      (proj1_sig (Register_Index idx1) + wordSizeEighth) < 2 ^ wordSize) \/
+     ((bitvector_nat_big idx2  + wordSizeEighth <= bitvector_nat_big idx1) /\
+      (bitvector_nat_big idx1  + wordSizeEighth < 2 ^ wordSize)) \/
     (*  |----------------|
         -|    |--|      |-
          2+   1  1+     2   *)
-     ((proj1_sig (Register_Index idx1) + wordSizeEighth) <= proj1_sig (Register_Index idx2) /\
-      (proj1_sig (Register_Index idx2) + wordSizeEighth) mod 2 ^ wordSize <= proj1_sig (Register_Index idx1) /\
-      2 ^ wordSize < proj1_sig (Register_Index idx2) + wordSizeEighth) \/
+     ((bitvector_nat_big idx1  + wordSizeEighth <= bitvector_nat_big idx2) /\
+      ((bitvector_nat_big idx2  + wordSizeEighth) mod 2 ^ wordSize <= bitvector_nat_big idx1) /\
+      (2 ^ wordSize < bitvector_nat_big idx2  + wordSizeEighth)) \/
     (*  |----------------|
         -|    |--|      |-
          1+   2  2+     1   *)
-     ((proj1_sig (Register_Index idx2) + wordSizeEighth) <= proj1_sig (Register_Index idx1) /\
-      (proj1_sig (Register_Index idx1) + wordSizeEighth) mod 2 ^ wordSize <= proj1_sig (Register_Index idx2)/\
-      2 ^ wordSize < proj1_sig (Register_Index idx1) + wordSizeEighth)) ->
+     ((bitvector_nat_big idx2  + wordSizeEighth <= bitvector_nat_big idx1) /\
+      ((bitvector_nat_big idx1  + wordSizeEighth) mod 2 ^ wordSize <= bitvector_nat_big idx2)/\
+      (2 ^ wordSize < bitvector_nat_big idx1  + wordSizeEighth))) ->
     Memory_Word_Store_from_Reg 
       (Memory_Word_Store_from_Reg m idx1 block)
       idx2 block'
@@ -1079,6 +1207,34 @@ Proof.
   unfold Memory_Block_Load, Memory_Block_Store.
   rewrite Block_Store_Store_Swap;[reflexivity|assumption].
 Qed.
+
+Theorem Memory_Word_Load_from_Reg_const : forall 
+  (idx : Word)
+  (val : Byte),
+  Memory_Word_Load_from_Reg (const val _) idx
+  = vector_concat (const val _).
+Proof.
+  intros.
+  unfold Memory_Word_Load_from_Reg, Memory_Word_Load, Memory_Block_Load.
+  rewrite Block_Load_const.
+  rewrite rev_const; reflexivity.
+Qed.
+
+Theorem registers_pureOp_cjmp : forall v m,
+  registers (pureOp_cjmp v m) = registers m.
+Proof. intros; destruct m; reflexivity. Qed.
+
+Theorem registers_pureOp_cmpe : forall v1 v2 m,
+  registers (pureOp_cmpe v1 v2 m) = registers m.
+Proof. intros; destruct m; reflexivity. Qed.
+
+Theorem memory_pureOp_cjmp : forall v m,
+  memory (pureOp_cjmp v m) = memory m.
+Proof. intros; destruct m; reflexivity. Qed.
+
+Theorem memory_pureOp_cmpe : forall v1 v2 m,
+  memory (pureOp_cmpe v1 v2 m) = memory m.
+Proof. intros; destruct m; reflexivity. Qed.
 
 (* We can create the actual assembly program now. 
    
@@ -1191,17 +1347,21 @@ Definition fib_step (m : MachineState) : MachineState :=
                 (nth (registers m0) (bitvector_fin_big [b1; b0]))
     m0))))).
 
+Definition fib_finish (m : MachineState) : MachineState :=
+  (pureOp_cjmp (nat_bitvector_big _ 12)
+  (pureOp_cmpe (bitvector_fin_big [b0; b0]) (nat_bitvector_big _ 0)
+  m)).
+
 Fixpoint fib_step_r (n : nat) (m : MachineState) : MachineState :=
   match n with
-  | 0 => (pureOp_cjmp (nat_bitvector_big _ 12)
-         (pureOp_cmpe (bitvector_fin_big [b0; b0]) (nat_bitvector_big _ 0)
-         m))
+  | 0 => m
   | S n => fib_step_r n (fib_step m)
   end.
 
-Definition full_fib (m : MachineState) : MachineState :=
+Definition fib_full (m : MachineState) : MachineState :=
   let m0 := fib_init m in
-  fib_step_r (bitvector_nat_big (nth (registers m0) (bitvector_fin_big [b0; b0]))) m0.
+  let m1 := fib_step_r (bitvector_nat_big (nth (registers m0) (bitvector_fin_big [b0; b0]))) m0 in
+  fib_finish m1.
 
 (* We can verify that these functions do, in fact, do the same thing 
    as out program. *)
@@ -1209,6 +1369,9 @@ Definition full_fib (m : MachineState) : MachineState :=
 (* Note: the strategies used here are essentially automatic. They 
    can definitely be turned into tactics, but that's for the future. *)
 
+Lemma program_fib_init : 
+  forall m, (program (fib_init m)) = program m.
+Proof. destruct m; reflexivity. Qed.
 
 Lemma program_fib_step : 
   forall m, (program (fib_step m)) = program m.
@@ -1223,10 +1386,65 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma program_fib_finish : 
+  forall m, (program (fib_finish m)) = program m.
+Proof. destruct m; reflexivity. Qed.
+
+Lemma program_fib_full : 
+  forall m, (program (fib_full m)) = program m.
+Proof. 
+  intro.
+  unfold fib_full. 
+  rewrite program_fib_finish, program_fib_step_r, program_fib_init.
+  reflexivity.
+Qed.
+
+Lemma programCounter_fib_init : 
+  forall m, 
+  (programCounter m) = (nat_bitvector_big _ 0) ->
+  (programCounter (fib_init m)) = 
+  (nat_bitvector_big _ 3).
+Proof.
+  destruct m; intro H; unfold programCounter in H; rewrite H; reflexivity.
+Qed.
+
 Lemma programCounter_fib_step : 
   forall m, (programCounter (fib_step m)) = 
   (nat_bitvector_big _ 3).
 Proof. destruct m; reflexivity. Qed.
+
+Lemma fib_step_r_unfold_out : forall n m,
+  fib_step_r (S n) m = fib_step (fib_step_r n m).
+Proof. 
+  induction n;[destruct m;reflexivity|intro].
+  unfold fib_step_r at 2; fold fib_step_r.
+  change (fib_step_r (S (S n)) m)
+     with (fib_step_r (S n) (fib_step m)).
+  rewrite IHn.
+  reflexivity.
+Qed.
+
+Lemma programCounter_fib_step_r : 
+  forall m n, (programCounter (fib_step_r (S n) m)) = 
+  (nat_bitvector_big _ 3).
+Proof.
+  intros.
+  rewrite fib_step_r_unfold_out, programCounter_fib_step.
+  reflexivity.
+Qed.
+
+Lemma programCounter_fib_finish : forall m,
+  nth (registers m) (bitvector_fin_big [b0; b0])
+  = (nat_bitvector_big wordSize 0) ->
+  (programCounter (fib_finish m)) = 
+  (nat_bitvector_big _ 12).
+Proof.
+  intros m H.
+  destruct m.
+  unfold fib_finish, pureOp_cmpe, pureOp_cjmp.
+  unfold registers in H; rewrite H.
+  reflexivity.
+Qed.
 
 (* fib_step decrements register 00 *)
 Lemma fib_step_index_dec : forall m,
@@ -1245,22 +1463,24 @@ Proof.
   reflexivity.
 Qed.
 
-(*fib_step_r will always jump to 12 (precondition for assembly always halting)*)
-Lemma programCounter_fib_step_r : 
+(*fib_step_r will always make register 00 0. 
+  (precondition for assembly always halting)*)
+Lemma fib_step_r_halt_lem : 
   forall n m,
   n < 2 ^ wordSize ->
-  (nat_bitvector_big _ n) = nth (registers m) (bitvector_fin_big [b0; b0]) ->
-  (programCounter (fib_step_r n m)) = (nat_bitvector_big _ 12).
+  nth (registers m) (bitvector_fin_big [b0; b0]) = (nat_bitvector_big _ n) ->
+  nth (registers (fib_step_r n m)) (bitvector_fin_big [b0; b0]) 
+  = (nat_bitvector_big _ 0).
 Proof.
-  induction n; destruct m; unfold registers; intros lt Eq.
-  - unfold fib_step_r, pureOp_cmpe, pureOp_cjmp, programCounter.
-    rewrite <- Eq, bv_eq_big_conv; [ reflexivity | apply Arith.zero2pow | apply Arith.zero2pow].
+  induction n; destruct m; intros lt Eq; unfold registers in Eq.
+  - unfold fib_step_r, fib_finish, pureOp_cmpe, pureOp_cjmp, programCounter.
+    assumption.
   - unfold fib_step_r; fold fib_step_r.
     assert (n < 2 ^ wordSize); [lia|].
     rewrite (IHn _ H); [ reflexivity | ].
     rewrite fib_step_index_dec.
     unfold registers.
-    rewrite <- Eq.
+    rewrite Eq.
     rewrite bv_sub_correct_pos; try lia.
     f_equal; lia.
 Qed.
@@ -1351,96 +1571,378 @@ Proof.
   unfold registers in H1;
   unfold program in H2;
   rewrite H0, H2;
-  unfold fib_step_r.
-  - rewrite interp_machine_run_step;
-    [|change (bitvector_nat_big _) with 3;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
-    rewrite pureOp_cmpe_interp_imm; unfold pureOp_cmpe.
-    rewrite H1; change (bv_eq _ _) with b1.
-    rewrite interp_machine_run_step;
-    [|change (bitvector_nat_big _) with 4;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
-    rewrite pureOp_cjmp_interp_imm.
-    reflexivity.
-  - fold fib_step_r.
-    rewrite fib_runs_step; [|exact H|reflexivity|exact H1|reflexivity].
-    rewrite IHn; try reflexivity; [lia|].
-    rewrite fib_step_index_dec; unfold registers.
-    rewrite H1.
-    rewrite bv_sub_correct_pos;[f_equal;lia|assumption|
-    exact pureOp_read_correct_lem|lia].
+  unfold fib_step_r;[reflexivity|].
+  fold fib_step_r.
+  rewrite fib_runs_step; [|exact H|reflexivity|exact H1|reflexivity].
+  rewrite IHn; try reflexivity; [lia|].
+  rewrite fib_step_index_dec; unfold registers.
+  rewrite H1.
+  rewrite bv_sub_correct_pos;[f_equal;lia|assumption|
+  exact pureOp_read_correct_lem|lia].
 Qed.
 
-(* The state manupilations produced by FibProgram is the same as that
-   produced by full_fib. *)
+Lemma fib_runs_finish : forall m,
+  programCounter m = nat_bitvector_big _ 3 ->
+  nth (registers m) (bitvector_fin_big [b0; b0]) = nat_bitvector_big _ 0 ->
+  program m = FibProgram ->
+  interp_machine (E := void1) run m
+  ≈ interp_machine (E := void1) run (fib_finish m).
+Proof.
+  destruct m; unfold programCounter, registers, program; intros.
+  unfold fib_finish.
+  rewrite H, H1; clear H H1.
+  rewrite interp_machine_run_step;
+  [|change (bitvector_nat_big _) with 3;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  rewrite pureOp_cmpe_interp_imm; unfold pureOp_cmpe.
+  rewrite H0; change (bv_eq _ _) with b1.
+  rewrite interp_machine_run_step;
+  [|change (bitvector_nat_big _) with 4;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  rewrite pureOp_cjmp_interp_imm.
+  reflexivity.
+Qed.
+
+(* The state manipulations produced by FibProgram is the same as that
+   produced by fib_full. *)
 Lemma fib_runs_full : forall n, 
   n < 2 ^ wordSize ->
   (interp_machine (E := void1) run (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil))
-  ≈ (interp_machine (E := void1) run (full_fib (initialState FibProgram
+  ≈ (interp_machine (E := void1) run (fib_full (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil))).
 Proof.
   intros n lt.
-  rewrite fib_runs_init.
-  unfold initialState, full_fib.
-  rewrite fib_runs_step_r; try reflexivity;
-  unfold fib_init, pureOp_mov, pureOp_store_w, pureOp_read, registers.
-  - rewrite nat_bitvector_big_inv; [|apply Arith.zero2pow].
+  rewrite fib_runs_init, fib_runs_step_r, fib_runs_finish;
+  unfold fib_full;
+  unfold initialState, fib_init, pureOp_mov, pureOp_store_w, pureOp_read.    
+  - reflexivity.
+  - unfold registers.
+    rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
     rewrite nth_replace.
-    rewrite nat_bitvector_big_inv; assumption.
-  - rewrite nat_bitvector_big_inv; [|apply Arith.zero2pow].
-    rewrite replace_replace, nth_replace.
-    rewrite bitvector_nat_big_inv.
-    reflexivity.
+    rewrite nat_bitvector_big_inv;[|assumption].
+    destruct n;[reflexivity|].
+    apply programCounter_fib_step_r.
+  - unfold registers at 2.
+    rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
+    rewrite nth_replace.
+    rewrite nat_bitvector_big_inv;[|assumption].
+    apply fib_step_r_halt_lem;[assumption|].
+    unfold registers.
+    apply nth_replace.
+  - rewrite program_fib_step_r; reflexivity.
+  - unfold registers.
+    rewrite nth_replace.
+    rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
+    rewrite nat_bitvector_big_inv;assumption.
+  - unfold programCounter; reflexivity.
+  - unfold registers.
+    rewrite nth_replace. 
+    rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
+    rewrite nat_bitvector_big_inv;[reflexivity|assumption ].
+  - reflexivity.
 Qed.
 
-(* After running full_fib, the PC is at an answer instruction. *)
-Lemma full_fib_answer : forall n, n < 2 ^ wordSize ->
-  (List.nth_error (program (full_fib (initialState FibProgram
+(* After running fib_full, the PC is at an answer instruction. *)
+Lemma fib_full_answer : forall n, n < 2 ^ wordSize ->
+  (List.nth_error (program (fib_full (initialState FibProgram
                                      (nat_bitvector_big wordSize n :: nil)%list nil)))
-                  (bitvector_nat_big (programCounter (full_fib (initialState FibProgram
+                  (bitvector_nat_big (programCounter (fib_full (initialState FibProgram
                                      (nat_bitvector_big wordSize n :: nil)%list nil)))))
   = Some (InstructionEncode (answerI, inr (bitvector_fin_big [b1; b0]))).
 Proof.
   intros n nlt.
-  remember (full_fib _) as intr.
-  unfold initialState, full_fib, fib_init, pureOp_mov, pureOp_store_w, pureOp_read, registers in Heqintr.
+  remember (fib_full _) as intr.
+  unfold initialState, fib_full, fib_init, pureOp_mov, pureOp_store_w, pureOp_read, registers in Heqintr.
   rewrite nat_bitvector_big_inv, nth_replace, nat_bitvector_big_inv in Heqintr;
   [ | assumption | apply Arith.zero2pow ].
   rewrite nth_replace, replace_replace in Heqintr.
   change (bv_incr _ _) with (nat_bitvector_big wordSize 3) in Heqintr.
   rewrite Heqintr; clear Heqintr intr.
-  rewrite program_fib_step_r.
+  rewrite program_fib_finish, program_fib_step_r.
   unfold program.
-  rewrite programCounter_fib_step_r; [reflexivity|assumption|].
+  rewrite programCounter_fib_finish;[reflexivity|].
+  rewrite fib_step_r_halt_lem;[reflexivity|assumption|].
   unfold registers.
   rewrite nth_replace.
   reflexivity.
 Qed.
 
-(* After running full_fib instructions, reg 10 contains the appropriate value *)
-Lemma fib_correct_2 : forall n, 
+(* the word at 0 contains the first intiial value of the mfib function. *)
+Lemma fib_init_vals_1 : forall m,
+  Memory_Word_Load_from_Reg 
+    (memory (fib_init m))
+    (nat_bitvector_big _ 0)
+  = Memory_Word_Load_from_Reg 
+    (memory m)
+    (nat_bitvector_big _ 0).
+Proof.
+  assert (4 < 2 ^ wordSize);[
+    rewrite pureOp_store_b_lem;
+    rewrite add_comm;
+    change (2 ^ (8 + (wordSize - 8)))
+      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
+    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  intro m; destruct m.
+  unfold fib_init, pureOp_mov, pureOp_store_w, pureOp_read, memory.
+  rewrite nth_replace.
+  rewrite Memory_Word_Store_Load_from_Reg_Irr;[|
+    change wordSizeEighth with 2;
+    repeat rewrite nat_bitvector_big_inv;[lia|apply Arith.zero2pow|lia]].
+  reflexivity.
+Qed.
+
+(* the word at 2 contains the second intiial value of the mfib function. *)
+Lemma fib_init_vals_2_gen : forall m, 
+  Memory_Word_Load_from_Reg 
+    (memory (fib_init m))
+    (nat_bitvector_big _ 2)
+  = nat_bitvector_big _ 1.
+Proof.
+  intro m; destruct m.
+  unfold initialState, fib_init, pureOp_mov, pureOp_store_w, pureOp_read, memory.
+  rewrite nth_replace.
+  rewrite Memory_Word_Store_Load_from_Reg. 
+  reflexivity.
+Qed.
+
+(*fib_step computes subsequent fib values.*)
+Lemma fib_step_vals_1 : forall i j m n,
+  Memory_Word_Load_from_Reg (memory m) (nat_bitvector_big _ 2)
+    = nat_bitvector_big _ (mfib i j (2 ^ wordSize) (S n)) -> 
+  Memory_Word_Load_from_Reg (memory (fib_step m)) (nat_bitvector_big _ 0)
+    = nat_bitvector_big _ (mfib i j (2 ^ wordSize) (S n)).
+Proof.
+  assert (4 < 2 ^ wordSize);[
+    rewrite pureOp_store_b_lem;
+    rewrite add_comm;
+    change (2 ^ (8 + (wordSize - 8)))
+      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
+    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  intros i j m n.
+  destruct m; unfold memory.
+  intros.
+  unfold fib_step.
+  unfold pureOp_cmpe, pureOp_cjmp, pureOp_load_w.
+  unfold pureOp_add, pureOp_store_w, pureOp_sub, pureOp_jmp.
+  unfold registers.
+  rewrite H0; clear H0.
+  repeat rewrite (replace_swap _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
+  repeat rewrite (replace_nth_irr _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
+  repeat rewrite (replace_swap _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
+  repeat rewrite (replace_nth_irr _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
+  repeat rewrite replace_replace.
+  repeat rewrite nth_replace.
+  rewrite Memory_Word_Store_Load_from_Reg_Irr.
+  rewrite Memory_Word_Store_Load_from_Reg.
+  reflexivity.
+  repeat rewrite nat_bitvector_big_inv; change wordSizeEighth with 2; lia.
+  all: simpl; lia.
+Qed.
+
+(*fib_step computes subsequent fib values.*)
+Lemma fib_step_vals_2 : forall i j m n,
+  i < 2 ^ wordSize -> j < 2 ^ wordSize ->
+  Memory_Word_Load_from_Reg (memory m) (nat_bitvector_big _ 0)
+    = nat_bitvector_big _ (mfib i j (2 ^ wordSize) n) -> 
+  Memory_Word_Load_from_Reg (memory m) (nat_bitvector_big _ 2)
+    = nat_bitvector_big _ (mfib i j (2 ^ wordSize) (S n)) -> 
+  Memory_Word_Load_from_Reg (memory (fib_step m)) (nat_bitvector_big _ 2)
+    = nat_bitvector_big _ (mfib i j (2 ^ wordSize) (S (S n))).
+Proof.
+  assert (4 < 2 ^ wordSize);[
+    rewrite pureOp_store_b_lem;
+    rewrite add_comm;
+    change (2 ^ (8 + (wordSize - 8)))
+      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
+    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  intros i j m n iLT jLT.
+  destruct m; unfold memory.
+  intros.
+  unfold fib_step.
+  unfold pureOp_cmpe, pureOp_cjmp, pureOp_load_w.
+  unfold pureOp_add, pureOp_store_w, pureOp_sub, pureOp_jmp.
+  unfold registers.
+  rewrite H0, H1; clear H0 H1.
+  repeat rewrite (replace_swap _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
+  repeat rewrite (replace_nth_irr _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
+  repeat rewrite (replace_swap _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
+  repeat rewrite (replace_nth_irr _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
+  repeat rewrite nth_replace.
+  rewrite Memory_Word_Store_Store_from_Reg_Swap.
+  rewrite Memory_Word_Store_Load_from_Reg_Irr.
+  rewrite Memory_Word_Store_Load_from_Reg.
+  rewrite <- bv_add_correct_mod_2.
+  reflexivity.
+  apply mfib_upper_bound;[assumption|assumption|apply pow_nonzero;lia].
+  apply mfib_upper_bound;[assumption|assumption|apply pow_nonzero;lia].
+  repeat rewrite nat_bitvector_big_inv; change wordSizeEighth with 2; lia.
+  repeat rewrite nat_bitvector_big_inv; change wordSizeEighth with 2; lia.
+  all: simpl; lia.
+Qed.
+
+Lemma fib_step_r_vals : forall n m,
   n < 2 ^ wordSize ->
-  nth (registers (full_fib (initialState FibProgram
+  nth (registers m) (bitvector_fin_big [b0;b0]) 
+    = (nat_bitvector_big _ n) ->
+  Memory_Word_Load_from_Reg (memory (fib_step_r n m)) (nat_bitvector_big _ 0)
+  = nat_bitvector_big _ 
+      (mfib (bitvector_nat_big (Memory_Word_Load_from_Reg (memory m) (nat_bitvector_big _ 0)))
+            (bitvector_nat_big (Memory_Word_Load_from_Reg (memory m) (nat_bitvector_big _ 2)))
+            (2 ^ wordSize) n).
+Proof.
+  induction n; intros; destruct m; unfold registers in H0.
+  - unfold fib_step_r.
+    unfold memory.
+    unfold mfib.
+    repeat rewrite bitvector_nat_big_inv.
+    reflexivity.
+  - unfold fib_step_r; fold fib_step_r.
+    rewrite IHn; clear IHn.
+    + repeat unfold memory at 3.
+      rewrite mfib_rebase.
+      f_equal; f_equal.
+      --  rewrite (fib_step_vals_1 (bitvector_nat_big
+                    (Memory_Word_Load_from_Reg memory0
+                        (nat_bitvector_big wordSize 0))) (bitvector_nat_big
+                    (Memory_Word_Load_from_Reg memory0
+                        (nat_bitvector_big wordSize 2))) _ 0).
+          rewrite nat_bitvector_big_inv;[reflexivity|].
+          apply mfib_upper_bound.
+          all: try apply bitvector_nat_big_lt_2pow.
+          apply pow_nonzero; lia.
+          unfold memory.
+          unfold mfib.
+          rewrite bitvector_nat_big_inv; reflexivity.
+      --  rewrite (fib_step_vals_2 (bitvector_nat_big
+                    (Memory_Word_Load_from_Reg memory0
+                        (nat_bitvector_big wordSize 0))) (bitvector_nat_big
+                    (Memory_Word_Load_from_Reg memory0
+                        (nat_bitvector_big wordSize 2))) _ 0).
+          rewrite nat_bitvector_big_inv;[reflexivity|].
+          apply mfib_upper_bound.
+          all: try apply bitvector_nat_big_lt_2pow.
+          apply pow_nonzero; lia.
+          all: unfold memory, mfib; rewrite bitvector_nat_big_inv; reflexivity.
+    + lia.
+    + rewrite fib_step_index_dec.
+      unfold registers; rewrite H0.
+      rewrite bv_sub_correct_pos.
+      f_equal.
+      all: lia.
+Qed.
+
+(* register 00 has the same value as address 0 after each step. *)
+Lemma fib_step_copy: forall m,
+  nth (registers (fib_step m)) (bitvector_fin_big [b1; b0])
+  = Memory_Word_Load_from_Reg (memory (fib_step m)) (nat_bitvector_big _ 0).
+Proof.
+  assert (4 < 2 ^ wordSize);[
+    rewrite pureOp_store_b_lem;
+    rewrite add_comm;
+    change (2 ^ (8 + (wordSize - 8)))
+      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
+    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  destruct m.
+  unfold fib_step.
+  unfold pureOp_cmpe, pureOp_cjmp, pureOp_load_w.
+  repeat unfold registers at 2.
+  unfold pureOp_add, pureOp_store_w, pureOp_sub, pureOp_jmp.
+  unfold registers, memory.
+  repeat rewrite (replace_swap _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
+  repeat rewrite nth_replace.
+  repeat rewrite replace_replace.
+  repeat rewrite (replace_swap _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
+  repeat rewrite nth_replace.
+  Check replace_nth_irr.
+  rewrite (replace_nth_irr _ _ (bitvector_fin_big [b1; b0])).
+  rewrite (replace_nth_irr _ _ (bitvector_fin_big [b1; b0])).
+  rewrite nth_replace.
+  rewrite Memory_Word_Store_Load_from_Reg_Irr. 
+  rewrite Memory_Word_Store_Load_from_Reg; reflexivity.
+  repeat rewrite nat_bitvector_big_inv;change wordSizeEighth with 2;lia.
+  all: simpl; lia.
+Qed.
+
+(* register 00 has the same value as address 0 after each step_r. *)
+Lemma fib_step_r_copy: forall n m,
+  nth (registers (fib_step_r m (fib_init (initialState FibProgram
+        (nat_bitvector_big wordSize n :: nil)%list nil)))) (bitvector_fin_big [b1; b0])
+  = Memory_Word_Load_from_Reg (memory (fib_step_r m (fib_init (initialState FibProgram
+        (nat_bitvector_big wordSize n :: nil)%list nil)))) (nat_bitvector_big _ 0).
+Proof.
+  assert (4 < 2 ^ wordSize);[
+    rewrite pureOp_store_b_lem;
+    rewrite add_comm;
+    change (2 ^ (8 + (wordSize - 8)))
+      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
+    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  intro n.
+  destruct m.
+  - unfold fib_step_r.
+    unfold initialState, fib_init, pureOp_mov, pureOp_store_w, pureOp_read, registers.
+    unfold memory.
+    rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow].
+    rewrite nth_replace.
+    repeat rewrite replace_nth_irr.
+    rewrite Memory_Word_Store_Load_from_Reg_Irr.
+    rewrite Memory_Word_Load_from_Reg_const.
+    reflexivity.
+    repeat rewrite nat_bitvector_big_inv;change wordSizeEighth with 2;lia.
+    all: simpl; lia.
+  - rewrite fib_step_r_unfold_out.
+    apply fib_step_copy.
+Qed.
+
+(* After running fib_full instructions, reg 10 contains the appropriate value *)
+Lemma fib_full_vals : forall n, 
+  n < 2 ^ wordSize ->
+  nth (registers (fib_full (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil)))
       (bitvector_fin_big [b1; b0])
   = nat_bitvector_big _ (fib n mod (2 ^ wordSize)).
-Admitted.
+Proof.
+  assert (4 < 2 ^ wordSize);[
+    rewrite pureOp_store_b_lem;
+    rewrite add_comm;
+    change (2 ^ (8 + (wordSize - 8)))
+      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
+    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  intros n nLT.
+  unfold fib_full, fib_finish.
+  rewrite registers_pureOp_cjmp, registers_pureOp_cmpe.
+  rewrite <- mfib_mod;[|exact pureOp_read_correct_lem].
+  rewrite fib_step_r_copy.
+  rewrite fib_step_r_vals.
+  unfold initialState, fib_init, pureOp_mov, pureOp_store_w, pureOp_read, registers.
+  unfold memory.
+  repeat rewrite nth_replace.
+  rewrite Memory_Word_Store_Load_from_Reg_Irr.
+  rewrite Memory_Word_Load_from_Reg_const.
+  rewrite Memory_Word_Store_Load_from_Reg.
+  rewrite nat_bitvector_big_inv;[|exact pureOp_read_correct_lem].
+  rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow].
+  rewrite nat_bitvector_big_inv;[|assumption].
+  reflexivity.
+  repeat rewrite nat_bitvector_big_inv;change wordSizeEighth with 2;lia.
+  apply bitvector_nat_big_lt_2pow.
+  rewrite bitvector_nat_big_inv; reflexivity.
+Qed.
 
 (* We can compose our previous lines of proof together to observe 
-  that the state is correctly calculated by full_fib and the value
+  that the state is correctly calculated by fib_full and the value
   is correctly calculated by (fib n mod (2 ^ wordSize) *)
 Lemma fib_ret_state_val : forall n, 
   n < 2 ^ wordSize ->
   (interp_machine (E := void1) run
      (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil))
-  ≈ Ret (full_fib (initialState FibProgram
+  ≈ Ret (fib_full (initialState FibProgram
                    (nat_bitvector_big wordSize n :: nil)%list nil),
          nat_bitvector_big _ (fib n mod (2 ^ wordSize))).
 Proof.
   intros n lt. rewrite fib_runs_full;[|assumption].
   rewrite interp_machine_run_halt_reg;
-  [ rewrite fib_correct_2;[reflexivity|assumption]
-  | rewrite full_fib_answer;[reflexivity|assumption]
+  [ rewrite fib_full_vals;[reflexivity|assumption]
+  | rewrite fib_full_answer;[reflexivity|assumption]
   | apply encode_decode_id ].
 Qed.
 
