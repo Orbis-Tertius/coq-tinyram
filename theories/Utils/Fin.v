@@ -17,12 +17,16 @@
 From Coq Require Import
      Arith
      Lia.
+Import PeanoNat.Nat EqNotations.
 
 From ITree Require Import
      ITree
      ITreeFacts
      Basics.Category
      Basics.CategorySub.
+
+From TinyRAM.Utils Require Import
+  Arith.
 (* end hide *)
 
 (* Type with [n] inhabitants. *)
@@ -187,6 +191,15 @@ Proof.
     try contradiction + exfalso; lia.
 Qed.
 
+Definition fin_mod : forall n m,
+  n <> 0 -> fin (m * n) -> fin n.
+  intros n m meq f.
+  destruct f as [f fprp].
+  exists (f mod n).
+  apply mod_upper_bound.
+  assumption.
+Defined.
+
 Instance ToBifunctor_ktree_fin {E} : ToBifunctor (ktree E) fin sum Nat.add :=
   fun n m y => Ret (split_fin_sum n m y).
 
@@ -222,3 +235,78 @@ Instance InitialObject_ktree_fin {E} : InitialObject (sub (ktree E) fin) 0.
 Proof.
   intros n f x; apply fin_0; auto.
 Qed.
+
+Definition fin_add : forall {n m} (f1 : fin n) (f2 : fin m), fin (n + m - 1).
+  intros n m [f1 f1P] [f2 f2P].
+  exists (f1 + f2).
+  destruct n. { lia. }
+  destruct m. { lia. }
+  lia.
+Defined.
+
+Definition fin_cast : forall {n m}, (n <= m) -> fin n -> fin m.
+  intros n m le [f fP].
+  exists f.
+  lia.
+Defined.
+
+Theorem fin_mul_lem : forall {n m},
+  (n - 1) * (m - 1) <= S (n * m - m - n).
+Proof.
+  intros n m.
+  rewrite mul_sub_distr_l.
+  repeat rewrite mul_sub_distr_r.
+  rewrite mul_1_r, mul_1_l; simpl.
+  destruct n. { simpl; lia. }
+  destruct m. { rewrite <- mult_n_O; simpl; lia. }
+  destruct n. { simpl; rewrite add_0_r, sub_diag; lia. }
+  destruct m. { simpl; rewrite mul_1_r, sub_diag; lia. }
+  rewrite add_sub_distr. 2: { lia. }
+  2: { apply le_add_le_sub_r, add_le_mul; lia. }
+  rewrite add_1_r; apply le_n.
+Qed.
+
+Definition fin_mul : forall {n m} (f1 : fin n) (f2 : fin m),
+                            fin (S (S (n * m - m - n))).
+  intros n m [f1 f1P] [f2 f2P].
+  exists (f1 * f2).
+  apply (le_lt_trans _ ((n - 1) * (m - 1))).
+  + apply mul_le_mono.
+    - rewrite <- lt_succ_r.
+      replace (S (n - 1)) with n. { assumption. }
+      lia.
+    - rewrite <- lt_succ_r.
+      replace (S (m - 1)) with m. { assumption. }
+      lia.
+  + apply (le_lt_trans _ (S (n * m - m - n))).
+    - apply fin_mul_lem.
+    - lia.
+Defined.
+
+Definition fin_max : forall n, fin (S n).
+  intro n; exists n; lia.
+Defined.
+
+Theorem proj1_fin_cast : forall {n m} (f : fin n) (eq : n <= m),
+  proj1_sig (fin_cast eq f) = proj1_sig f.
+Proof. destruct f; reflexivity. Qed.
+
+Theorem proj1_fin_add : forall {n m} (f : fin n) (g : fin m),
+  proj1_sig (fin_add f g) = proj1_sig f + proj1_sig g.
+Proof. destruct f, g; reflexivity. Qed.
+
+Theorem proj1_fin_mul : forall {n m} (f : fin n) (g : fin m),
+  proj1_sig (fin_mul f g) = proj1_sig f * proj1_sig g.
+Proof. destruct f, g; reflexivity. Qed.
+
+Theorem proj1_fin_max : forall {n},
+  proj1_sig (fin_max n) = n.
+Proof. reflexivity. Qed.
+
+Theorem fin_rew : forall {n m o} (eq : n = m) (H : o < n),
+  (rew eq in (exist (fun x => x < n) o H : fin n)) =
+  exist (fun x => x < m) o (rew eq in H).
+Proof. intros n m o eq; destruct eq; reflexivity. Qed.
+
+Definition mk_fin {m} : forall n, n < m -> fin m.
+  intros; exists n; assumption. Defined.

@@ -4,8 +4,6 @@ Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it
 
 `vnTinyRam` description: `papers/TinyRAM-spec-2.000.pdf`
 
-The implementation relies **heavily** on Xia et. al. 2020. Some code is plagiarized [see here](https://github.com/DeepSpec/InteractionTrees/blob/master/tutorial/Asm.v).
-
 ## Build and launch emacs or vscodium with coq available, for an interactive session
 
 1. [Install `nix`](https://nixos.org/download.html)
