@@ -217,13 +217,13 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
         | cmpaI ri =>
           regi <- trigger (GetReg ri) ;;
           (*""" [flag:] [ri] > [A] """*)
-          trigger (SetFlag (bitvector_nat_big A <? bitvector_nat_big regi)) ;;
+          trigger (SetFlag (bv_lt A regi)) ;;
           trigger IncPC
 
         | cmpaeI ri =>
           regi <- trigger (GetReg ri) ;;
           (*""" [flag:] [ri] ≥ [A] """*)
-          trigger (SetFlag (bitvector_nat_big A <=? bitvector_nat_big regi)) ;;
+          trigger (SetFlag (bv_le A regi)) ;;
           trigger IncPC
 
         | cmpgI ri =>

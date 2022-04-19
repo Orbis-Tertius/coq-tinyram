@@ -935,8 +935,7 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       (* Registers *)
       - exact registers0.
       (* Flag *)
-      - apply bitvector_nat_big in ri, A.
-        exact (A <? ri).
+      - exact (bv_lt A ri).
       (* Memory *)
       - exact memory0.
       (* Main Tape *)
@@ -950,7 +949,12 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
     Theorem pureOp_cmpa_flag_correct (ri : regId) (A : Word) (m : MachineState) :
       flag (pureOp_cmpa ri A m) = 
       (bitvector_nat_big A <? bitvector_nat_big (nth (registers m) ri)).
-    Proof. destruct m; reflexivity. Qed.
+    Proof.
+      destruct m.
+      unfold pureOp_cmpa, flag, registers.
+      rewrite bv_lt_correct.
+      reflexivity.
+    Qed.
 
     Theorem pureOp_cmpa_interp_imm {S} (k: itree E S) (ri : regId) 
                                   (A : Word) (m : MachineState) :
@@ -978,8 +982,7 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       (* Registers *)
       - exact registers0.
       (* Flag *)
-      - apply bitvector_nat_big in ri, A.
-        exact (A <=? ri).
+      - exact (bv_le A ri).
       (* Memory *)
       - exact memory0.
       (* Main Tape *)
@@ -993,7 +996,12 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
     Theorem pureOp_cmpae_flag_correct (ri : regId) (A : Word) (m : MachineState) :
       flag (pureOp_cmpae ri A m) = 
       (bitvector_nat_big A <=? bitvector_nat_big (nth (registers m) ri)).
-    Proof. destruct m; reflexivity. Qed.
+    Proof. 
+      destruct m.
+      unfold pureOp_cmpae, flag, registers.
+      rewrite bv_le_correct.
+      reflexivity.
+    Qed.
 
     Theorem pureOp_cmpae_interp_imm {S} (k: itree E S) (ri : regId) 
                                   (A : Word) (m : MachineState) :

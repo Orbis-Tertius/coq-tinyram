@@ -1775,6 +1775,42 @@ Proof.
   - apply lt_mul_mul; lia.
 Qed.
 
+Definition bv_lt {n} (u v : t bool n) : bool :=
+  (bitvector_N_big u <? bitvector_N_big v)%N.
+
+Theorem bv_lt_correct {n} (u v : t bool n) :
+  bv_lt u v = (bitvector_nat_big u <? bitvector_nat_big v).
+Proof.
+  intros.
+  unfold bv_lt.
+  repeat rewrite bitvector_nat_N_big.
+  destruct (bitvector_nat_big u <? bitvector_nat_big v) eqn:ltV.
+  - rewrite PeanoNat.Nat.ltb_lt in ltV.
+    rewrite N.ltb_lt.
+    lia.
+  - rewrite PeanoNat.Nat.ltb_nlt in ltV.
+    rewrite N.ltb_nlt.
+    lia.
+Qed.
+
+Definition bv_le {n} (u v : t bool n) : bool :=
+  (bitvector_N_big u <=? bitvector_N_big v)%N.
+
+Theorem bv_le_correct {n} (u v : t bool n) :
+  bv_le u v = (bitvector_nat_big u <=? bitvector_nat_big v).
+Proof.
+  intros.
+  unfold bv_le.
+  repeat rewrite bitvector_nat_N_big.
+  destruct (bitvector_nat_big u <=? bitvector_nat_big v) eqn:leV.
+  - rewrite PeanoNat.Nat.leb_le in leV.
+    rewrite N.leb_le.
+    lia.
+  - rewrite PeanoNat.Nat.leb_nle in leV.
+    rewrite N.leb_nle.
+    lia.
+Qed.
+
 Definition bv_succ {n} (v : t bool n) := 
   (N_bitvector_big n (N.succ (bitvector_N_big v) mod 2 ^ N.of_nat n)).
 
