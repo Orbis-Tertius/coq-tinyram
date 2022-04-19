@@ -111,7 +111,7 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
     let pc := programCounter s in
     match e in (ProgramCounterE T) return (itree E T) with
     | SetPC v => put (updtPC v s)
-    | IncPC => put (updtPC (bv_incr 1 pc) s)
+    | IncPC => put (updtPC (bv_succ pc) s)
     | GetPC => ret pc
     end.
 

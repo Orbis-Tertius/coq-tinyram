@@ -86,6 +86,20 @@ Module TinyRAMThrms (Params : TinyRAMParameters).
     apply le_log2_log2_up.
   Qed.
 
+  Theorem wordSize_expand : wordSize = (wordSize - 8 + 8).
+  Proof. assert (8 <= wordSize). { exact wordSizeMin8. } lia. Qed.
+
+  Theorem address_min : 255 < 2 ^ wordSize.
+  Proof.
+    rewrite wordSize_expand.
+    replace (wordSize - 8 + 8)
+       with (8 + (wordSize - 8));[|lia].
+    change (2 ^ (8 + ?x))
+      with (2 * (2 * (2 * (2 * (2 * (2 * (2 * (2 * 2 ^ x)))))))).
+    assert (0 < 2 ^ (wordSize - 8));[apply Arith.zero2pow|].
+    lia.
+  Qed.
+
   (*"""
   increments pc (the program counter) by i [...] where
   [...] i = 2W/8 for vnTinyRAM.

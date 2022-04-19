@@ -288,7 +288,10 @@ Lemma programCounter_fib_init :
   (programCounter (fib_init m)) = 
   (nat_bitvector_big _ 3).
 Proof.
-  destruct m; intro H; unfold programCounter in H; rewrite H; reflexivity.
+  destruct m; intro H; unfold programCounter in H; rewrite H.
+  unfold fib_init, pureOp_mov, pureOp_store_w, pureOp_read, programCounter.
+  assert (255 < 2 ^ wordSize);[apply address_min|].
+  pc_simpl; reflexivity.
 Qed.
 
 Lemma programCounter_fib_step : 
@@ -377,18 +380,25 @@ Lemma fib_runs_init : forall n,
       (fib_init (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil))).
 Proof.
+  assert (255 < 2 ^ wordSize);[apply address_min|].
   intro n.
   unfold initialState.
+  change (const b0 wordSize) with (nat_bitvector_big wordSize 0).
   rewrite interp_machine_run_step;
-  [|reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_mov_interp_imm; unfold pureOp_mov.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 1;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_store_w_interp_imm; unfold pureOp_store_w.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 2;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_read_interp_imm.
-  reflexivity.
+  unfold pureOp_read.
+  unfold fib_init, pureOp_mov, pureOp_store_w, pureOp_read, programCounter.
+  pc_simpl; reflexivity.
 Qed.
 
 (* After initialization, the assembly produced by FibProgram's main
@@ -401,6 +411,7 @@ Lemma fib_runs_step : forall n m,
   interp_machine (E := void1) run m
   ≈ interp_machine (E := void1) run (fib_step m).
 Proof.
+  assert (255 < 2 ^ wordSize);[apply address_min|].
   intros n m lt eq1 eq2 eq3; destruct m.
   unfold registers in eq2.
   unfold programCounter in eq1; rewrite eq1.
@@ -411,34 +422,42 @@ Proof.
   rewrite pureOp_cmpe_interp_imm; unfold pureOp_cmpe.
   replace (bv_eq _ _) with b0; [|
   rewrite eq2, bv_eq_big_conv; [reflexivity|assumption|apply Arith.zero2pow]].
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 4;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_cjmp_interp_imm; unfold pureOp_cjmp.
   change (if b0 then _ else ?y) with y.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 5;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_load_w_interp_imm; unfold pureOp_load_w.
   unfold registers.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 6;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_load_w_interp_imm; unfold pureOp_load_w.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 7;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_add_interp_reg; unfold pureOp_add.
   unfold registers.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 8;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
-  rewrite pureOp_store_w_interp_imm.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 9;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_store_w_interp_imm; unfold pureOp_store_w.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 10;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
+  rewrite pureOp_store_w_interp_imm; unfold pureOp_store_w.
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_sub_interp_imm; unfold pureOp_sub.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 11;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_jmp_interp_imm; unfold pureOp_jmp.
-  reflexivity.
+  pc_simpl;reflexivity.
 Qed.
 
 (*After initialization, the loop generated by FibProgram is the same
@@ -474,15 +493,18 @@ Lemma fib_runs_finish : forall m,
   interp_machine (E := void1) run m
   ≈ interp_machine (E := void1) run (fib_finish m).
 Proof.
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   destruct m; unfold programCounter, registers, program; intros.
   unfold fib_finish.
   rewrite H, H1; clear H H1.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 3;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_cmpe_interp_imm; unfold pureOp_cmpe.
   rewrite H0; change (bv_eq _ _) with b1.
-  rewrite interp_machine_run_step;
-  [|change (bitvector_nat_big _) with 4;reflexivity|apply encode_decode_id|intro HAH; discriminate HAH].
+  pc_simpl; rewrite interp_machine_run_step;
+  [|unfold programCounter; rewrite nat_bitvector_big_inv;[reflexivity|lia]
+   |apply encode_decode_id|intro HAH; discriminate HAH].
   rewrite pureOp_cjmp_interp_imm.
   reflexivity.
 Qed.
@@ -496,16 +518,18 @@ Lemma fib_runs_full : forall n,
   ≈ (interp_machine (E := void1) run (fib_full (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil))).
 Proof.
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   intros n lt.
   rewrite fib_runs_init, fib_runs_step_r, fib_runs_finish;
   unfold fib_full;
-  unfold initialState, fib_init, pureOp_mov, pureOp_store_w, pureOp_read.    
+  unfold initialState, fib_init, pureOp_mov, pureOp_store_w, pureOp_read.
   - reflexivity.
   - unfold registers.
     rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
     rewrite nth_replace.
     rewrite nat_bitvector_big_inv;[|assumption].
-    destruct n;[reflexivity|].
+    change (const b0 wordSize) with (nat_bitvector_big wordSize 0).
+    destruct n;[pc_simpl;reflexivity|].
     apply programCounter_fib_step_r.
   - unfold registers at 2.
     rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
@@ -519,7 +543,9 @@ Proof.
     rewrite nth_replace.
     rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
     rewrite nat_bitvector_big_inv;assumption.
-  - unfold programCounter; reflexivity.
+  - unfold programCounter. 
+    change (const b0 wordSize) with (nat_bitvector_big wordSize 0).
+    pc_simpl; reflexivity.
   - unfold registers.
     rewrite nth_replace. 
     rewrite nat_bitvector_big_inv;[|apply Arith.zero2pow ].
@@ -537,12 +563,7 @@ Lemma fib_step_vals_1 : forall i j m n,
   Memory_Word_Load_from_Reg (memory (fib_step m)) (nat_bitvector_big _ 0)
     = nat_bitvector_big _ (mfib i j (2 ^ wordSize) (S n)).
 Proof.
-  assert (4 < 2 ^ wordSize);[
-    rewrite pureOp_store_b_lem;
-    rewrite add_comm;
-    change (2 ^ (8 + (wordSize - 8)))
-      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
-    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   intros i j m n.
   destruct m; unfold memory.
   intros.
@@ -550,7 +571,7 @@ Proof.
   unfold pureOp_cmpe, pureOp_cjmp, pureOp_load_w.
   unfold pureOp_add, pureOp_store_w, pureOp_sub, pureOp_jmp.
   unfold registers.
-  rewrite H0; clear H0.
+  rewrite H; clear H.
   repeat rewrite (replace_swap _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
   repeat rewrite (replace_nth_irr _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
   repeat rewrite (replace_swap _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
@@ -574,12 +595,7 @@ Lemma fib_step_vals_2 : forall i j m n,
   Memory_Word_Load_from_Reg (memory (fib_step m)) (nat_bitvector_big _ 2)
     = nat_bitvector_big _ (mfib i j (2 ^ wordSize) (S (S n))).
 Proof.
-  assert (4 < 2 ^ wordSize);[
-    rewrite pureOp_store_b_lem;
-    rewrite add_comm;
-    change (2 ^ (8 + (wordSize - 8)))
-      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
-    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   intros i j m n iLT jLT.
   destruct m; unfold memory.
   intros.
@@ -587,7 +603,7 @@ Proof.
   unfold pureOp_cmpe, pureOp_cjmp, pureOp_load_w.
   unfold pureOp_add, pureOp_store_w, pureOp_sub, pureOp_jmp.
   unfold registers.
-  rewrite H0, H1; clear H0 H1.
+  rewrite H, H0; clear H H0.
   repeat rewrite (replace_swap _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
   repeat rewrite (replace_nth_irr _ (bitvector_fin_big [b0; b1]) (bitvector_fin_big [b1; b0])).
   repeat rewrite (replace_swap _ (bitvector_fin_big [b1; b0]) (bitvector_fin_big [b0; b1])).
@@ -661,12 +677,7 @@ Lemma fib_step_copy: forall m,
   nth (registers (fib_step m)) (bitvector_fin_big [b1; b0])
   = Memory_Word_Load_from_Reg (memory (fib_step m)) (nat_bitvector_big _ 0).
 Proof.
-  assert (4 < 2 ^ wordSize);[
-    rewrite pureOp_store_b_lem;
-    rewrite add_comm;
-    change (2 ^ (8 + (wordSize - 8)))
-      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
-    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   destruct m.
   unfold fib_step.
   unfold pureOp_cmpe, pureOp_cjmp, pureOp_load_w.
@@ -694,12 +705,7 @@ Lemma fib_step_r_copy: forall n m,
   = Memory_Word_Load_from_Reg (memory (fib_step_r m (fib_init (initialState FibProgram
         (nat_bitvector_big wordSize n :: nil)%list nil)))) (nat_bitvector_big _ 0).
 Proof.
-  assert (4 < 2 ^ wordSize);[
-    rewrite pureOp_store_b_lem;
-    rewrite add_comm;
-    change (2 ^ (8 + (wordSize - 8)))
-      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
-    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   intro n.
   destruct m.
   - unfold fib_step_r.
@@ -725,12 +731,7 @@ Lemma fib_full_vals : forall n,
       (bitvector_fin_big [b1; b0])
   = nat_bitvector_big _ (fib n mod (2 ^ wordSize)).
 Proof.
-  assert (4 < 2 ^ wordSize);[
-    rewrite pureOp_store_b_lem;
-    rewrite add_comm;
-    change (2 ^ (8 + (wordSize - 8)))
-      with (2 * (2 * (2 * 2 ^ (5 + (wordSize - 8)))));
-    assert (0 < 2 ^ (5 + (wordSize - 8)));[apply Arith.zero2pow|lia]|].
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   intros n nLT.
   unfold fib_full, fib_finish.
   rewrite registers_pureOp_cjmp, registers_pureOp_cmpe.
@@ -762,14 +763,16 @@ Lemma fib_full_answer : forall n, n < 2 ^ wordSize ->
                                      (nat_bitvector_big wordSize n :: nil)%list nil)))))
   = Some (InstructionEncode (answerI, inr (bitvector_fin_big [b1; b0]))).
 Proof.
+  assert (255 < 2 ^ wordSize) as HLT;[apply address_min|].
   intros n nlt.
   remember (fib_full _) as intr.
   unfold initialState, fib_full, fib_init, pureOp_mov, pureOp_store_w, pureOp_read, registers in Heqintr.
   rewrite nat_bitvector_big_inv, nth_replace, nat_bitvector_big_inv in Heqintr;
   [ | assumption | apply Arith.zero2pow ].
   rewrite nth_replace, replace_replace in Heqintr.
-  change (bv_incr _ _) with (nat_bitvector_big wordSize 3) in Heqintr.
   rewrite Heqintr; clear Heqintr intr.
+  change (const b0 wordSize) with (nat_bitvector_big wordSize 0).
+  pc_simpl.
   rewrite program_fib_finish, program_fib_step_r.
   unfold program.
   rewrite programCounter_fib_finish;[reflexivity|].
