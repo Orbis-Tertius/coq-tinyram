@@ -1,7 +1,5 @@
 From Coq Require Import
   ZArith.Int List VectorDef BinIntDef VectorEq.
-From Coq Require Import
-  VectorDef.
 From ExtLib Require Import
      Monad.
 From ITree Require Import
@@ -19,15 +17,10 @@ From TinyRAM.Utils Require Import
   Fin BitVectors.
 Import BinInt.Z PeanoNat.Nat Monads MonadNotation VectorNotations.
 
-
-
 Module TinyRAMDenotations (Params : TinyRAMParameters).
   Module TRMem := TinyRAMMem Params.
   Import TRMem.
   Export TRMem.
-  Module TRCod := TinyRAMCoding Params.
-  Import TRCod.
-  Export TRCod.
 
   Definition traverse_ {A: Type} {M: Type -> Type} `{Monad M} (f: A -> M unit): list A -> M unit :=
     fix traverse__ l: M unit :=

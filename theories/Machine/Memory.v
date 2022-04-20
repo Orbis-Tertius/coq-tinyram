@@ -9,18 +9,18 @@ From TinyRAM.Utils Require Import
 From TinyRAM.Machine Require Import
   Parameters.
 From TinyRAM.Machine Require Import
-  Words.
+  Coding.
 Import PeanoNat.Nat.
 
 Module TinyRAMMem (Params : TinyRAMParameters).
-  Module TRWords := TinyRAMWords Params.
-  Import TRWords.
-  Export TRWords.
+  Module TRCod := TinyRAMCoding Params.
+  Import TRCod.
+  Export TRCod.
 
   (*"""
   Memory, which is a linear array of 2^[wordSize] bytes.
   """*)
-  Definition Memory := Vector.t Byte (2 ^ wordSize).
+  Definition Memory := VectorDef.t Byte (2 ^ wordSize).
 
   (*"""
   We say that a block is aligned to the A-th byte if its
@@ -34,8 +34,8 @@ Module TinyRAMMem (Params : TinyRAMParameters).
   Definition Memory_Block_Load
     (m : Memory)
     (idx blksz : fin (2 ^ wordSize)) :
-    Vector.t Byte (proj1_sig blksz) :=
-    Vector.rev (Block_Load m idx blksz).
+    VectorDef.t Byte (proj1_sig blksz) :=
+    VectorDef.rev (Block_Load m idx blksz).
 
   (*"""
   When storing or loading blocks of multiple bytes, 
@@ -44,9 +44,9 @@ Module TinyRAMMem (Params : TinyRAMParameters).
   Definition Memory_Block_Store 
     (m : Memory)
     (idx blksz : fin (2 ^ wordSize))
-    (block : Vector.t Byte (proj1_sig blksz)) :
+    (block : VectorDef.t Byte (proj1_sig blksz)) :
     Memory :=
-    Block_Store m idx blksz (Vector.rev block).
+    Block_Store m idx blksz (VectorDef.rev block).
 
   (* Since a Word is a memory block, it can be loaded as well. *)
   Definition Memory_Word_Load
@@ -190,8 +190,8 @@ Qed.
 Theorem Memory_Word_Load_from_Reg_const : forall 
   (idx : Word)
   (val : Byte),
-  Memory_Word_Load_from_Reg (Vector.const val _) idx
-  = vector_concat (Vector.const val _).
+  Memory_Word_Load_from_Reg (VectorDef.const val _) idx
+  = vector_concat (VectorDef.const val _).
 Proof.
   intros.
   unfold Memory_Word_Load_from_Reg, Memory_Word_Load, Memory_Block_Load.

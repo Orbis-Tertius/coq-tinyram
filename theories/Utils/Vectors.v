@@ -161,7 +161,7 @@ Proof.
 Qed.
 
 Theorem cast_app_distribute : forall {A n m k l} {eq : n + m = k + l}
-  {v : Vector.t A n} {u : Vector.t A m} (eq1 : n = k) (eq2 : m = l),
+  {v : t A n} {u : t A m} (eq1 : n = k) (eq2 : m = l),
   cast (v ++ u) eq = cast v eq1 ++ cast u eq2.
 Proof.
   intros; destruct eq1, eq2.
@@ -169,7 +169,7 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem cast_swap : forall {A n m} (v : Vector.t A n) (u : Vector.t A m)
+Theorem cast_swap : forall {A n m} (v : t A n) (u : t A m)
   (eq : n = m),
   cast v eq = u <-> v = cast u (eq_sym eq).
 Proof.
@@ -179,7 +179,7 @@ Proof.
   - intros; rewrite H, cast_trans, cast_id; reflexivity.
 Qed.
 
-Theorem cast_f_apply: forall {A n m} (v u : Vector.t A n) (eq : n = m),
+Theorem cast_f_apply: forall {A n m} (v u : t A n) (eq : n = m),
   v = u <-> cast v eq = cast u eq.
 Proof.
   intros.
@@ -200,7 +200,7 @@ Definition vector_cons_split : forall {A n}
   (v : t A (S n)), 
   { x : A & { vtl : t A n | v = cons A x n vtl } }.
   intros A n v.
-  exists (hd v), (tl v). apply Vector.eta.
+  exists (hd v), (tl v). apply VectorSpec.eta.
 Defined.
 
 Definition replace :
@@ -241,7 +241,7 @@ Proof.
     apply IHv.
 Qed.
 
-Theorem replace_unfold : forall {A n} (l : Vector.t A n) h f x
+Theorem replace_unfold : forall {A n} (l : t A n) h f x
   (lt : S f < S n),
   replace (h :: l) (mk_fin (S f) lt) x
   = h :: replace l (mk_fin f (Lt.lt_S_n _ _ lt)) x.
@@ -252,7 +252,7 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem replace_replace : forall {A n} (l : Vector.t A n) f x y,
+Theorem replace_replace : forall {A n} (l : t A n) f x y,
   replace (replace l f x) f y = replace l f y.
 Proof.
   induction l; [ reflexivity | ].
@@ -263,7 +263,7 @@ Proof.
   reflexivity.
 Qed.
 
-Theorem replace_swap : forall {A n} (l : Vector.t A n) f g x y,
+Theorem replace_swap : forall {A n} (l : t A n) f g x y,
   proj1_sig f <> proj1_sig g ->
   replace (replace l f x) g y = replace (replace l  g y) f x.
 Proof.
@@ -275,7 +275,7 @@ Proof.
     simpl; rewrite IHl; [ reflexivity |  simpl; lia].
 Qed.
 
-Theorem replace_nth_irr : forall {A n} (l : Vector.t A n) f g x,
+Theorem replace_nth_irr : forall {A n} (l : t A n) f g x,
   proj1_sig f <> proj1_sig g ->
   nth (replace l f x) g = nth l g.
 Proof.
@@ -413,14 +413,14 @@ Proof.
   intros A n v.
   induction n.
   - rewrite (vector_nil_eq (most_ v)).
-    rewrite (Vector.eta v).
+    rewrite (VectorSpec.eta v).
     rewrite (vector_nil_eq (tl v)).
     simpl; f_equal.
     unfold last_.
     replace (add_comm 0 1) with (eq_refl 1).
     2: { apply proof_irrelevance. }
     reflexivity.
-  - rewrite (Vector.eta v).
+  - rewrite (VectorSpec.eta v).
     assert (tl v = most_ (tl v) ++ [last_ (tl v)]).
     { apply IHn. }
     rewrite H at 1.
@@ -829,7 +829,7 @@ Proof.
 Qed.
 
 Theorem rev_const: forall {B} {b : B} {n},
-  Vector.rev (const b n) = const b n.
+  VectorDef.rev (const b n) = const b n.
 Proof.
   intros.
   induction n.
@@ -1112,9 +1112,9 @@ Qed.
 
 (* Storing then loading a block at the same address gives the same block back. *)
 Theorem Block_Store_Load : forall {B memsz}
-    (m : Vector.t B memsz)
+    (m : t B memsz)
     (idx blksz: fin memsz)
-    (block : Vector.t B (proj1_sig blksz)),
+    (block : t B (proj1_sig blksz)),
     Block_Load 
       (Block_Store m idx blksz block)
       idx blksz
@@ -1163,9 +1163,9 @@ Qed.
 
 (*Storing twice at the same place is the same as storing once.*)
 Theorem Block_Store_Store : forall {B memsz}
-    (m : Vector.t B memsz)
+    (m : t B memsz)
     (idx blksz: fin memsz)
-    (block block' : Vector.t B (proj1_sig blksz)),
+    (block block' : t B (proj1_sig blksz)),
     Block_Store 
       (Block_Store m idx blksz block)
       idx blksz block'
@@ -1215,9 +1215,9 @@ Qed.
 (*If searching for a block in a memory after a different block was
   stored, we can ignore that storage. *)
 Theorem Block_Store_Load_Irr : forall {B memsz}
-    (m : Vector.t B memsz)
+    (m : t B memsz)
     (idx1 idx2 blksz: fin memsz)
-    (block : Vector.t B (proj1_sig blksz)),
+    (block : t B (proj1_sig blksz)),
     (*  |----------------|
           |--|      |--|
           1  1+     2  2+   *)
@@ -1493,9 +1493,9 @@ Ltac shake_vect_eq speq :=
 (*If storing a block in a memory after a different block was
   stored, we can ignore the order of storage. *)
 Theorem Block_Store_Store_Swap : forall {B memsz}
-    (m : Vector.t B memsz)
+    (m : t B memsz)
     (idx1 idx2 blksz: fin memsz)
-    (block block' : Vector.t B (proj1_sig blksz)),
+    (block block' : t B (proj1_sig blksz)),
     (*  |----------------|
           |--|      |--|
           1  1+     2  2+   *)

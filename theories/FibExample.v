@@ -335,7 +335,7 @@ Qed.
 (* fib_step decrements register 00 *)
 Lemma fib_step_index_dec : forall m,
   nth (registers (fib_step m)) (bitvector_fin_big [b0; b0])
-  = Vector.tl (bv_sub (nth (registers m) (bitvector_fin_big [b0; b0]))
+  = VectorDef.tl (bv_sub (nth (registers m) (bitvector_fin_big [b0; b0]))
                       (nat_bitvector_big _ 1)).
 Proof.
   destruct m.

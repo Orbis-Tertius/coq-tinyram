@@ -14,23 +14,23 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   (*"""
   each Word consists of [wordSize] bits
   """*)
-  Definition Word := Vector.t bool wordSize.
+  Definition Word := VectorDef.t bool wordSize.
 
   Definition wcast (v : Word) := 
     cast v (eq_sym (succ_pred_pos _ wordSizePos)).
 
-  Definition wuncast (v : Vector.t bool (S (pred wordSize))) :=
+  Definition wuncast (v : VectorDef.t bool (S (pred wordSize))) :=
     cast v (succ_pred_pos _ wordSizePos).
 
-  Definition wbcast {A} (v : Vector.t A wordSize) :
-                        Vector.t A (wordSize - 8 + 8).
+  Definition wbcast {A} (v : VectorDef.t A wordSize) :
+                        VectorDef.t A (wordSize - 8 + 8).
     assert (8 <= wordSize). { exact wordSizeMin8. }
     replace (_ + _) with wordSize. { exact v. }
     lia.
   Defined.
 
-  Definition wbuncast {A} (v : Vector.t A (wordSize - 8 + 8)) :
-                          Vector.t A wordSize.
+  Definition wbuncast {A} (v : VectorDef.t A (wordSize - 8 + 8)) :
+                          VectorDef.t A wordSize.
     assert (8 <= wordSize). { exact wordSizeMin8. }
     replace (_ + _) with wordSize in v. { exact v. }
     lia.
@@ -38,10 +38,10 @@ Module TinyRAMWords (Params : TinyRAMParameters).
 
   (*Registers can be cleanly split into bytes.*) 
   Definition WordBytes (r : Word) : 
-    Vector.t Byte wordSizeEighth :=
+    VectorDef.t Byte wordSizeEighth :=
     vector_unconcat r.
 
-  Definition BytesWord (v : Vector.t Byte wordSizeEighth) : Word 
+  Definition BytesWord (v : VectorDef.t Byte wordSizeEighth) : Word 
     := vector_concat v.
 
   Theorem WordBytesIso1 :
@@ -55,7 +55,7 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   Qed.
 
   Theorem WordBytesIso2 :
-    forall (v : Vector.t Byte wordSizeEighth), 
+    forall (v : VectorDef.t Byte wordSizeEighth), 
     WordBytes (BytesWord v) = v.
   Proof.
     intros r.
@@ -69,5 +69,5 @@ Module TinyRAMWords (Params : TinyRAMParameters).
   Definition Program : Type := list (Word * Word).
   Definition Tape : Type := list Word.
   (*""" [registerCount] general-purpose registers, [...] """*)
-  Definition Registers : Type := Vector.t Word registerCount.
+  Definition Registers : Type := VectorDef.t Word registerCount.
 End TinyRAMWords.

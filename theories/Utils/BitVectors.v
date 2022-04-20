@@ -515,7 +515,7 @@ Proof.
 Qed.
 
 Theorem bitvector_fin_big_0_0 : forall {n} (v : t bool n),
-  bv_eq v (Vector.const b0 n) =
+  bv_eq v (VectorDef.const b0 n) =
   (bitvector_nat_big v =? 0).
 Proof.
   induction v.
@@ -564,7 +564,7 @@ Qed.
 
 Theorem bitvector_fin_big_0_const :
   forall {n} (v : t bool n),
-    (v = (Vector.const b0 n)) <-> (bitvector_nat_big v = 0).
+    (v = (VectorDef.const b0 n)) <-> (bitvector_nat_big v = 0).
 Proof.
   intros n v.
   rewrite <- bv_eq_equiv, <- eqb_eq, <- Bool.eq_iff_eq_true.
@@ -573,7 +573,7 @@ Qed.
 
 Theorem bitvector_fin_big_1_const :
   forall {n} (v : t bool n),
-    (v = (Vector.const b1 n)) <-> (bitvector_nat_big v = pred (2 ^ n)).
+    (v = (VectorDef.const b1 n)) <-> (bitvector_nat_big v = pred (2 ^ n)).
 Proof.
   intros n v.
   induction v.
@@ -1160,7 +1160,7 @@ Qed.
 Theorem bv_sub_correct_pos : 
   forall k n m,
   n < 2 ^ k -> m < 2 ^ k -> m <= n ->
-  Vector.tl (bv_sub (nat_bitvector_big k n)
+  VectorDef.tl (bv_sub (nat_bitvector_big k n)
             (nat_bitvector_big k m))
   = nat_bitvector_big k (n - m).
   intros k n m nlt mlt le.
@@ -1267,7 +1267,7 @@ Proof.
        apply bitvector_nat_big_lt_2pow. }
   rewrite <- bv_mul_correct_1.
   destruct (splitat _ _) as [v12h v12l] eqn:sE; simpl fst.
-  apply Vector.append_splitat in sE; rewrite sE.
+  apply VectorSpec.append_splitat in sE; rewrite sE.
   rewrite bitvector_nat_big_app.
   split.
   - intro; rewrite bitvector_fin_big_0_const.
@@ -1371,7 +1371,7 @@ Proof.
   destruct (splitat m v) as [v1 v2] eqn:spvE.
   apply VectorSpec.append_splitat in spvE; rewrite spvE.
   unfold eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
-  rewrite cast_app_l, Vector.splitat_append.
+  rewrite cast_app_l, VectorSpec.splitat_append.
   simpl; vector_simp.
   f_equal; apply proof_irrelevance.
 Qed.
@@ -1400,7 +1400,7 @@ Proof.
   apply VectorSpec.append_splitat in spvE; rewrite spvE.
   unfold eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
   vector_simp; rewrite cast_app_r. 
-  rewrite Vector.splitat_append.
+  rewrite VectorSpec.splitat_append.
   simpl; vector_simp.
   f_equal; apply proof_irrelevance.
 Qed.
@@ -1439,7 +1439,7 @@ Theorem twos_complement_min : forall {n} (v : t bool (S n)),
 Proof.
   intros n v.
   rewrite <- BinInt.Z.sub_0_l.
-  rewrite (Vector.eta v).
+  rewrite (VectorSpec.eta v).
   simpl twos_complement.
   apply BinInt.Z.sub_le_mono. { apply Zorder.Zle_0_nat. }
   destruct (hd v).
@@ -1456,7 +1456,7 @@ Theorem twos_complement_max : forall {n} (v : t bool (S n)),
   lt (twos_complement v) (pow 2 (of_nat n)).
 Proof.
   intros n v.
-  rewrite (Vector.eta v).
+  rewrite (VectorSpec.eta v).
   simpl twos_complement.
   rewrite (BinInt.Zminus_0_l_reverse (pow _ _)).
   apply BinInt.Z.sub_lt_le_mono. 2: { apply Zorder.Zle_0_nat. }
@@ -1479,7 +1479,7 @@ Proof.
   intros n v.
   assert (twos_complement' (tl v) < 2 ^ n).
   { rewrite twos_complement_big; apply bitvector_nat_big_lt_2pow. }
-  rewrite (Vector.eta v).
+  rewrite (VectorSpec.eta v).
   simpl.
   destruct (hd v); simpl bitValN.
   - rewrite PeanoNat.Nat.mul_1_l, <- opp_sub_swap, <- Znat.Nat2Z.inj_sub.
@@ -1593,7 +1593,7 @@ Qed.
 Theorem twos_complement_min_1s : forall {n} (b : t bool (S n)),
   b = b1 :: const b0 _ <-> opp (pow 2 (of_nat n)) = twos_complement b.
 Proof.
-  intros n b; rewrite (Vector.eta b).
+  intros n b; rewrite (VectorSpec.eta b).
   unfold twos_complement.
   assert (bitvector_nat_big (tl b) < 2 ^ n) as L1.
   { apply bitvector_nat_big_lt_2pow. }
