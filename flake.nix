@@ -72,6 +72,18 @@
                       version = "0.3.6";
                       sha256 = "sha256-b0gCaEzt5yAj53oLFZSXSD3bum9J1fYes/uf9+OlUek=";
                     }
+                    {
+                      name = "Haskell";
+                      publisher = "haskell";
+                      version = "2.1.3";
+                      sha256 = "sha256-OWV8i1XPO1BUc66nIIKoJmzs0D95O0+FJE1hxpYqPBw=";
+                    }
+                    {
+                      name = "language-haskell";
+                      publisher = "justusadam";
+                      version = "3.3.0";
+                      sha256 = "sha256-2rlomc4qjca1Mv5lxgT/4AARzuG8e4kgshielpBeBYk=";
+                    }
                   ];
                 };
               in
