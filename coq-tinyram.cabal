@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable coq-tinyram
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       Tinyram_VM
   other-extensions:    EmptyCase
   build-depends:       base >=4.12 && <4.13
   hs-source-dirs:      src
