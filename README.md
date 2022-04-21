@@ -1,8 +1,10 @@
 # `coq-tinyram`
 
-Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it later.
+This implements a fully formalized virtual machine for the (Harvard) TinyRam architecture.
 
-`vnTinyRam` description: `papers/TinyRAM-spec-2.000.pdf`
+Future plans are to extend it with an assembler and compiler from some more abstract imperative language, and C, eventually.
+
+`TinyRam` description: `papers/TinyRAM-spec-2.000.pdf`
 
 ## Build and launch emacs or vscodium with coq available, for an interactive session
 
@@ -21,6 +23,8 @@ Current plan: advance the `vnTinyRAM` emulator in coq, figure out the rest of it
 ```sh
 dune build
 ```
+
+Note that this can take in excess of 30 minutes, depending on your system. This will also create a new copy of `Tinyram_VM.hs`, extracted from the Coq files, within the `_build` directory, a copy of which can be found in the `src` folder.
 
 ## Mess around
 
