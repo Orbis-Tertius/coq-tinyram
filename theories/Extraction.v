@@ -34,7 +34,7 @@ Extract Inductive positive => "Prelude.Integer" [ "((1 Prelude.+) GHC.Base.. (2 
   )".
 Extract Inductive N => "Prelude.Integer" [ "0" "GHC.Base.id" ] 
  "(\fZ fP n -> if n Prelude.== 0 then fZ () else fP n)".
-Extract Inductive Z => "Prelude.Integer" [ "0" "Prelude.toInteger" "((0 Prelude.-) GHC.Base.. Prelude.toInteger)" ]
+Extract Inductive Z => "Prelude.Integer" [ "0" "GHC.Base.id" "(0 Prelude.-)" ]
  "(\fZ fP fN n -> if n Prelude.== 0 then fZ () else 
     ( if n Prelude.> 0
       then fP n
@@ -42,5 +42,10 @@ Extract Inductive Z => "Prelude.Integer" [ "0" "Prelude.toInteger" "((0 Prelude.
     )
   )".
 Extract Inductive comparison => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
+Extract Inductive VectorDef.t => "([])" [ "[]" "(\x _ xs -> x : xs)" ]
+  "(\fnil fcons v -> 
+     case v of
+       [] -> fnil ()
+       (x : xs) -> fcons x (Prelude.toInteger (Prelude.length xs)) xs)".
 
-Extraction "tinyram_vm.hs" interp_program.
+Extraction "Tinyram_VM.hs" interp_program.
