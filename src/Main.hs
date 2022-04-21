@@ -166,7 +166,7 @@ threeArg x mt at = case x of
     "-h" -> putStrLn (helpMultErr 2)
     _ -> case mt of
       "-s" -> do
-        putStrLn ("Running program " ++ x ++ " in interactive mode for " ++ at ++ " steps.")
+        putStrLn ("Running program " ++ x ++ " in interactive mode for " ++ at ++ " steps.\n")
         case readMaybe at of
           Nothing -> putStrLn ("Error: Could not parse " ++ at ++ " into value stepcount.")
           Just n -> do
