@@ -5,7 +5,7 @@ This directory contains the Haskell files needed to run the extracted VM. `Tinyr
 Example:
 
 ```
-> ./coq-tinyram tinyram_programs/fib_16_4.tr
+> cabal new-run coq-tinyram tinyram_programs/fib_16_4.tr
 Running program tinyram_programs/fib_16_4.tr in interactive mode.
 
 Main Tape Input> 20
@@ -13,7 +13,7 @@ Main Tape Input> 20
 	Nat: 6765
 	Int: 6765
 
-> ./coq-tinyram tinyram_programs/fib_16_4.tr -s 100
+> cabal new-run tinyram_programs/fib_16_4.tr -s 100
 Running program tinyram_programs/fib_16_4.tr in interactive mode for 100 steps.
 Main Tape Input> 20
 Error: Program did not halt within 100 steps.

@@ -26,6 +26,18 @@ dune build
 
 Note that this can take in excess of 30 minutes, depending on your system. This will also create a new copy of `Tinyram_VM.hs`, extracted from the Coq files, within the `_build` directory, a copy of which can be found in the `src` folder.
 
+## Compile `.hs` files
+
+```sh
+cabal new-build
+```
+
+and they can be run with
+
+```sh
+cabal new-run
+```
+
 ## Mess around
 
 Open up one of `theories/*.v` and type `C-c C-ENTER` to start the interactive session. Recall that `C-` is emacs-speak for holding the `CTRL` key.
