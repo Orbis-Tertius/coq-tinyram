@@ -1280,10 +1280,25 @@ Qed.
 (*unsigned division. Extra boolean indicates division by 0.*)
 Definition bv_udiv_flag {n} (v1 v2 : t bool n) : bool * t bool n :=
   let den := bitvector_N_big v2 in
-  (den =? 0, N_bitvector_big n (bitvector_N_big v1 / den))%N.
+  let b := (den =? 0)%N in
+  (b, N_bitvector_big n (if b then 0 else (bitvector_N_big v1 / den))%N).
 
 Definition bv_udiv {n} (v1 v2 : t bool n) : t bool n :=
   snd (bv_udiv_flag v1 v2).
+
+(*"""
+If [A]u = 0, then aW-1 · · · a0 = 0W .
+"""*)
+Theorem bv_udiv_correct_0 : forall {n} (v1 v2 : t bool n),
+  bitvector_nat_big v2 = 0 ->
+  bv_udiv v1 v2 = nat_bitvector_big n 0.
+Proof.
+  intros.
+  unfold bv_udiv, bv_udiv_flag, snd.
+  rewrite bitvector_nat_N_big, H.
+  simpl.
+  rewrite nat_N_bitvector_big;[reflexivity|simpl;lia].
+Qed.
 
 Theorem bv_udiv_correct_1 : forall {n} (v1 v2 : t bool n),
   bitvector_nat_big v2 > 0 ->
@@ -1293,6 +1308,9 @@ Proof.
   intros n v2 v3 v2LT.
   unfold bv_udiv, bv_udiv_flag.
   unfold snd.
+  assert (bitvector_N_big v3 > 0)%N;[rewrite bitvector_nat_N_big; lia|].
+  assert (bitvector_N_big v3 =? 0 = false)%N;[rewrite N.eqb_neq; lia|].
+  rewrite H0.
   repeat rewrite bitvector_nat_N_big.
   rewrite <- Nat2N_inj_div, N_nat_bitvector_big;try lia; try reflexivity.
   assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
@@ -1315,10 +1333,25 @@ Qed.
 (*unsigned modulus. Extra boolean indicates modulus by 0.*)
 Definition bv_umod_flag {n} (v1 v2 : t bool n) : bool * t bool n :=
   let bas := bitvector_N_big v2 in
-  (bas =? 0, N_bitvector_big n (bitvector_N_big v1 mod bas))%N.
+  let b := (bas =? 0)%N in
+  (b, N_bitvector_big n (if b then 0 else bitvector_N_big v1 mod bas)%N).
 
 Definition bv_umod {n} (v1 v2 : t bool n) : t bool n :=
   snd (bv_umod_flag v1 v2).
+
+(*"""
+If [A]u = 0, then aW-1 · · · a0 = 0W .
+"""*)
+Theorem bv_umod_correct_0 : forall {n} (v1 v2 : t bool n),
+  bitvector_nat_big v2 = 0 ->
+  bv_umod v1 v2 = nat_bitvector_big n 0.
+Proof.
+  intros.
+  unfold bv_umod, bv_umod_flag, snd.
+  rewrite bitvector_nat_N_big, H.
+  simpl.
+  rewrite nat_N_bitvector_big;[reflexivity|simpl;lia].
+Qed.
 
 Theorem bv_umod_correct_1 : forall {n} (v1 v2 : t bool n),
   bitvector_nat_big v2 > 0 ->
@@ -1328,6 +1361,9 @@ Proof.
   intros n v2 v3.
   unfold bv_umod, bv_umod_flag.
   unfold snd. intro.
+  assert (bitvector_N_big v3 > 0)%N;[rewrite bitvector_nat_N_big; lia|].
+  assert (bitvector_N_big v3 =? 0 = false)%N;[rewrite N.eqb_neq; lia|].
+  rewrite H1.
   repeat rewrite bitvector_nat_N_big.
   rewrite <- Nat2N_inj_mod, N_nat_bitvector_big;try lia; try reflexivity.
   assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
