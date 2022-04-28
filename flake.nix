@@ -27,6 +27,19 @@
           overlays = [ self.overlay ];
         });
       tinyram = system: (nixpkgsFor.${system}).tinyram;
+      sharedBuildInputs = pkgs:
+         (with pkgs; [
+            ocaml
+            dune_2
+            coqPackages.coq
+            coqPackages.coq-ext-lib
+            coqPackages.ITree
+          ])
+          ++
+          (with pkgs.haskell.packages.ghc884; [
+            ghc
+            cabal-install
+          ]);
     in
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
@@ -34,15 +47,10 @@
         tinyram = final.stdenv.mkDerivation {
           name = "tinyram";
           src = ./.;
-          buildInputs = with final.pkgs; [
-            ocaml
-            dune_2
-            coqPackages.coq
-            coqPackages.coq-ext-lib
-            coqPackages.ITree
-          ];
+          buildInputs = sharedBuildInputs final;
           buildPhase = ''
             dune build
+            cabal new-build
           '';
           phases = ["unpackPhase" "buildPhase"];
         };
@@ -58,18 +66,7 @@
           # In case we don't want to provide an editor, this defaultShell will
           # provide only coq packages we need.
           defaultShell = pkgs.mkShell {
-            buildInputs = (with pkgs; [
-              ocaml
-              dune_2
-              coqPackages.coq
-              coqPackages.coq-ext-lib
-              coqPackages.ITree
-           ])
-           ++
-           (with pkgs.haskell.packages.ghc884; [
-              ghc
-              cabal-install
-           ]);
+            buildInputs = sharedBuildInputs pkgs;
           };
           # This is the defaultShell, but overriden to add one additional buildInput,
           # vscodium!
