@@ -13,6 +13,7 @@
     , emacs
     , nix-doom-emacs
     }:
+    with builtins;
     let
       compiler = "ghc884";
       # Generate a user-friendly version number.
@@ -48,7 +49,11 @@
       overlay = final: prev: {
           tinyram-hs-src = final.stdenv.mkDerivation {
             name = "tinyram-hs-src";
-            src = ./.;
+            src =
+              let l = final.lib; in
+              filterSource
+                (path: _: !(l.hasSuffix ".nix" path || l.hasSuffix ".lock" path))
+                ./.;
             buildInputs = sharedBuildInputs final;
             buildPhase = ''
               dune build
@@ -57,9 +62,20 @@
               mkdir -p $out
               cp -r ./. $out
             '';
+          };
+
+          tinyram-hs-src-2 = final.stdenv.mkDerivation {
+            name = "tinyram-hs-src-2";
+            src = final.tinyram-hs-src;
+            phases = ["unpackPhase" "installPhase"];
+            installPhase = ''
+              mkdir -p $out
+              cp -r ./. $out
+              cp ./_build/default/Tinyram_VM.hs $out/src
+            '';
+          };
 
           # tinyram = final.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" final.tinyram-hs-src {};
-        };
       };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
