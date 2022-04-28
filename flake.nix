@@ -42,7 +42,6 @@
             cabal-install
           ]);
       tinyram = system: nixpkgsFor.${system}.tinyram;
-      tinyram-hs-src-f = system: nixpkgsFor.${system}.tinyram-hs-src-2;
     in
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
@@ -71,11 +70,11 @@
             '';
           };
 
-          # tinyram = final.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" final.tinyram-hs-src {};
+          tinyram = final.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" final.tinyram-hs-src-2 {};
       };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
-      defaultPackage = forAllSystems tinyram-hs-src-f;
+      defaultPackage = forAllSystems tinyram;
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
