@@ -26,12 +26,29 @@
           inherit system;
           overlays = [ self.overlay ];
         });
+      tinyram = system: (nixpkgsFor.${system}).tinyram;
     in
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
-      overlay = final: prev: { };
+      overlay = final: prev: {
+        tinyram = final.stdenv.mkDerivation {
+          name = "tinyram";
+          src = ./.;
+          buildInputs = with final.pkgs; [
+            ocaml
+            dune_2
+            coqPackages.coq
+            coqPackages.coq-ext-lib
+            coqPackages.ITree
+          ];
+          buildPhase = ''
+            dune build
+          '';
+        };
+      };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
+      defaultPackage = forAllSystems tinyram;
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
