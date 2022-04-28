@@ -44,6 +44,7 @@
           buildPhase = ''
             dune build
           '';
+          phases = ["unpackPhase" "buildPhase"];
         };
       };
       # the default devShell used when running `nix develop`
@@ -57,13 +58,18 @@
           # In case we don't want to provide an editor, this defaultShell will
           # provide only coq packages we need.
           defaultShell = pkgs.mkShell {
-            buildInputs = with pkgs; [
+            buildInputs = (with pkgs; [
               ocaml
               dune_2
               coqPackages.coq
               coqPackages.coq-ext-lib
               coqPackages.ITree
-            ];
+           ])
+           ++
+           (with pkgs.haskell.packages.ghc884; [
+              ghc
+              cabal-install
+           ]);
           };
           # This is the defaultShell, but overriden to add one additional buildInput,
           # vscodium!
