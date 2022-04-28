@@ -49,11 +49,7 @@
       overlay = final: prev: {
           tinyram-hs-src = final.stdenv.mkDerivation {
             name = "tinyram-hs-src";
-            src =
-              let l = final.lib; in
-              filterSource
-                (path: _: !(l.hasSuffix ".nix" path || l.hasSuffix ".lock" path))
-                ./.;
+            src = ./src; 
             buildInputs = sharedBuildInputs final;
             buildPhase = ''
               dune build
