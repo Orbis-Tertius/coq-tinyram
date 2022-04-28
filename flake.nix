@@ -27,7 +27,6 @@
           inherit system;
           overlays = [ self.overlay ];
         });
-      tinyram = system: (nixpkgsFor.${system}).tinyram;
       sharedBuildInputs = pkgs:
          (with pkgs; [
             ocaml
@@ -41,35 +40,30 @@
             ghc
             cabal-install
           ]);
+      tinyram = system: nixpkgsFor.${system}.tinyram;
+      tinyram-hs-src-f = system: nixpkgsFor.${system}.tinyram-hs-src;
     in
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
       overlay = final: prev: {
-        tinyram-hs-src = final.stdenv.mkDerivation {
-          name = "tinyram-hs-src";
-          src = ./.;
-          buildInputs = sharedBuildInputs final;
-          buildPhase = ''
-            dune build
-          '';
-          installPhase = ''
-            mkdir -p $out
-            cp -r ./. $out
-            cp Tinyram_VM.hs $out/src
-          '';
+          tinyram-hs-src = final.stdenv.mkDerivation {
+            name = "tinyram-hs-src";
+            src = ./.;
+            buildInputs = sharedBuildInputs final;
+            buildPhase = ''
+              dune build
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp -r ./. $out
+            '';
+
+          # tinyram = final.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" final.tinyram-hs-src {};
         };
       };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
-      defaultPackage =
-        forAllSystems
-          (system:
-             let
-               l = p.lib; p = pkgs;
-               pkgs = nixpkgsFor.${system};
-             in
-             (p.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" p.tinyram-hs-src {})
-          );
+      defaultPackage = forAllSystems tinyram-hs-src-f;
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
