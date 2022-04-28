@@ -50,9 +50,16 @@
           buildInputs = sharedBuildInputs final;
           buildPhase = ''
             dune build
-            cabal new-build
+            cd _build/default
+            mv Tinyram_VM.hs src
+            mkdir tmp-home
+            HOME=./tmp-home cabal new-build
           '';
-          phases = ["unpackPhase" "buildPhase"];
+          installPhase = ''
+            mkdir -p $out
+            cp ./build/default/dist-newstyle/build/x86_64-linux/ghc-8.8.4/coq-tinyram-0.1.0.0/x/coq-tinyram/build/coq-tinyram/coq-tinyram $out
+          '';
+          phases = ["unpackPhase" "buildPhase" "installPhase"];
         };
       };
       # the default devShell used when running `nix develop`
