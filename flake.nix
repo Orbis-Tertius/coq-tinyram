@@ -42,7 +42,7 @@
             cabal-install
           ]);
       tinyram = system: nixpkgsFor.${system}.tinyram;
-      tinyram-hs-src-f = system: nixpkgsFor.${system}.tinyram-hs-src;
+      tinyram-hs-src-f = system: nixpkgsFor.${system}.tinyram-hs-src-2;
     in
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
