@@ -14,6 +14,7 @@
     , nix-doom-emacs
     }:
     let
+      compiler = "ghc884";
       # Generate a user-friendly version number.
       version = builtins.substring 0 8 self.lastModifiedDate;
       # System types to support.
@@ -36,7 +37,7 @@
             coqPackages.ITree
           ])
           ++
-          (with pkgs.haskell.packages.ghc884; [
+          (with pkgs.haskell.packages.${compiler}; [
             ghc
             cabal-install
           ]);
@@ -44,27 +45,31 @@
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
       overlay = final: prev: {
-        tinyram = final.stdenv.mkDerivation {
-          name = "tinyram";
+        tinyram-hs-src = final.stdenv.mkDerivation {
+          name = "tinyram-hs-src";
           src = ./.;
           buildInputs = sharedBuildInputs final;
           buildPhase = ''
             dune build
-            cd _build/default
-            mv Tinyram_VM.hs src
-            mkdir tmp-home
-            HOME=./tmp-home cabal new-build
           '';
           installPhase = ''
             mkdir -p $out
-            cp ./build/default/dist-newstyle/build/x86_64-linux/ghc-8.8.4/coq-tinyram-0.1.0.0/x/coq-tinyram/build/coq-tinyram/coq-tinyram $out
+            cp -r ./. $out
+            cp Tinyram_VM.hs $out/src
           '';
-          phases = ["unpackPhase" "buildPhase" "installPhase"];
         };
       };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
-      defaultPackage = forAllSystems tinyram;
+      defaultPackage =
+        forAllSystems
+          (system:
+             let
+               l = p.lib; p = pkgs;
+               pkgs = nixpkgsFor.${system};
+             in
+             (p.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" p.tinyram-hs-src {})
+          );
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
