@@ -13,7 +13,9 @@
     , emacs
     , nix-doom-emacs
     }:
+    with builtins;
     let
+      compiler = "ghc884";
       # Generate a user-friendly version number.
       version = builtins.substring 0 8 self.lastModifiedDate;
       # System types to support.
@@ -26,12 +28,53 @@
           inherit system;
           overlays = [ self.overlay ];
         });
+      sharedBuildInputs = pkgs:
+         (with pkgs; [
+            ocaml
+            dune_2
+            coqPackages.coq
+            coqPackages.coq-ext-lib
+            coqPackages.ITree
+          ])
+          ++
+          (with pkgs.haskell.packages.${compiler}; [
+            ghc
+            cabal-install
+          ]);
+      tinyram = system: nixpkgsFor.${system}.tinyram;
     in
     {
       herculesCI.ciSystems = [ "x86_64-linux" ];
-      overlay = final: prev: { };
+      overlay = final: prev: {
+          tinyram-hs-src = final.stdenv.mkDerivation {
+            name = "tinyram-hs-src";
+            src = ./src; 
+            buildInputs = sharedBuildInputs final;
+            buildPhase = ''
+              dune build
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp -r ./. $out
+            '';
+          };
+
+          tinyram-hs-src-2 = final.stdenv.mkDerivation {
+            name = "tinyram-hs-src-2";
+            src = final.tinyram-hs-src;
+            phases = ["unpackPhase" "installPhase"];
+            installPhase = ''
+              mkdir -p $out
+              cp -r ./. $out
+              cp ./_build/default/Tinyram_VM.hs $out/src
+            '';
+          };
+
+          tinyram = final.haskell.packages.${compiler}.callCabal2nix "coq-tinyram" final.tinyram-hs-src-2 {};
+      };
       # the default devShell used when running `nix develop`
       devShell = forAllSystems (system: self.devShells.${system}.defaultShell);
+      defaultPackage = forAllSystems tinyram;
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor."${system}";
@@ -40,13 +83,7 @@
           # In case we don't want to provide an editor, this defaultShell will
           # provide only coq packages we need.
           defaultShell = pkgs.mkShell {
-            buildInputs = with pkgs; [
-              ocaml
-              dune_2
-              coqPackages.coq
-              coqPackages.coq-ext-lib
-              coqPackages.ITree
-            ];
+            buildInputs = sharedBuildInputs pkgs;
           };
           # This is the defaultShell, but overriden to add one additional buildInput,
           # vscodium!
@@ -61,6 +98,18 @@
                       publisher = "maximedenes";
                       version = "0.3.6";
                       sha256 = "sha256-b0gCaEzt5yAj53oLFZSXSD3bum9J1fYes/uf9+OlUek=";
+                    }
+                    {
+                      name = "Haskell";
+                      publisher = "haskell";
+                      version = "2.1.3";
+                      sha256 = "sha256-OWV8i1XPO1BUc66nIIKoJmzs0D95O0+FJE1hxpYqPBw=";
+                    }
+                    {
+                      name = "language-haskell";
+                      publisher = "justusadam";
+                      version = "3.3.0";
+                      sha256 = "sha256-2rlomc4qjca1Mv5lxgT/4AARzuG8e4kgshielpBeBYk=";
                     }
                   ];
                 };

@@ -1,11 +1,14 @@
 From Coq Require Import
-  Lia Nat ZArith.Int Numbers.BinNums ProofIrrelevance VectorDef VectorEq BinIntDef.
+  Lia Nat BinPos Pnat BinNat BinIntDef
+  ZArith.Int NArith.Nnat Numbers.BinNums 
+  ProofIrrelevance 
+  List VectorDef VectorEq.
 Import PeanoNat.Nat(add_comm,
                     lt_neq,
                     div_mod,
                     add_0_r,
                     eqb_neq,
-                    mod_small,
+                    mod_small, mod_upper_bound,
                     div_small,
                     eqb_eq).
 Import BinInt.Z(of_nat, to_nat, opp,
@@ -109,21 +112,18 @@ Definition bitvector_fin_little : forall {n},
     + apply (bitvector_fin_double IHv).
 Defined.
 
-Definition bitvector_fin_little_fun {n} (v : t bool n) : nat :=
+Definition bitvector_nat_little {n} (v : t bool n) : nat :=
   proj1_sig (bitvector_fin_little v).
 
-Fixpoint fin_bitvector_little_fun (n m : nat) : t bool n :=
+Fixpoint nat_bitvector_little (n m : nat) : t bool n :=
   match n with
   | 0 => nil bool
   | S n => 
-    cons _ (negb (m mod 2 =? 0)) _ (fin_bitvector_little_fun n (m / 2))
+    cons _ (negb (m mod 2 =? 0)) _ (nat_bitvector_little n (m / 2))
   end.
 
-Definition fin_bitvector_little : forall {n},
-  fin (2 ^ n) -> t bool n.
-  intros n [f _].
-  apply (fin_bitvector_little_fun n f).
-Defined.
+Definition fin_bitvector_little {n} (f : fin (2 ^ n)) : t bool n :=
+  nat_bitvector_little n (proj1_sig f).
 
 Theorem bitvector_fin_little_inv_lem_true : forall {n} (f : fin (2 ^ n)),
   fin_bitvector_little (bitvector_fin_double_S f : fin (2 ^ (S n))) =
@@ -135,9 +135,9 @@ Proof.
     reflexivity.
   - simpl bitvector_fin_double_S.
     unfold fin_bitvector_little.
-    unfold fin_bitvector_little_fun.
-    replace (S (f + (f + 0))) with (1 + f * 2).
-    2: { lia. }
+    simpl proj1_sig.
+    unfold nat_bitvector_little; fold nat_bitvector_little.
+    replace (S (f + (f + 0))) with (1 + f * 2); [| lia].
     replace (((1 + f * 2)) mod 2) with 1.
     2: { rewrite PeanoNat.Nat.mod_add; [ reflexivity | lia ]. }
     replace ((1 + f * 2) / 2) with f.
@@ -155,9 +155,9 @@ Proof.
     reflexivity.
   - simpl bitvector_fin_double.
     unfold fin_bitvector_little.
-    unfold fin_bitvector_little_fun.
-    replace (f + (f + 0)) with (f * 2).
-    2: { lia. }
+    simpl proj1_sig.
+    unfold nat_bitvector_little; fold nat_bitvector_little.
+    replace (f + (f + 0)) with (f * 2);[|lia].
     replace (f * 2 / 2) with f.
     2: { rewrite PeanoNat.Nat.div_mul; [ reflexivity | lia ]. }
     replace ((f * 2) mod 2) with 0.
@@ -169,8 +169,7 @@ Theorem bitvector_fin_little_inv : forall {n} (v : t bool n),
   fin_bitvector_little (bitvector_fin_little v) = v.
 Proof.
   intros n v.
-  induction v.
-  - reflexivity.
+  induction v;[reflexivity|].
   - destruct h; simpl bitvector_fin_little.
     + rewrite bitvector_fin_little_inv_lem_true.
       rewrite IHv.
@@ -180,38 +179,60 @@ Proof.
       reflexivity.
 Qed.
 
+Theorem bitvector_nat_little_inv :
+  forall n (v : t bool n),
+    nat_bitvector_little n (bitvector_nat_little v) = v.
+Proof.
+  intros n v.
+  unfold bitvector_nat_little.
+  change (nat_bitvector_little n (proj1_sig ?x))
+    with (fin_bitvector_little x).
+  apply bitvector_fin_little_inv.
+Qed.
+
 Theorem fin_bitvector_little_inv : forall {n} (f : fin (2 ^ n)),
   bitvector_fin_little (fin_bitvector_little f) = f.
 Proof.
   intro n.
   induction n as [|n IHn]; intros [f fprp].
-  + simpl.
+  - simpl.
     rewrite unique_f0.
     apply subset_eq_compat.
     reflexivity.
-  + unfold fin_bitvector_little.
-    replace (fin_bitvector_little_fun (S n) f)
-       with (cons _ (negb (f mod 2 =? 0)) _ (fin_bitvector_little_fun n (f / 2)));
-      [ | reflexivity ].
+  - unfold fin_bitvector_little.
+    unfold nat_bitvector_little; fold nat_bitvector_little.
     assert (f = (2 * (f / 2) + f mod 2)) as fsplit.
     { rewrite <- div_mod; [ reflexivity | lia ]. }
     assert (f/2 < 2 ^ n) as fhprp.
-    { apply PeanoNat.Nat.div_lt_upper_bound. { lia. } exact fprp. } 
+    { apply PeanoNat.Nat.div_lt_upper_bound;[lia|]. exact fprp. } 
     assert (bitvector_fin_little (fin_bitvector_little (exist _ (f/2) fhprp)) 
-            = (exist _ (f/2) fhprp)).
-    { apply IHn. } clear IHn. simpl in H.
+            = (exist _ (f/2) fhprp));[apply IHn|];clear IHn.
+    unfold proj1_sig.
     destruct (f mod 2 =? 0) eqn:fmod;
-    simpl; rewrite H; clear H; simpl;
+    simpl bitvector_fin_little; simpl in H;
+    unfold  fin_bitvector_little, proj1_sig in H; rewrite H; clear H; simpl;
     apply subset_eq_compat;
     replace (fst (divmod f 1 0 1)) with (f / 2); try reflexivity.
-    - rewrite eqb_eq in fmod.
+    + rewrite eqb_eq in fmod.
       rewrite fmod, add_0_r in fsplit.
       lia.
-    - replace (f mod 2) with 1 in fsplit.
-      { lia. }  
+    + replace (f mod 2) with 1 in fsplit;[lia|].
       rewrite eqb_neq in fmod.
-      destruct (mod_2_0or1 f). { destruct (fmod H). }
+      destruct (mod_2_0or1 f);[destruct (fmod H)|].
       symmetry; assumption.
+Qed.
+
+Theorem nat_bitvector_little_inv :
+  forall {n} k, k < 2 ^ n ->
+    bitvector_nat_little (nat_bitvector_little n k) = k.
+Proof.
+  intros n k klt.
+  change k with (proj1_sig (mk_fin k klt)).
+  unfold bitvector_nat_little.
+  change (nat_bitvector_little n (proj1_sig ?x))
+    with (fin_bitvector_little x).
+  rewrite fin_bitvector_little_inv.
+  reflexivity.
 Qed.
 
 (* Big Endian encoding. *)
@@ -293,33 +314,32 @@ Theorem bitvector_nat_big_inv : forall {n} (v : t bool n),
   nat_bitvector_big n (bitvector_nat_big v) = v.
 Proof.
   intros n v.
-  induction v.
-  - reflexivity.
-  - assert (bitvector_nat_big v < 2 ^ n).
-    { apply bitvector_nat_big_lt_2pow. }
-    rewrite bitvector_nat_big_cons.
-    unfold nat_bitvector_big; fold nat_bitvector_big.
-    f_equal.
-    + destruct (bitvector_fin_big v); destruct h; simpl proj1_sig.
-      * rewrite PeanoNat.Nat.mul_1_l.
-        replace (_ / _) with 1; [ reflexivity | ].
-        symmetry; apply div_bet_1; lia.
-      * rewrite PeanoNat.Nat.mul_0_l, div_small; simpl; lia.
-    + assert (2 ^ n <> 0) as pow0.
-      { apply not_eq_sym, lt_neq, zero2pow. }
-      replace ((_ * 2 ^ n + _) mod _) with (proj1_sig (bitvector_fin_big v)).
-      { apply IHv. }
-      rewrite <- PeanoNat.Nat.add_mod_idemp_l.
-      2: { assumption. }
-      unfold bitvector_nat_big.
-      replace ((proj1_sig (bitVal h) * 2 ^ n) mod 2 ^ n)
-         with 0.
-      destruct (bitvector_fin_big v) as [f fP].
-      { simpl; rewrite mod_small; trivial. }
-      destruct h.
-      * simpl. rewrite add_0_r, PeanoNat.Nat.mod_same; trivial.
-      * simpl; rewrite mod_small; [ reflexivity | ].
-        apply zero2pow.
+  induction v;[reflexivity|].
+  assert (bitvector_nat_big v < 2 ^ n).
+  { apply bitvector_nat_big_lt_2pow. }
+  rewrite bitvector_nat_big_cons.
+  unfold nat_bitvector_big; fold nat_bitvector_big.
+  f_equal.
+  - destruct (bitvector_fin_big v); destruct h; simpl proj1_sig.
+    + rewrite PeanoNat.Nat.mul_1_l.
+      replace (_ / _) with 1; [ reflexivity | ].
+      symmetry; apply div_bet_1; lia.
+    + rewrite PeanoNat.Nat.mul_0_l, div_small; simpl; lia.
+  - assert (2 ^ n <> 0) as pow0.
+    { apply not_eq_sym, lt_neq, zero2pow. }
+    replace ((_ * 2 ^ n + _) mod _) with (proj1_sig (bitvector_fin_big v)).
+    { apply IHv. }
+    rewrite <- PeanoNat.Nat.add_mod_idemp_l.
+    2: { assumption. }
+    unfold bitvector_nat_big.
+    replace ((proj1_sig (bitVal h) * 2 ^ n) mod 2 ^ n)
+        with 0.
+    destruct (bitvector_fin_big v) as [f fP].
+    { simpl; rewrite mod_small; trivial. }
+    destruct h.
+    + simpl. rewrite add_0_r, PeanoNat.Nat.mod_same; trivial.
+    + simpl; rewrite mod_small; [ reflexivity | ].
+      apply zero2pow.
 Qed.
 
 Theorem bitvector_fin_big_split : forall {n} (v : t bool n),
@@ -495,7 +515,7 @@ Proof.
 Qed.
 
 Theorem bitvector_fin_big_0_0 : forall {n} (v : t bool n),
-  bv_eq v (Vector.const b0 n) =
+  bv_eq v (VectorDef.const b0 n) =
   (bitvector_nat_big v =? 0).
 Proof.
   induction v.
@@ -544,7 +564,7 @@ Qed.
 
 Theorem bitvector_fin_big_0_const :
   forall {n} (v : t bool n),
-    (v = (Vector.const b0 n)) <-> (bitvector_nat_big v = 0).
+    (v = (VectorDef.const b0 n)) <-> (bitvector_nat_big v = 0).
 Proof.
   intros n v.
   rewrite <- bv_eq_equiv, <- eqb_eq, <- Bool.eq_iff_eq_true.
@@ -553,7 +573,7 @@ Qed.
 
 Theorem bitvector_fin_big_1_const :
   forall {n} (v : t bool n),
-    (v = (Vector.const b1 n)) <-> (bitvector_nat_big v = pred (2 ^ n)).
+    (v = (VectorDef.const b1 n)) <-> (bitvector_nat_big v = pred (2 ^ n)).
 Proof.
   intros n v.
   induction v.
@@ -572,18 +592,491 @@ Proof.
       rewrite IHv; lia.
 Qed.
 
+(* Encodings using binary numbers *)
+
+Fixpoint positive_list_little (m : positive) : list bool :=
+  match m with
+  | xH => List.cons b1 List.nil
+  | xO p => List.cons b0 (positive_list_little p)
+  | xI p => List.cons b1 (positive_list_little p)
+  end.
+
+Fixpoint positive_bitvector_little (n : nat) (m : positive) : t bool n :=
+  match n return t bool n with
+  | 0 => []
+  | S n =>
+    match m with
+    | xH => b1 :: const b0 _
+    | xO p => b0 :: positive_bitvector_little n p
+    | xI p => b1 :: positive_bitvector_little n p
+    end
+  end.
+
+Definition N_bitvector_little (n : nat) (m : N) : t bool n :=
+  match m with
+  | N0 => const b0 _
+  | Npos p => positive_bitvector_little _ p
+  end.
+
+Fixpoint bitvector_N_little {n : nat} (v : t bool n) : N :=
+  match v with
+  | [] => N0
+  | hd :: tl => 
+    match hd with
+    | true => BinPosDef.Pos.Nsucc_double (bitvector_N_little tl)
+    | false => BinPosDef.Pos.Ndouble (bitvector_N_little tl)
+    end
+  end.
+
+Fixpoint positive_len (p : positive): nat :=
+  match p with
+  | xH => 0
+  | xO p => S (positive_len p)
+  | xI p => S (positive_len p)
+  end.
+
+Definition N_len (n : N): nat :=
+  match n with
+  | N0 => 0
+  | Npos n => S (positive_len n)
+  end.
+
+Theorem double_Sn_Pos : forall n,
+  exists p, 
+    BinPosDef.Pos.Nsucc_double n = Npos p.
+Proof.
+  intros n.
+  destruct n.
+  - exists xH; reflexivity.
+  - exists (xI p); reflexivity.
+Qed.
+
+Theorem double_Sn_N0 : forall n,
+  BinPosDef.Pos.Nsucc_double n = N0 ->
+  n = N0.
+Proof.
+  intros.
+  destruct n;[reflexivity|].
+  cbn in H; discriminate H. 
+Qed.
+
+Theorem double_n_N0 : forall n,
+  BinPosDef.Pos.Ndouble n = N0 ->
+  n = N0.
+Proof.
+  intros.
+  destruct n;[reflexivity|].
+  cbn in H; discriminate H. 
+Qed.
+
+Theorem n0_list_nil {n : nat} (v : t bool n) :
+  bitvector_N_little v = N0 -> v = const b0 _.
+Proof.
+  induction v;[reflexivity|].
+  unfold bitvector_N_little; fold (bitvector_N_little (n := n)).
+  destruct h; intro.
+  - destruct (double_Sn_Pos (bitvector_N_little v)).
+    rewrite H0 in H.
+    discriminate H.
+  - apply double_n_N0 in H.
+    rewrite (IHv H).
+    reflexivity.
+Qed.
+
+Theorem bitvector_N_little_inv {n : nat} : forall (v : t bool n),
+  N_bitvector_little n (bitvector_N_little v) = v.
+Proof.
+  induction v;[reflexivity|].
+  destruct h; simpl; unfold N_bitvector_little;
+  remember (bitvector_N_little v) as bNlv;
+  destruct bNlv; unfold BinPosDef.Pos.Nsucc_double;
+  unfold positive_bitvector_little; simpl; f_equal;
+  try exact IHv.
+Qed.
+
+Theorem bitvector_N_little_inj {n : nat} : forall (v u : t bool n),
+  bitvector_N_little v = bitvector_N_little u <-> v = u.
+Proof.
+  intros; split; intro.
+  - rewrite <- (bitvector_N_little_inv v).
+    rewrite <- (bitvector_N_little_inv u).
+    rewrite H; reflexivity.
+  - rewrite H; reflexivity.
+Qed.
+
+Theorem bitvector_N_little_const_N0 : forall n,
+  bitvector_N_little (const b0 n) = N0.
+Proof.
+  induction n.
+  - reflexivity.
+  - cbn; rewrite IHn; reflexivity.
+Qed.
+
+Theorem N_bitvector_little_inv {n : nat} : forall (m : N),
+  N_len m <= n ->
+  bitvector_N_little (N_bitvector_little n m) = m.
+Proof.
+  intros.
+  destruct m. 
+  - unfold N_bitvector_little.
+    apply bitvector_N_little_const_N0.
+  - unfold N_bitvector_little.
+    unfold N_len in H.
+    generalize dependent n.
+    induction p; intros.
+    + destruct n;[lia|cbn].
+      rewrite IHp;[reflexivity|
+      unfold positive_len in H; fold positive_len in H; lia].
+    + destruct n;[lia|cbn].
+      rewrite IHp;[reflexivity|
+      unfold positive_len in H; fold positive_len in H; lia].
+    + destruct n;[lia|cbn].
+      rewrite bitvector_N_little_const_N0.
+      reflexivity.
+Qed.
+
+Theorem N_bitvector_little_inj {n : nat} {k l : N} : 
+  N_len k <= n -> N_len l <= n ->
+  N_bitvector_little n k = N_bitvector_little n l <-> k = l.
+Proof.
+  intros; split; intro.
+  - rewrite <- (N_bitvector_little_inv (n := n) k).
+    rewrite <- (N_bitvector_little_inv (n := n) l).
+    rewrite H1; reflexivity.
+    all: assumption.
+  - rewrite H1; reflexivity.
+Qed.
+
+Theorem mod_2_div : forall k, k mod 2 = 0 -> k / 2 = S k / 2.
+Proof.
+  assert (forall k,
+            (k mod 2 = 0 -> k / 2 = S k / 2) /\
+            (k mod 2 = 1 -> S k / 2 = S (S k) / 2));[|
+  intro k; destruct (H k); assumption].
+  induction k;[simpl;lia|destruct IHk];
+  split; intro.
+  - apply H0.
+    change k with (0 + k).
+    rewrite <- H1 at 1.
+    rewrite PeanoNat.Nat.add_mod_idemp_l;[|lia].
+    replace (S k + k) with (1 + 2 * k);[|lia].
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r;[|lia].
+    rewrite PeanoNat.Nat.mul_comm, PeanoNat.Nat.mod_mul;simpl;lia.
+  - assert (forall k, S (S k) / 2 = S (k / 2));[
+        intro k2;change (S (S k2)) with (1 * 2 + k2);
+        rewrite PeanoNat.Nat.div_add_l; lia|].
+    repeat rewrite H2.
+    f_equal.
+    apply H.
+    change (S k) with (1 + k) in H1.
+    replace 0 with ((2 + k) mod 2) at 2;[|
+      replace (2 + k) with (1 + (1 + k));[|lia];
+      rewrite <- PeanoNat.Nat.add_mod_idemp_r, H1;
+      simpl; lia].
+    rewrite <- PeanoNat.Nat.add_mod_idemp_l; simpl; lia.
+Qed.
+
+Theorem nmod_2_0 : forall k, k mod 2 <> 0 -> k mod 2 = 1.
+Proof.
+  assert (forall k,
+            (k mod 2 <> 0 -> k mod 2 = 1) /\
+            (k mod 2 <> 1 -> k mod 2 = 0));[|
+  intro k; destruct (H k); assumption].
+  induction k;[simpl;lia|destruct IHk];
+  split; intro;
+  change (S k) with (1 + k);
+  rewrite <- PeanoNat.Nat.add_mod_idemp_r;
+  try lia.
+  - rewrite H0;[reflexivity|].
+    intro.
+    change (S k) with (1 + k) in H1.
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r in H1.
+    rewrite H2 in H1; simpl in H1.
+    all: lia.
+  - rewrite H;[reflexivity|].
+    intro.
+    change (S k) with (1 + k) in H1.
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r in H1.
+    rewrite H2 in H1; simpl in H1.
+    all: lia.
+Qed.
+
+Theorem N_bitvector_little_unfold:
+  forall n k, 
+  N_bitvector_little (S n) (N.of_nat (S k)) =
+  (k mod 2 =? 0) :: N_bitvector_little n (N.of_nat (S k / 2)).
+Proof.
+  destruct k;[reflexivity|].
+  destruct (k mod 2 =? 0) eqn:skmod2.
+  - rewrite eqb_eq in skmod2. 
+    assert (k = (2 * (k / 2)));[rewrite PeanoNat.Nat.div_exact;lia|].
+    assert (S (S k) = (2 * (S (S k) / 2)));[
+      change (S (S k)) with (1 * 2 + k) at 2;
+      rewrite PeanoNat.Nat.div_add_l; lia|].
+    rewrite H0 at 1.
+    rewrite Nnat.Nat2N.inj_double.
+    unfold N.double.
+    assert (S (S k) / 2 = S (k / 2));[
+      change (S (S k)) with (1 * 2 + k);
+      rewrite PeanoNat.Nat.div_add_l; lia|].
+    rewrite H1.
+    unfold N.of_nat, N_bitvector_little, positive_bitvector_little;
+    fold positive_bitvector_little.
+    f_equal.
+    change (S k) with (1 + k).
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r;[|lia].
+    rewrite skmod2.
+    reflexivity.
+  - rewrite eqb_neq in skmod2.
+    apply nmod_2_0 in skmod2. 
+    assert (S k mod 2 = 0);[
+      change (S k) with (1 + k);
+      rewrite <- PeanoNat.Nat.add_mod_idemp_r; try lia;
+      rewrite skmod2; reflexivity|].
+    assert (S k = (2 * (S k / 2)));[rewrite PeanoNat.Nat.div_exact;lia|].
+    rewrite H0 at 1.
+    rewrite Nnat.Nat2N.inj_succ_double.
+    destruct k;[lia|].
+    assert (S (S k) / 2 = S (k / 2));[
+      change (S (S k)) with (1 * 2 + k);
+      rewrite PeanoNat.Nat.div_add_l; lia|].
+    rewrite H1.
+    unfold N.succ_double, N.of_nat at 1, N_bitvector_little at 1, positive_list_little.
+    rewrite H; f_equal.
+    unfold N_bitvector_little.
+    assert (S (S (S k)) / 2 = S ((S k) / 2));[
+      change (S (S (S k))) with (1 * 2 + (S k));
+      rewrite PeanoNat.Nat.div_add_l; lia|].
+    rewrite H2.
+    unfold N.of_nat.
+    rewrite mod_2_div;[reflexivity|].
+    replace k with (2 mod 2 + k);[|reflexivity].
+    rewrite PeanoNat.Nat.add_mod_idemp_l;[|lia].
+    exact H.
+Qed.
+
+Theorem nat_bitvector_little_const :
+  forall n, nat_bitvector_little n 0 = const b0 n.
+Proof.
+  intro n.
+  induction n;[reflexivity|].
+  unfold nat_bitvector_little; fold nat_bitvector_little.
+  change (0 / 2) with 0.
+  rewrite IHn; reflexivity.
+Qed.
+
+Theorem Nsucc_double_nat_val : 
+  forall p, 
+    N.to_nat (BinPosDef.Pos.Nsucc_double p) =
+    S (2 * N.to_nat p).
+Proof.
+  destruct p;[reflexivity|].
+  induction p;
+  unfold BinPosDef.Pos.Nsucc_double;
+  change 2 with (N.to_nat (Npos (xO xH)));
+  rewrite <- Nnat.N2Nat.inj_mul;
+  unfold N.mul;
+  change (S (N.to_nat (Npos ?p)))
+    with (BinPos.Pos.to_nat (BinPos.Pos.succ p));
+  reflexivity.
+Qed.
+
+Theorem Ndouble_nat_val : 
+  forall p, 
+    N.to_nat (BinPosDef.Pos.Ndouble p) =
+    2 * N.to_nat p.
+Proof.
+  destruct p;[reflexivity|].
+  induction p;
+  unfold BinPosDef.Pos.Ndouble;
+  change 2 with (N.to_nat (Npos (xO xH)));
+  rewrite <- Nnat.N2Nat.inj_mul;
+  unfold N.mul;
+  reflexivity.
+Qed.
+
+Theorem bitvector_N_little_max : forall n (v : t bool n), 
+  N.to_nat (bitvector_N_little v) < 2 ^ n.
+Proof.
+  intros n v.
+  induction v;[simpl; lia|].
+  cbn; destruct h.
+  - rewrite Nsucc_double_nat_val; lia.
+  - rewrite Ndouble_nat_val; lia.
+Qed.
+
+Theorem N_nat_bitvector_little :
+  forall n k, N_bitvector_little n (N.of_nat k) = nat_bitvector_little n k.
+Proof.
+  induction n;[destruct k;reflexivity|].
+  intro k. 
+  unfold nat_bitvector_little; fold nat_bitvector_little.
+  destruct k.
+  - cbn; rewrite nat_bitvector_little_const; reflexivity.
+  - rewrite N_bitvector_little_unfold.
+    rewrite <- IHn.
+    f_equal.
+    change (S k) with (1 + k).
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r;[|lia].
+    destruct (k mod 2 =? 0) eqn:mVal.
+    + rewrite eqb_eq in mVal.
+      rewrite mVal; reflexivity.
+    + rewrite eqb_neq in mVal.
+      apply nmod_2_0 in mVal.
+      rewrite mVal; reflexivity.
+Qed.
+
+Theorem N_len_max : forall n x,
+  N_len x <= n <-> N.to_nat x < 2 ^ n.
+Proof.
+  intros n x; split; intro; generalize dependent n; destruct x.
+  - intros.
+    simpl.
+    apply zero2pow.
+  - induction p; intros; simpl in H; try simpl in IHp.
+    + destruct n;[lia|].
+      change (Npos (xI p))
+        with (BinPosDef.Pos.Nsucc_double (Npos p)).
+      rewrite Nsucc_double_nat_val; cbn.
+      assert (BinPos.Pos.to_nat p < 2 ^ n);[apply IHp;lia|lia].
+    + destruct n;[lia|].
+      change (Npos (xO p))
+        with (BinPosDef.Pos.Ndouble (Npos p)).
+      rewrite Ndouble_nat_val; cbn.
+      assert (BinPos.Pos.to_nat p < 2 ^ n);[apply IHp;lia|lia].
+    + destruct n;[lia|].
+      assert (0 < 2 ^ n);[apply Arith.zero2pow|].
+      cbn; lia.
+  - simpl; lia.
+  - induction p; intros; try simpl in IHp.
+    + change (Npos (xI p))
+        with (BinPosDef.Pos.Nsucc_double (Npos p))
+        in H.
+      rewrite Nsucc_double_nat_val in H.
+      destruct n;[simpl in H; lia|].
+      simpl. cbn in H.
+      assert (BinPos.Pos.to_nat p < 2 ^ n);[lia|].
+      apply IHp in H0.
+      lia.
+    + change (Npos (xO p))
+        with (BinPosDef.Pos.Ndouble (Npos p))
+        in H.
+      rewrite Ndouble_nat_val in H.
+      destruct n;[simpl in H; lia|].
+      simpl. cbn in H.
+      assert (BinPos.Pos.to_nat p < 2 ^ n);[lia|].
+      apply IHp in H0.
+      lia.
+    + destruct n;[simpl in H; lia|simpl; lia].
+Qed.
+
+Theorem N_len_max_2 : forall n x,
+  N_len (N.of_nat x) <= n <-> x < 2 ^ n.
+Proof.
+  intros.
+  rewrite <- (Nnat.Nat2N.id x) at 2.
+  rewrite <- N_len_max.
+  reflexivity.
+Qed.
+
+Theorem bitvector_N_nat_little :
+  forall n (v : t bool n), 
+  N.to_nat (bitvector_N_little v) = bitvector_nat_little v.
+Proof.
+  intros n v.
+  apply Nnat.Nat2N.inj.
+  rewrite Nnat.N2Nat.id.
+  rewrite <- (N_bitvector_little_inj (n := n)).
+  rewrite bitvector_N_little_inv, N_nat_bitvector_little, bitvector_nat_little_inv.
+  reflexivity.
+  rewrite N_len_max; apply bitvector_N_little_max.
+  rewrite N_len_max.
+  rewrite Nnat.Nat2N.id.
+  unfold bitvector_nat_little.
+  destruct (bitvector_fin_little v) as [f flt].
+  simpl; assumption.
+Qed.
+
+Definition N_bitvector_big (n : nat) (m : N) : t bool n :=
+  rev (N_bitvector_little n m).
+
+Definition bitvector_N_big {n : nat} (v : t bool n) : N :=
+  bitvector_N_little (rev v).
+
+Theorem rev_nat_bitvector_little : 
+  forall n k,
+    k < 2 ^ n ->
+    rev (nat_bitvector_little n k) =
+    nat_bitvector_big n k.
+Proof.
+  intros.
+  replace (nat_bitvector_little n k)
+     with (fin_bitvector_little (mk_fin k H));[|reflexivity].
+  rewrite rev_bitvector_fin, vector_rev_rev_id.
+  reflexivity.
+Qed.
+
+Theorem N_nat_bitvector_big :
+  forall n k, k < 2 ^ n ->
+  N_bitvector_big n (N.of_nat k) = nat_bitvector_big n k.
+Proof.
+  intros n k lt.
+  unfold N_bitvector_big.
+  rewrite <- rev_nat_bitvector_little;[|assumption].
+  f_equal.
+  rewrite N_nat_bitvector_little.
+  reflexivity.
+Qed.
+
+Theorem nat_N_bitvector_big :
+  forall n m, N_len m <= n ->
+  N_bitvector_big n m = nat_bitvector_big n (N.to_nat m).
+Proof.
+  intros n k lt.
+  rewrite <- N_nat_bitvector_big, Nnat.N2Nat.id;[reflexivity|].
+  rewrite <- N_len_max; assumption.
+Qed.
+
+Theorem bitvector_N_nat_big :
+  forall n (v : t bool n),
+  (N.to_nat (bitvector_N_big v)) = bitvector_nat_big v.
+Proof.
+  unfold bitvector_N_big.
+  intros n k.
+  rewrite bitvector_N_nat_little.
+  unfold bitvector_nat_big, bitvector_nat_little.
+  rewrite <- bitvector_fin_rev; reflexivity.
+Qed.
+
+Theorem bitvector_nat_N_big :
+  forall n (v : t bool n),
+  (bitvector_N_big v) = N.of_nat (bitvector_nat_big v).
+Proof.
+  intros.
+  rewrite <- bitvector_N_nat_big, Nnat.N2Nat.id.
+  reflexivity.
+Qed.
+
 (* Bitvector arithmetic *)
 
 (*least significant bits of addition (unsigned)
   extra leading bit indicates an overflow*)
 Definition bv_add {n} (v1 v2 : t bool n) : t bool (S n) :=
-  nat_bitvector_big (S n)
-    (bitvector_nat_big v1 + bitvector_nat_big v2).
+  N_bitvector_big (S n)
+    (bitvector_N_big v1 + bitvector_N_big v2).
 
 Theorem bv_add_correct_1 : forall {n} (v1 v2 : t bool n),
   bv_add v1 v2 = nat_bitvector_big (S n)
     (bitvector_nat_big v1 + bitvector_nat_big v2).
-Proof. reflexivity. Qed.
+Proof.
+  intros.
+  unfold bv_add.
+  repeat rewrite bitvector_nat_N_big.
+  rewrite <- Nnat.Nat2N.inj_add, N_nat_bitvector_big;[reflexivity|].
+  assert (bitvector_nat_big v1 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  cbn; lia.
+Qed.
 
 Theorem bv_add_correct_2 : forall {n} (n1 n2 : nat),
   n1 < 2 ^ n -> n2 < 2 ^ n ->
@@ -591,9 +1084,11 @@ Theorem bv_add_correct_2 : forall {n} (n1 n2 : nat),
   bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2)).
 Proof.
   intros.
-  rewrite bv_add_correct_1.
-  repeat rewrite nat_bitvector_big_inv; try lia.
-  simpl; lia.
+  unfold bv_add.
+  repeat rewrite bitvector_nat_N_big.
+  repeat rewrite nat_bitvector_big_inv.
+  rewrite <- Nnat.Nat2N.inj_add, N_nat_bitvector_big, nat_bitvector_big_inv.
+  all: cbn; lia.
 Qed.
 
 Theorem bv_add_correct_mod :
@@ -612,7 +1107,7 @@ Proof.
   simpl VectorDef.tl.
   fold nat_bitvector_big.
   rewrite nat_bitvector_big_inv;[reflexivity|].
-  apply PeanoNat.Nat.mod_upper_bound; lia.
+  apply mod_upper_bound; lia.
 Qed.
 
 Theorem bv_add_correct_mod_2 :
@@ -622,37 +1117,34 @@ Theorem bv_add_correct_mod_2 :
   nat_bitvector_big _ ((n1 + n2) mod 2 ^ n) =
 	VectorDef.tl (bv_add (nat_bitvector_big n n1) (nat_bitvector_big n n2)).
 Proof.
-  intros.
-  apply nat_bitvector_big_inj;try (apply PeanoNat.Nat.mod_upper_bound; lia).
+  intros; rewrite bv_add_correct_1.
+  apply nat_bitvector_big_inj;try (apply mod_upper_bound; lia).
   rewrite nat_bitvector_big_inv;[|assumption].
   rewrite nat_bitvector_big_inv;[|assumption].
   reflexivity.
 Qed.
 
-Definition bv_incr {n} (i : nat) (v : t bool n) : t bool n :=
-  nat_bitvector_big n ((i + bitvector_nat_big v) mod (2 ^ n)).
-
-Theorem bv_incr_fold : forall k n m,
-  n + m < 2 ^ k ->
-  bv_incr n (nat_bitvector_big k m) =
-  nat_bitvector_big k (n + m).
-Proof.
-  intros k n m lt.
-  unfold bv_incr.
-  rewrite nat_bitvector_big_inv; [ | lia ].
-  rewrite mod_small; auto.
-Qed.
-
 (*least significant bits of subtraction (unsigned). 
   extra leading bit indicates a borrow, 0 if borrow, 1 if not.*)
 Definition bv_sub {n} (v1 v2 : t bool n) : t bool (S n) :=
-  nat_bitvector_big (S n) 
-    (bitvector_nat_big v1 + 2 ^ n - bitvector_nat_big v2).
+  N_bitvector_big (S n) 
+    (bitvector_N_big v1 + 2 ^ N.of_nat n - bitvector_N_big v2).
 
 Theorem bv_sub_correct_1 : forall {n} (v1 v2 : t bool n),
   bv_sub v1 v2 = nat_bitvector_big (S n) 
     (bitvector_nat_big v1 + 2 ^ n - bitvector_nat_big v2).
-Proof. reflexivity. Qed.
+Proof.
+  intros.
+  unfold bv_sub.
+  change (2)%N with (N.of_nat 2).
+  rewrite <- Nat2N_inj_pow.
+  repeat rewrite bitvector_nat_N_big.
+  rewrite <- Nnat.Nat2N.inj_add, <- Nnat.Nat2N.inj_sub, N_nat_bitvector_big.
+  reflexivity.
+  assert (bitvector_nat_big v1 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  cbn; lia.
+Qed.
 
 Theorem bv_sub_correct_2 : forall {n} (n1 n2 : nat),
   n1 < 2 ^ n -> n2 < 2 ^ n ->
@@ -668,7 +1160,7 @@ Qed.
 Theorem bv_sub_correct_pos : 
   forall k n m,
   n < 2 ^ k -> m < 2 ^ k -> m <= n ->
-  Vector.tl (bv_sub (nat_bitvector_big k n)
+  VectorDef.tl (bv_sub (nat_bitvector_big k n)
             (nat_bitvector_big k m))
   = nat_bitvector_big k (n - m).
   intros k n m nlt mlt le.
@@ -687,9 +1179,9 @@ Qed.
   additional bits indicate, respecively, an overflow and a result of 0.
   Left vector are MSB, right vector are LSB.*)
 Definition bv_mul_flags {n} (v1 v2 : t bool n) : bool * bool * t bool n * t bool n :=
-  let prod := (bitvector_nat_big v1 * bitvector_nat_big v2) in
-  let (pvH, pvL) := splitat n (nat_bitvector_big (n + n) prod) in
-  (2 ^ n <=? prod, prod =? 0, pvH, pvL).
+  let prod := (bitvector_N_big v1 * bitvector_N_big v2)%N in
+  let (pvH, pvL) := splitat n (N_bitvector_big (n + n) prod) in
+  (2 ^ N.of_nat n <=? prod, prod =? 0, pvH, pvL)%N.
 
 (*Multiplication (unsigned), all bits*)
 Definition bv_mul {n} (v1 v2 : t bool n) : t bool (n + n) :=
@@ -703,7 +1195,13 @@ Proof.
   unfold bv_mul, bv_mul_flags.
   destruct (splitat n _) eqn:splitEq; simpl.
   apply VectorSpec.append_splitat in splitEq.
-  symmetry; assumption.
+  rewrite <- splitEq.
+  repeat rewrite bitvector_nat_N_big.
+  rewrite <- Nnat.Nat2N.inj_mul, N_nat_bitvector_big;[reflexivity|].
+  assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  assert (bitvector_nat_big v3 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  rewrite PeanoNat.Nat.pow_add_r.
+  apply PeanoNat.Nat.mul_lt_mono; lia.
 Qed.
 
 Theorem bv_mul_correct_2 : forall {n} (n1 n2 : nat),
@@ -769,7 +1267,7 @@ Proof.
        apply bitvector_nat_big_lt_2pow. }
   rewrite <- bv_mul_correct_1.
   destruct (splitat _ _) as [v12h v12l] eqn:sE; simpl fst.
-  apply Vector.append_splitat in sE; rewrite sE.
+  apply VectorSpec.append_splitat in sE; rewrite sE.
   rewrite bitvector_nat_big_app.
   split.
   - intro; rewrite bitvector_fin_big_0_const.
@@ -781,19 +1279,43 @@ Qed.
 
 (*unsigned division. Extra boolean indicates division by 0.*)
 Definition bv_udiv_flag {n} (v1 v2 : t bool n) : bool * t bool n :=
-  let den := bitvector_nat_big v2 in
-  (den =? 0, nat_bitvector_big n (bitvector_nat_big v1 / den)).
+  let den := bitvector_N_big v2 in
+  let b := (den =? 0)%N in
+  (b, N_bitvector_big n (if b then 0 else (bitvector_N_big v1 / den))%N).
 
 Definition bv_udiv {n} (v1 v2 : t bool n) : t bool n :=
   snd (bv_udiv_flag v1 v2).
 
+(*"""
+If [A]u = 0, then aW-1 · · · a0 = 0W .
+"""*)
+Theorem bv_udiv_correct_0 : forall {n} (v1 v2 : t bool n),
+  bitvector_nat_big v2 = 0 ->
+  bv_udiv v1 v2 = nat_bitvector_big n 0.
+Proof.
+  intros.
+  unfold bv_udiv, bv_udiv_flag, snd.
+  rewrite bitvector_nat_N_big, H.
+  simpl.
+  rewrite nat_N_bitvector_big;[reflexivity|simpl;lia].
+Qed.
+
 Theorem bv_udiv_correct_1 : forall {n} (v1 v2 : t bool n),
+  bitvector_nat_big v2 > 0 ->
   bv_udiv v1 v2 = nat_bitvector_big n 
     (bitvector_nat_big v1 / bitvector_nat_big v2).
 Proof.
-  intros n v2 v3.
+  intros n v2 v3 v2LT.
   unfold bv_udiv, bv_udiv_flag.
-  reflexivity.
+  unfold snd.
+  assert (bitvector_N_big v3 > 0)%N;[rewrite bitvector_nat_N_big; lia|].
+  assert (bitvector_N_big v3 =? 0 = false)%N;[rewrite N.eqb_neq; lia|].
+  rewrite H0.
+  repeat rewrite bitvector_nat_N_big.
+  rewrite <- Nat2N_inj_div, N_nat_bitvector_big;try lia; try reflexivity.
+  assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  assert (bitvector_nat_big v3 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  apply neq0_div_lt; lia.
 Qed.
 
 Theorem bv_udiv_correct_2 : forall {n} (n1 n2 : nat),
@@ -805,23 +1327,49 @@ Proof.
   rewrite bv_udiv_correct_1.
   repeat rewrite nat_bitvector_big_inv; try lia.
   apply neq0_div_lt; assumption.
+  rewrite nat_bitvector_big_inv; lia.
 Qed.
 
 (*unsigned modulus. Extra boolean indicates modulus by 0.*)
 Definition bv_umod_flag {n} (v1 v2 : t bool n) : bool * t bool n :=
-  let bas := bitvector_nat_big v2 in
-  (bas =? 0, nat_bitvector_big n (bitvector_nat_big v1 mod bas)).
+  let bas := bitvector_N_big v2 in
+  let b := (bas =? 0)%N in
+  (b, N_bitvector_big n (if b then 0 else bitvector_N_big v1 mod bas)%N).
 
 Definition bv_umod {n} (v1 v2 : t bool n) : t bool n :=
   snd (bv_umod_flag v1 v2).
 
+(*"""
+If [A]u = 0, then aW-1 · · · a0 = 0W .
+"""*)
+Theorem bv_umod_correct_0 : forall {n} (v1 v2 : t bool n),
+  bitvector_nat_big v2 = 0 ->
+  bv_umod v1 v2 = nat_bitvector_big n 0.
+Proof.
+  intros.
+  unfold bv_umod, bv_umod_flag, snd.
+  rewrite bitvector_nat_N_big, H.
+  simpl.
+  rewrite nat_N_bitvector_big;[reflexivity|simpl;lia].
+Qed.
+
 Theorem bv_umod_correct_1 : forall {n} (v1 v2 : t bool n),
+  bitvector_nat_big v2 > 0 ->
   bv_umod v1 v2 = nat_bitvector_big n 
     (bitvector_nat_big v1 mod bitvector_nat_big v2).
 Proof.
   intros n v2 v3.
   unfold bv_umod, bv_umod_flag.
-  reflexivity.
+  unfold snd. intro.
+  assert (bitvector_N_big v3 > 0)%N;[rewrite bitvector_nat_N_big; lia|].
+  assert (bitvector_N_big v3 =? 0 = false)%N;[rewrite N.eqb_neq; lia|].
+  rewrite H1.
+  repeat rewrite bitvector_nat_N_big.
+  rewrite <- Nat2N_inj_mod, N_nat_bitvector_big;try lia; try reflexivity.
+  assert (bitvector_nat_big v2 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  assert (bitvector_nat_big v3 < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  transitivity (bitvector_nat_big v3);[|assumption].
+  apply mod_upper_bound; lia.
 Qed.
 
 Theorem bv_umod_correct_2 : forall {n} (n1 n2 : nat),
@@ -833,6 +1381,7 @@ Proof.
   rewrite bv_umod_correct_1.
   repeat rewrite nat_bitvector_big_inv; try lia.
   rewrite PeanoNat.Nat.mod_eq; try lia.
+  rewrite nat_bitvector_big_inv; lia.
 Qed.
 
 (*left-shift by m with zero padding.*)
@@ -858,7 +1407,7 @@ Proof.
   destruct (splitat m v) as [v1 v2] eqn:spvE.
   apply VectorSpec.append_splitat in spvE; rewrite spvE.
   unfold eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
-  rewrite cast_app_l, Vector.splitat_append.
+  rewrite cast_app_l, VectorSpec.splitat_append.
   simpl; vector_simp.
   f_equal; apply proof_irrelevance.
 Qed.
@@ -887,7 +1436,7 @@ Proof.
   apply VectorSpec.append_splitat in spvE; rewrite spvE.
   unfold eq_rec_r, eq_rec; repeat rewrite <- cast_rew.
   vector_simp; rewrite cast_app_r. 
-  rewrite Vector.splitat_append.
+  rewrite VectorSpec.splitat_append.
   simpl; vector_simp.
   f_equal; apply proof_irrelevance.
 Qed.
@@ -926,7 +1475,7 @@ Theorem twos_complement_min : forall {n} (v : t bool (S n)),
 Proof.
   intros n v.
   rewrite <- BinInt.Z.sub_0_l.
-  rewrite (Vector.eta v).
+  rewrite (VectorSpec.eta v).
   simpl twos_complement.
   apply BinInt.Z.sub_le_mono. { apply Zorder.Zle_0_nat. }
   destruct (hd v).
@@ -943,7 +1492,7 @@ Theorem twos_complement_max : forall {n} (v : t bool (S n)),
   lt (twos_complement v) (pow 2 (of_nat n)).
 Proof.
   intros n v.
-  rewrite (Vector.eta v).
+  rewrite (VectorSpec.eta v).
   simpl twos_complement.
   rewrite (BinInt.Zminus_0_l_reverse (pow _ _)).
   apply BinInt.Z.sub_lt_le_mono. 2: { apply Zorder.Zle_0_nat. }
@@ -966,7 +1515,7 @@ Proof.
   intros n v.
   assert (twos_complement' (tl v) < 2 ^ n).
   { rewrite twos_complement_big; apply bitvector_nat_big_lt_2pow. }
-  rewrite (Vector.eta v).
+  rewrite (VectorSpec.eta v).
   simpl.
   destruct (hd v); simpl bitValN.
   - rewrite PeanoNat.Nat.mul_1_l, <- opp_sub_swap, <- Znat.Nat2Z.inj_sub.
@@ -1080,7 +1629,7 @@ Qed.
 Theorem twos_complement_min_1s : forall {n} (b : t bool (S n)),
   b = b1 :: const b0 _ <-> opp (pow 2 (of_nat n)) = twos_complement b.
 Proof.
-  intros n b; rewrite (Vector.eta b).
+  intros n b; rewrite (VectorSpec.eta b).
   unfold twos_complement.
   assert (bitvector_nat_big (tl b) < 2 ^ n) as L1.
   { apply bitvector_nat_big_lt_2pow. }
@@ -1121,16 +1670,6 @@ Qed.
 (*Absolute value of signed vector*)
 Definition bv_abs {n} (v : t bool (S n)) : t bool n :=
   nat_bitvector_big n (Z.abs_nat (twos_complement v)).
-(*
-Definition bv_abs {n} (v : t bool (S n)) : t bool n :=
-  match v with
-  | s :: vs => 
-    match s with
-    | true => bv_incr 1 (bv_not vs)
-    | false => vs
-    end
-  end.
-*)
 
 Theorem bv_abs_correct : forall {n} (v : t bool (S n)),
   bv_abs v = nat_bitvector_big n (Z.abs_nat (twos_complement v)).
@@ -1139,16 +1678,6 @@ Proof. reflexivity. Qed.
 (*Negative of signed vector*)
 Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
   twos_complement_inv n (opp (twos_complement v)).
-(*
-Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
-  match v with
-  | s :: vs => 
-    match s with
-    | true => false :: (bv_incr 1 (bv_not vs))
-    | false => true :: (bv_incr 1 (bv_not vs))
-    end
-  end.
-*)
 
 Theorem bv_neg_correct_1 : forall {n} (v : t bool (S n)),
   bv_neg v = twos_complement_inv n (opp (twos_complement v)).
@@ -1282,3 +1811,65 @@ Proof.
   - apply lt_mul_mul; lia.
 Qed.
 
+Definition bv_lt {n} (u v : t bool n) : bool :=
+  (bitvector_N_big u <? bitvector_N_big v)%N.
+
+Theorem bv_lt_correct {n} (u v : t bool n) :
+  bv_lt u v = (bitvector_nat_big u <? bitvector_nat_big v).
+Proof.
+  intros.
+  unfold bv_lt.
+  repeat rewrite bitvector_nat_N_big.
+  destruct (bitvector_nat_big u <? bitvector_nat_big v) eqn:ltV.
+  - rewrite PeanoNat.Nat.ltb_lt in ltV.
+    rewrite N.ltb_lt.
+    lia.
+  - rewrite PeanoNat.Nat.ltb_nlt in ltV.
+    rewrite N.ltb_nlt.
+    lia.
+Qed.
+
+Definition bv_le {n} (u v : t bool n) : bool :=
+  (bitvector_N_big u <=? bitvector_N_big v)%N.
+
+Theorem bv_le_correct {n} (u v : t bool n) :
+  bv_le u v = (bitvector_nat_big u <=? bitvector_nat_big v).
+Proof.
+  intros.
+  unfold bv_le.
+  repeat rewrite bitvector_nat_N_big.
+  destruct (bitvector_nat_big u <=? bitvector_nat_big v) eqn:leV.
+  - rewrite PeanoNat.Nat.leb_le in leV.
+    rewrite N.leb_le.
+    lia.
+  - rewrite PeanoNat.Nat.leb_nle in leV.
+    rewrite N.leb_nle.
+    lia.
+Qed.
+
+Definition bv_succ {n} (v : t bool n) := 
+  (N_bitvector_big n (N.succ (bitvector_N_big v) mod 2 ^ N.of_nat n)).
+
+Theorem bv_succ_correct : forall {n} (v : t bool n),
+  bv_succ v = nat_bitvector_big n (S (bitvector_nat_big v) mod 2 ^ n).
+Proof.
+  intros n v.
+  assert (bitvector_nat_big v < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
+  unfold bv_succ.
+  rewrite <- bitvector_N_nat_big, <- N2Nat.inj_succ.
+  replace (2 ^ N.of_nat n)%N
+     with (N.of_nat (2 ^ n));[|rewrite Nat2N_inj_pow; reflexivity].
+  assert (2 ^ n <> 0);[apply PeanoNat.Nat.pow_nonzero;lia|].
+  rewrite nat_N_bitvector_big, N2Nat_inj_mod.
+  repeat f_equal.
+  apply Nnat.Nat2N.id.
+  lia.
+  rewrite N_len_max, N2Nat_inj_mod, Nnat.Nat2N.id;[|lia].
+  apply mod_upper_bound.
+  assumption.
+Qed.
+
+Ltac pc_simpl := 
+  repeat rewrite bv_succ_correct;
+  repeat rewrite nat_bitvector_big_inv; try apply mod_upper_bound; try lia;
+  repeat rewrite mod_small; try lia.

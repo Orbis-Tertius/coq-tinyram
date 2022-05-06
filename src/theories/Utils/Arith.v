@@ -1,5 +1,7 @@
 From Coq Require Import
-  Arith Lia ZArith.Int Numbers.BinNums.
+  Lia Nat BinPos Pnat BinNat BinIntDef
+  Arith ZArith.Int Numbers.BinNums
+  NArith.Nnat.
 Import PeanoNat.Nat.
 Require Import ProofIrrelevance.
 Import EqNotations.
@@ -399,4 +401,99 @@ Proof.
   - rewrite <- BinInt.Z.mul_opp_opp.
     apply BinInt.Z.mul_le_mono_nonneg; lia.
   - apply BinInt.Z.mul_le_mono_nonneg; try lia.
+Qed.
+
+(* Some binary nat theorems which aren't present in 
+   the Coq version that ITrees likes. *)
+
+Theorem Nat2N_inj_pow:
+  forall n n' : nat,
+  N.of_nat (n ^ n') =
+  (N.of_nat n ^ N.of_nat n')%N.
+Proof.
+  intros.
+  generalize dependent n.
+  induction n';[reflexivity|].
+  intro.
+  rewrite Nnat.Nat2N.inj_succ.
+  rewrite N.pow_succ_r'.
+  rewrite <- IHn'.
+  rewrite PeanoNat.Nat.pow_succ_r'.
+  apply Nnat.Nat2N.inj_mul.
+Qed.
+
+Theorem N2Nat_inj_pow:
+  forall n n' : N,
+  N.to_nat (n ^ n') =
+  (N.to_nat n ^ N.to_nat n').
+Proof.
+  intros.
+  rewrite <- Nat2N.id.
+  rewrite Nat2N_inj_pow. 
+  repeat rewrite N2Nat.id.
+  reflexivity.
+Qed.
+
+Lemma inj_compare a a' :
+ (a ?= a')%N = (N.to_nat a ?= N.to_nat a').
+Proof.
+ destruct a as [|p], a' as [|p']; simpl; trivial.
+ - now destruct (Pos2Nat.is_succ p') as (n,->).
+ - now destruct (Pos2Nat.is_succ p) as (n,->).
+ - apply Pos2Nat.inj_compare.
+Qed.
+
+Theorem N2Nat_inj_mod n n' :
+  n' <> N0 ->
+  N.to_nat (n mod n') =
+  (N.to_nat n mod N.to_nat n').
+Proof.
+  intros.
+  destruct n' as [|n']; [now destruct n|].
+  apply PeanoNat.Nat.mod_unique
+   with (N.to_nat (n / (N.pos n'))).
+  - apply PeanoNat.Nat.compare_lt_iff.
+    rewrite <- inj_compare.
+    apply N.mod_lt.
+    intro H0; discriminate H0.
+  - now rewrite <- N2Nat.inj_mul, <- N2Nat.inj_add, <- N.div_mod.
+Qed.
+
+Theorem Nat2N_inj_mod:
+  forall n n' : nat,
+  n' <> 0 ->
+  N.of_nat (n mod n') =
+  (N.of_nat n mod N.of_nat n')%N.
+Proof.
+  intros.
+  apply N2Nat.inj.
+  rewrite N2Nat_inj_mod;[|lia].
+  now repeat rewrite Nat2N.id.
+Qed.
+
+Theorem N2Nat_inj_div n n' :
+  n' <> N0 ->
+  N.to_nat (n / n') =
+  (N.to_nat n / N.to_nat n').
+Proof.
+  intros.
+  destruct n' as [|n']; [now destruct n|].
+  apply PeanoNat.Nat.div_unique
+  with (N.to_nat (n mod (N.pos n'))).
+  - apply PeanoNat.Nat.compare_lt_iff.
+    rewrite <- inj_compare.
+    apply N.mod_lt; lia.
+  - now rewrite <- N2Nat.inj_mul, <- N2Nat.inj_add, <- N.div_mod.
+Qed.
+
+Theorem Nat2N_inj_div:
+  forall n n' : nat,
+  n' <> 0 ->
+  N.of_nat (n / n') =
+  (N.of_nat n / N.of_nat n')%N.
+Proof.
+  intros.
+  apply N2Nat.inj.
+  rewrite N2Nat_inj_div;[|lia].
+  now repeat rewrite Nat2N.id.
 Qed.
