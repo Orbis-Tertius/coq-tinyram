@@ -92,8 +92,8 @@ interactionRequest str = do
 
 interactiveLoopSteps :: Integer -> Program -> IO (Maybe Tinyram_VM.Word)
 interactiveLoopSteps n p =
-  let mainTape = repeat (interactionRequest "Main Tape Input")
-      auxTape = repeat (interactionRequest "Auxiliary Tape Input")
+  let mainTape = repeat (interactionRequest "Main Tape Input\n")
+      auxTape = repeat (interactionRequest "Auxiliary Tape Input\n")
   in do
     mt <- lazySequence mainTape
     at <- lazySequence auxTape
@@ -101,8 +101,8 @@ interactiveLoopSteps n p =
 
 interactiveLoop :: Program -> IO Tinyram_VM.Word
 interactiveLoop p =
-  let mainTape = repeat (interactionRequest "Main Tape Input")
-      auxTape = repeat (interactionRequest "Auxiliary Tape Input")
+  let mainTape = repeat (interactionRequest "Main Tape Input\n")
+      auxTape = repeat (interactionRequest "Auxiliary Tape Input\n")
   in do
     mt <- lazySequence mainTape
     at <- lazySequence auxTape
