@@ -66,6 +66,11 @@ parseInstruction str = do
   (w2, str'') <- parseWord wordSize str'
   return ((w1, w2), str'')
 
+parseWords :: String -> Either String (Tinyram_VM.Word, String)
+parseWords str = do
+  (w1, str') <- parseWord wordSize str
+  return (w1, str')
+
 parseProgram :: String -> Either String Program
 parseProgram [] = Right []
 parseProgram str = do
@@ -73,11 +78,24 @@ parseProgram str = do
   prg <- parseProgram str'
   Right (ws:prg)
 
+parseTape :: String -> Either String Tape
+parseTape [] = Right []
+parseTape str = do
+  (ws, str') <- parseWords str
+  prg <- parseTape str'
+  Right (ws:prg)
+
 readProgram :: String -> IO (Either String Program)
 readProgram str = do
   handle <- openFile str ReadMode
   text <- hGetContents handle
   return (parseProgram text)
+
+readTape :: String -> IO (Either String Tape)
+readTape str = do
+  handle <- openFile str ReadMode
+  text <- hGetContents handle
+  return (parseTape text)
 
 interactionRequest :: String -> IO Tinyram_VM.Word
 interactionRequest str = do
@@ -120,7 +138,9 @@ helpString =
   "<Arg>:\n"++
   "\tWill run the program <Arg> in an interactive mode,\n\trequesting inputs whenever the tapes are used.\n" ++
   "<Args> -s <n>\n" ++
-  "\tWill run the program in an interactive mode for n steps."
+  "\tWill run the program in an interactive mode for n steps.\n" ++
+  "<Prog> <Main> <Aux> <Step>\n" ++
+  "\tWill run the program \"Prog\" on \"Main\" and \"Aux\" inputs for \"Step\" steps in noninteractive mode."
 
 printAnswer :: Tinyram_VM.Word -> IO ()
 printAnswer wrd = do
@@ -162,23 +182,43 @@ oneArg x =
 
 threeArg :: String -> String -> String -> IO ()
 threeArg x mt at = case x of
-    "-s" -> putStrLn stepAftErr
+  "-s" -> putStrLn stepAftErr
+  "-h" -> putStrLn (helpMultErr 2)
+  _ -> case mt of
+    "-s" -> do
+      putStrLn ("Running program " ++ x ++ " in interactive mode for " ++ at ++ " steps.\n")
+      case readMaybe at of
+        Nothing -> putStrLn ("Error: Could not parse " ++ at ++ " into value stepcount.")
+        Just n -> do
+          mb <- readProgram x
+          case mb of
+            Left err -> putStrLn ("Error: " ++ err) 
+            Right prg -> do
+              mwrd <- interactiveLoopSteps n prg
+              case mwrd of
+                Nothing -> putStrLn ("Error: Program did not halt within " ++ show n ++ " steps.")
+                Just wrd -> printAnswer wrd
     "-h" -> putStrLn (helpMultErr 2)
-    _ -> case mt of
-      "-s" -> do
-        putStrLn ("Running program " ++ x ++ " in interactive mode for " ++ at ++ " steps.\n")
-        case readMaybe at of
-          Nothing -> putStrLn ("Error: Could not parse " ++ at ++ " into value stepcount.")
-          Just n -> do
-            mb <- readProgram x
-            case mb of
-              Left err -> putStrLn ("Error: " ++ err) 
-              Right prg -> do
-                mwrd <- interactiveLoopSteps n prg
-                case mwrd of
-                  Nothing -> putStrLn ("Error: Program did not halt within " ++ show n ++ " steps.")
-                  Just wrd -> printAnswer wrd
-      "-h" -> putStrLn (helpMultErr 2)
+
+fourArg :: String -> String -> String -> String -> IO ()
+fourArg x mt at sc = do
+  putStrLn ("Running program " ++ x ++ " in non-interactive mode with main tape\n" ++ 
+            mt ++ " and auxiliary tape " ++ at ++ " for " ++ sc ++ " steps.\n")
+  prog <- readProgram x
+  case prog of
+    Left err -> putStrLn ("Error: " ++ err) 
+    Right prg -> do
+      mainTape <- readTape mt
+      case mainTape of
+        Left err -> putStrLn ("Error: " ++ err) 
+        Right mtp -> do
+          auxTape <- readTape at
+          case auxTape of
+            Left err -> putStrLn ("Error: " ++ err) 
+            Right atp -> 
+              case run_program_steps (read sc) prg mtp atp of
+                Nothing -> putStrLn ("Error: Program did not halt within " ++ sc ++ " steps.")
+                Just wrd -> printAnswer wrd
 
 main :: IO ()
 main = do
@@ -188,7 +228,8 @@ main = do
     (x:[]) -> oneArg x
     (x:mt:[]) -> putStrLn "Error: Executable called with wrong number of arguments.\nUse \"-h\" for help."
     (x:mt:at:[]) -> threeArg x mt at
-    (x:mt:at:_) -> do
+    (x:mt:at:ki:[]) -> fourArg x mt at ki
+    (x:mt:at:ki:_) -> do
       putStrLn ignoreWarn
       threeArg x mt at
 
