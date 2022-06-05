@@ -48,4 +48,4 @@ Extract Inductive VectorDef.t => "([])" [ "[]" "(\x _ xs -> x : xs)" ]
        [] -> fnil ()
        (x : xs) -> fcons x (Prelude.toInteger (Prelude.length xs)) xs)".
 
-Extraction "Tinyram_VM.hs" interp_program.
+Extraction "Tinyram_VM.hs" interp_program_for.
