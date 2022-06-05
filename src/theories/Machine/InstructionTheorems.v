@@ -1800,6 +1800,15 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
         + reflexivity. 
     Qed.
 
+    (*When a program runs out of steps to run it halts with no answer*)
+    Lemma interp_machine_run_for_halt_0:
+      forall (s : MachineState),
+        interp_machine (E := E') (run_for 0) s ≈ Ret (s, None).
+    Proof.
+      intros.
+      tau_steps; reflexivity.
+    Qed.
+
     (* When the program reaches an immediate answer, it halts. *)
     Lemma interp_machine_run_halt_imm:
       forall (s : MachineState) op r,
@@ -1830,6 +1839,36 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       reflexivity.
     Qed.
 
+    (* When the program reaches an immediate answer, it halts. *)
+    Lemma interp_machine_run_for_halt_imm:
+      forall n (s : MachineState) op r,
+        (List.nth_error (program s)
+                        (bitvector_nat_big (programCounter s)))
+        = Some r ->
+        uncurry InstructionDecode r = (answerI, inl op) ->
+        interp_machine (E := E') (run_for (S n)) s ≈ Ret (s, Some op).
+    Proof.
+      intros.
+      unfold run_for; rewrite unfold_iter; unfold run_step_lim, run_step at 1.
+      do 3 (rewrite interp_machine_bind at 1); rewrite interp_machine_trigger.
+      assert (machine_h (E := E') _ (subevent _ GetPC) s
+        ≈ Ret (s, programCounter s)) as AH;
+      [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
+      rewrite bind_ret_l; change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word));
+      rewrite interp_machine_bind, interp_machine_trigger.
+      assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
+        ≈ Ret (s, r)) as AH;
+      [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
+        rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
+      rewrite AH; clear AH.
+      rewrite bind_bind, bind_ret_l; rewrite H0.
+      assert (interp_machine (E := E') (ITree.map (inr (A := unit)) (denote_operand (inl op))) s
+        ≈ Ret (s, inr op)) as AH; [ tau_steps; reflexivity | ];
+      rewrite AH; clear AH.
+      rewrite bind_ret_l.
+      tau_steps; reflexivity.
+    Qed.
+
     (* When run gets a register answer, it halts with that value. *)
     Lemma interp_machine_run_halt_reg:
       forall (s : MachineState) op r,
@@ -1858,6 +1897,36 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       rewrite AH; clear AH.
       rewrite bind_ret_l, interp_machine_ret.
       reflexivity.
+    Qed.
+ 
+    (* When run gets a register answer, it halts with that value. *)
+    Lemma interp_machine_run_for_halt_reg:
+      forall n (s : MachineState) op r,
+        (List.nth_error (program s)
+                        (bitvector_nat_big (programCounter s)))
+        = Some r ->
+        uncurry InstructionDecode r = (answerI, inr op) ->
+        interp_machine (E := E') (run_for (S n)) s ≈ Ret (s, Some (nth (registers s) op)).
+    Proof.
+      intros.
+      unfold run_for; rewrite unfold_iter; unfold run_step_lim, run_step at 1.
+      do 3 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
+      assert (machine_h (E := E') _ (subevent _ GetPC) s
+        ≈ Ret (s, programCounter s)) as AH;
+      [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
+      rewrite bind_ret_l; change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word));
+      rewrite interp_machine_bind, interp_machine_trigger.
+      assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
+        ≈ Ret (s, r)) as AH;
+      [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
+        rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
+      rewrite AH; clear AH.
+      rewrite bind_bind, bind_ret_l; rewrite H0.
+      assert (interp_machine (E := E') (ITree.map (inr (A := unit)) (denote_operand (inr op))) s
+        ≈ Ret (s, inr (nth (registers s) op))) as AH; [ tau_steps; reflexivity | ];
+      rewrite AH; clear AH.
+      rewrite bind_ret_l.
+      tau_steps; reflexivity.
     Qed.
 
     Lemma interp_machine_run_step:
@@ -1897,6 +1966,44 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       rewrite interp_machine_ret, bind_ret_l.
       rewrite tau_eutt.
       reflexivity.
+    Qed.
+
+    Lemma interp_machine_run_for_step:
+      forall n (s : MachineState) k op r,
+        (List.nth_error (program s)
+                        (bitvector_nat_big (programCounter s)))
+        = Some r ->
+        uncurry InstructionDecode r = (k, op) ->
+        k <> answerI ->
+        interp_machine (E := E') (run_for (S n)) s ≈
+        interp_machine (denote_instruction (k, op) ;; run_for n) s.
+    Proof.
+      intros.
+      unfold run_for; rewrite unfold_iter; unfold run_step_lim, run_step at 1.
+      do 3 (rewrite interp_machine_bind); rewrite interp_machine_trigger.
+      assert (machine_h (E := E') _ (subevent _ GetPC) s
+        ≈ Ret (s, programCounter s)) as AH;
+      [ tau_steps; reflexivity | ]; rewrite AH; clear AH.
+      rewrite bind_ret_l;
+      change bind with (ITree.bind (E := E) (T := Word * Word) (U := unit + Word)) at 1;
+      rewrite interp_machine_bind, interp_machine_trigger.
+      assert (machine_h (E := E') _ (subevent _ (ReadInst (bitvector_nat_big (programCounter s)))) s
+        ≈ Ret (s, r)) as AH;
+      [ tau_steps; repeat change (ITree.subst ?k ?x) with (ITree.bind x k);
+        rewrite (bisimulation_is_eq _ _ (bind_ret_l _ _)); rewrite H; reflexivity | ];
+      rewrite AH; clear AH.
+      rewrite bind_bind, bind_ret_l. rewrite H0.
+      remember (interp_machine _) as gg;
+      replace gg with (interp_machine (E := E') (ITree.map (inl (B := Word)) (denote_instruction (k, op))));
+      [ | rewrite Heqgg; f_equal; destruct k; try reflexivity; contradiction ]; clear Heqgg gg.
+      unfold ITree.map.
+      rewrite interp_machine_bind, bind_bind.
+      change bind with (ITree.bind (E := E) (T := unit) (U := Word)).
+      rewrite interp_machine_bind.
+      apply eqit_bind; [ reflexivity | ].
+      intros [s2 []].
+      rewrite interp_machine_ret, bind_ret_l.
+      tau_steps; reflexivity.
     Qed.
 
   End with_event.

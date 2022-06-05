@@ -285,6 +285,9 @@ Module TinyRAMHandlers (Params : TinyRAMParameters).
   Definition interp_program {E} (s: Program) (t0 t1 : Tape) : itree E Word :=
     ITree.map snd (interp_machine run (initialState s t0 t1)).
 
+  Definition interp_program_for {E} (n : nat) (s: Program) (t0 t1 : Tape) : itree E (option Word) :=
+    ITree.map snd (interp_machine (run_for n) (initialState s t0 t1)).
+
   (* Equality between programs. *)
   Definition eq_machine (s1 s2 : Program) : Prop :=
     forall t1 t2,
