@@ -333,6 +333,21 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
     Definition run : itree E Word :=
       ITree.iter (fun _ => run_step) tt.
 
+    Definition run_step_lim (n : nat) : itree E (nat + option Word) :=
+      match n with
+      | 0 => ret (inr None)
+      | S n => 
+        a <- run_step ;;
+        match a with
+        | inl _ => ret (inl n)
+        | inr x => ret (inr (Some x))
+        end
+      end.
+
+    (* Run, but only for a specified number of instructions. *)
+    Definition run_for : nat -> itree E (option Word) :=
+      ITree.iter run_step_lim.
+
     (* programs *)
 
     Definition denote_program : list Instruction -> itree E unit :=

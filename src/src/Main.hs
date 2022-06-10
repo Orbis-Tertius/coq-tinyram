@@ -25,21 +25,14 @@ run_itree (Go t) =
     TauF t -> run_itree t
     VisF e _ -> case e of
 
-run_itree_steps :: Integer -> Itree Void a -> Maybe a
-run_itree_steps i (Go t) =
-  case t of
-    RetF r -> Just r
-    TauF t -> 
-      if i <= 0
-      then Nothing
-      else run_itree_steps (i-1) t
-    VisF e _ -> case e of
+run_program_steps :: Integer -> Program -> Tape -> Tape -> Maybe Tinyram_VM.Word
+run_program_steps i p t0 t1 = run_itree $ interp_program_for i p t0 t1 
 
 run_program :: Program -> Tape -> Tape -> Tinyram_VM.Word
-run_program p t0 t1 = run_itree $ interp_program p t0 t1 
-
-run_program_steps :: Integer -> Program -> Tape -> Tape -> Maybe Tinyram_VM.Word
-run_program_steps i p t0 t1 = run_itree_steps i $ interp_program p t0 t1 
+run_program p t0 t1 = 
+  case run_program_steps 9999999 p t0 t1 of
+    Nothing -> take (fromIntegral wordSize) (repeat False)
+    Just w -> w
 
 parseWord :: Integer -> String -> Either String (Tinyram_VM.Word, String)
 parseWord 0 str = Right ([], str)
