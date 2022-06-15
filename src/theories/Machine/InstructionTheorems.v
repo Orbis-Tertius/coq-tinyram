@@ -577,6 +577,13 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       apply le_opp_mul_mul; lia.
       rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
       apply lt_mul_mul; lia.
+      rewrite twos_complement_iso_2.
+      rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      apply lt_opp_mul_mul; lia.
+      rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      apply le_opp_mul_mul; lia.
+      rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      apply lt_mul_mul; lia.
     Qed.
 
     Theorem pureOp_smulh_correct_sign (ri rj : regId) (A : Word) (m : MachineState) :

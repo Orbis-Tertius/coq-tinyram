@@ -295,6 +295,14 @@ Proof.
   reflexivity.
 Qed.
 
+Theorem opp_lt_swap_l: forall n m : Z, lt (opp n) m <-> lt (opp m) n.
+Proof.
+  intros n m.
+  rewrite <- (BinInt.Z.opp_involutive m) at 1.
+  rewrite <- BinInt.Z.opp_lt_mono.
+  reflexivity.
+Qed.
+
 Theorem Z_inj_pow : forall x y, 
   pow (of_nat x) (of_nat y) = of_nat (x ^ y).
 Proof.
@@ -361,6 +369,27 @@ Proof.
     apply BinInt.Z.mul_le_mono_nonneg; lia.
   - rewrite opp_le_swap_l, <- BinInt.Z.mul_opp_r.
     apply BinInt.Z.mul_le_mono_nonneg; lia.
+Qed.
+
+Theorem lt_opp_mul_mul : forall p1 p2 t1 t2,
+  lt (opp p1) t1 -> lt (opp p2) t2 -> 
+  lt t1 p1 -> lt t2 p2 ->
+  lt (opp (mul p1 p2)) (mul t1 t2).
+Proof.
+  intros.
+  assert (lt Z0 p1); [ lia | ].
+  assert (lt Z0 p2); [ lia | ].
+  destruct (ltb t1 Z0) eqn:zt1; 
+  destruct (ltb t2 Z0) eqn:zt2;
+  try rewrite Z_ltb_lt in zt1;
+  try rewrite Z_ltb_lt in zt2;
+  try rewrite Z_nltb_ge in zt1;
+  try rewrite Z_nltb_ge in zt2;
+  try lia.
+  - rewrite opp_lt_swap_l, <- BinInt.Z.mul_opp_l.
+    apply BinInt.Z.mul_lt_mono_nonneg; lia.
+  - rewrite opp_lt_swap_l, <- BinInt.Z.mul_opp_r.
+    apply BinInt.Z.mul_lt_mono_nonneg; lia.
 Qed.
 
 Theorem lt_mul_mul : forall p1 p2 t1 t2,
@@ -497,3 +526,59 @@ Proof.
   rewrite N2Nat_inj_div;[|lia].
   now repeat rewrite Nat2N.id.
 Qed.
+
+
+Theorem mod_2_div : forall k, k mod 2 = 0 -> k / 2 = S k / 2.
+Proof.
+  assert (forall k,
+            (k mod 2 = 0 -> k / 2 = S k / 2) /\
+            (k mod 2 = 1 -> S k / 2 = S (S k) / 2));[|
+  intro k; destruct (H k); assumption].
+  induction k;[simpl;lia|destruct IHk];
+  split; intro.
+  - apply H0.
+    change k with (0 + k).
+    rewrite <- H1 at 1.
+    rewrite PeanoNat.Nat.add_mod_idemp_l;[|lia].
+    replace (S k + k) with (1 + 2 * k);[|lia].
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r;[|lia].
+    rewrite PeanoNat.Nat.mul_comm, PeanoNat.Nat.mod_mul;simpl;lia.
+  - assert (forall k, S (S k) / 2 = S (k / 2));[
+        intro k2;change (S (S k2)) with (1 * 2 + k2);
+        rewrite PeanoNat.Nat.div_add_l; lia|].
+    repeat rewrite H2.
+    f_equal.
+    apply H.
+    change (S k) with (1 + k) in H1.
+    replace 0 with ((2 + k) mod 2) at 2;[|
+      replace (2 + k) with (1 + (1 + k));[|lia];
+      rewrite <- PeanoNat.Nat.add_mod_idemp_r, H1;
+      simpl; lia].
+    rewrite <- PeanoNat.Nat.add_mod_idemp_l; simpl; lia.
+Qed.
+
+Theorem nmod_2_0 : forall k, k mod 2 <> 0 -> k mod 2 = 1.
+Proof.
+  assert (forall k,
+            (k mod 2 <> 0 -> k mod 2 = 1) /\
+            (k mod 2 <> 1 -> k mod 2 = 0));[|
+  intro k; destruct (H k); assumption].
+  induction k;[simpl;lia|destruct IHk];
+  split; intro;
+  change (S k) with (1 + k);
+  rewrite <- PeanoNat.Nat.add_mod_idemp_r;
+  try lia.
+  - rewrite H0;[reflexivity|].
+    intro.
+    change (S k) with (1 + k) in H1.
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r in H1.
+    rewrite H2 in H1; simpl in H1.
+    all: lia.
+  - rewrite H;[reflexivity|].
+    intro.
+    change (S k) with (1 + k) in H1.
+    rewrite <- PeanoNat.Nat.add_mod_idemp_r in H1.
+    rewrite H2 in H1; simpl in H1.
+    all: lia.
+Qed.
+

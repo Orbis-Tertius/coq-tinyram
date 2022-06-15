@@ -27,7 +27,7 @@ Definition bitVal : bool -> fin 2.
   - exists 0; lia.
 Defined.
 
-Definition bitValN (b : bool) : nat :=
+Definition bitValN (b : bool) : N :=
   match b with
   | true => 1
   | false => 0
@@ -40,7 +40,7 @@ Definition bitValZ (b : bool) : Z :=
   end.
 
 Theorem proj1_bitVal : forall {n},
-  proj1_sig (bitVal n) = bitValN n.
+  proj1_sig (bitVal n) = N.to_nat (bitValN n).
 Proof. intros []; reflexivity. Qed.
 
 Definition Byte := t bool 8.
@@ -382,13 +382,13 @@ Proof.
       rewrite mod_small; [ reflexivity | ].
       rewrite <- PeanoNat.Nat.div_small_iff; assumption.
     + rewrite eqb_neq in fDiv0.
-      rewrite (div_mod f (2 ^ n)) at 2. 2: { assumption. }
+      rewrite (div_mod f (2 ^ n)) at 2;[|assumption].
       rewrite PeanoNat.Nat.add_comm.
       f_equal.
       replace (f / 2 ^ n) with 1. { rewrite PeanoNat.Nat.mul_1_r; reflexivity. }
       symmetry.
       apply div_bet_1. 
-      split. 2: { assumption. }
+      split;[|assumption].
       apply Compare_dec.not_gt; unfold gt.
       intro.
       apply fDiv0.
@@ -584,10 +584,10 @@ Proof.
       simpl; lia.
     + intro H.
       replace (pred (2 ^ n + (2 ^ n + 0)))
-         with (2 ^ n + pred (2 ^ n)) in H. 2: { lia. }
+         with (2 ^ n + pred (2 ^ n)) in H;[|lia].
       assert (bitvector_nat_big v < 2 ^ n).
       { apply bitvector_nat_big_lt_2pow. }
-      destruct h; simpl in H. 2: { lia. }
+      destruct h; simpl in H;[|lia].
       f_equal.
       rewrite IHv; lia.
 Qed.
@@ -745,60 +745,6 @@ Proof.
     rewrite H1; reflexivity.
     all: assumption.
   - rewrite H1; reflexivity.
-Qed.
-
-Theorem mod_2_div : forall k, k mod 2 = 0 -> k / 2 = S k / 2.
-Proof.
-  assert (forall k,
-            (k mod 2 = 0 -> k / 2 = S k / 2) /\
-            (k mod 2 = 1 -> S k / 2 = S (S k) / 2));[|
-  intro k; destruct (H k); assumption].
-  induction k;[simpl;lia|destruct IHk];
-  split; intro.
-  - apply H0.
-    change k with (0 + k).
-    rewrite <- H1 at 1.
-    rewrite PeanoNat.Nat.add_mod_idemp_l;[|lia].
-    replace (S k + k) with (1 + 2 * k);[|lia].
-    rewrite <- PeanoNat.Nat.add_mod_idemp_r;[|lia].
-    rewrite PeanoNat.Nat.mul_comm, PeanoNat.Nat.mod_mul;simpl;lia.
-  - assert (forall k, S (S k) / 2 = S (k / 2));[
-        intro k2;change (S (S k2)) with (1 * 2 + k2);
-        rewrite PeanoNat.Nat.div_add_l; lia|].
-    repeat rewrite H2.
-    f_equal.
-    apply H.
-    change (S k) with (1 + k) in H1.
-    replace 0 with ((2 + k) mod 2) at 2;[|
-      replace (2 + k) with (1 + (1 + k));[|lia];
-      rewrite <- PeanoNat.Nat.add_mod_idemp_r, H1;
-      simpl; lia].
-    rewrite <- PeanoNat.Nat.add_mod_idemp_l; simpl; lia.
-Qed.
-
-Theorem nmod_2_0 : forall k, k mod 2 <> 0 -> k mod 2 = 1.
-Proof.
-  assert (forall k,
-            (k mod 2 <> 0 -> k mod 2 = 1) /\
-            (k mod 2 <> 1 -> k mod 2 = 0));[|
-  intro k; destruct (H k); assumption].
-  induction k;[simpl;lia|destruct IHk];
-  split; intro;
-  change (S k) with (1 + k);
-  rewrite <- PeanoNat.Nat.add_mod_idemp_r;
-  try lia.
-  - rewrite H0;[reflexivity|].
-    intro.
-    change (S k) with (1 + k) in H1.
-    rewrite <- PeanoNat.Nat.add_mod_idemp_r in H1.
-    rewrite H2 in H1; simpl in H1.
-    all: lia.
-  - rewrite H;[reflexivity|].
-    intro.
-    change (S k) with (1 + k) in H1.
-    rewrite <- PeanoNat.Nat.add_mod_idemp_r in H1.
-    rewrite H2 in H1; simpl in H1.
-    all: lia.
 Qed.
 
 Theorem N_bitvector_little_unfold:
@@ -1443,31 +1389,42 @@ Qed.
 
 (* two's complement signed integer representation. *)
 
-Fixpoint twos_complement' {n} (v : t bool n) : nat :=
+Fixpoint twos_complement' {n} (v : t bool n) : N :=
   match v with
   | [] => 0
-  | x :: xs => bitValN x * (2 ^ (n - 1)) + twos_complement' xs
+  | x :: xs => bitValN x * (2 ^ (N.of_nat n - 1)) + twos_complement' xs
   end.
 
 Definition twos_complement {n} (v : t bool (S n)) : Z :=
   match v with
-  | x :: xs => sub (of_nat (twos_complement' xs))
-                   (of_nat (bitValN x * (2 ^ n)))
+  | x :: xs => sub (Z.of_N (twos_complement' xs))
+                   (Z.of_N (bitValN x * (2 ^ N.of_nat n)))
   end.
 
 Theorem twos_complement_big : forall {n} (v : t bool n),
-  twos_complement' v = bitvector_nat_big v.
+  twos_complement' v = N.of_nat (bitvector_nat_big v).
 Proof.
   intros n v; induction v.
   - reflexivity.
-  - simpl twos_complement'.
+  - change (twos_complement' (?x :: ?xs))
+      with (bitValN x * (2 ^ (N.of_nat (S n) - 1)) + twos_complement' xs)%N.
     unfold bitvector_nat_big.
     rewrite bitvector_fin_big_cons.
     rewrite proj1_fin_cast, proj1_fin_add, proj1_fin_mul,
             proj1_fin_max, proj1_bitVal.
+    rewrite Nat2N.inj_add, Nat2N.inj_mul, N2Nat.id.
     f_equal.
-    + rewrite PeanoNat.Nat.sub_0_r; reflexivity.
+    + rewrite Nat2N_inj_pow; do 2 f_equal.
+      lia.
     + exact IHv.
+Qed.
+
+Theorem twos_complement_n_big : forall {n} (v : t bool n),
+  twos_complement' v = bitvector_N_big v.
+Proof.
+  intros n v.
+  rewrite bitvector_nat_N_big.
+  apply twos_complement_big.
 Qed.
 
 Theorem twos_complement_min : forall {n} (v : t bool (S n)),
@@ -1477,15 +1434,16 @@ Proof.
   rewrite <- BinInt.Z.sub_0_l.
   rewrite (VectorSpec.eta v).
   simpl twos_complement.
-  apply BinInt.Z.sub_le_mono. { apply Zorder.Zle_0_nat. }
+  apply BinInt.Z.sub_le_mono;[lia|].
   destruct (hd v).
-  2: { simpl bitValN; rewrite PeanoNat.Nat.mul_0_l.
+  2: { simpl bitValN; rewrite N.mul_0_l.
        apply BinInt.Z.pow_nonneg; lia. }
-  simpl bitValN; rewrite PeanoNat.Nat.mul_1_l.
+  simpl bitValN; rewrite N.mul_1_l.
   change (Zpos (xO xH)) with (of_nat 2).
   rewrite Z_inj_pow.
-  apply Znat.inj_le.
-  destruct n; apply le_n.
+  change (Npos (xO xH)) with (N.of_nat 2).
+  rewrite <- Nat2N_inj_pow, Znat.nat_N_Z.
+  lia.
 Qed.
 
 Theorem twos_complement_max : forall {n} (v : t bool (S n)),
@@ -1495,67 +1453,66 @@ Proof.
   rewrite (VectorSpec.eta v).
   simpl twos_complement.
   rewrite (BinInt.Zminus_0_l_reverse (pow _ _)).
-  apply BinInt.Z.sub_lt_le_mono. 2: { apply Zorder.Zle_0_nat. }
+  apply BinInt.Z.sub_lt_le_mono;[|lia].
   change (Zpos (xO xH)) with (of_nat 2).
   rewrite Z_inj_pow.
+  rewrite twos_complement_big, Znat.nat_N_Z.
   apply Znat.inj_lt.
-  rewrite twos_complement_big.
   apply bitvector_nat_big_lt_2pow.
 Qed.
 
 Definition twos_complement_inv (n : nat) (z : Z) : t bool (S n) :=
   match ltb z 0 with
-  | true => nat_bitvector_big _ (Z.to_nat (add z (pow 2 (of_nat (S n)))))
-  | false => nat_bitvector_big _ (Z.to_nat z)
+  | true => N_bitvector_big _ (Z.to_N (add z (pow 2 (of_nat (S n)))))
+  | false => N_bitvector_big _ (Z.to_N z)
   end.
 
 Theorem twos_complement_iso_1 : forall {n} (v : t bool (S n)),
   twos_complement_inv n (twos_complement v) = v.
 Proof.
   intros n v.
-  assert (twos_complement' (tl v) < 2 ^ n).
-  { rewrite twos_complement_big; apply bitvector_nat_big_lt_2pow. }
+  assert (bitvector_nat_big (tl v) < 2 ^ n);[apply bitvector_nat_big_lt_2pow|].
   rewrite (VectorSpec.eta v).
   simpl.
+  rewrite twos_complement_big, Znat.nat_N_Z.
+  change (Npos (xO xH)) with (N.of_nat 2).
+  rewrite <- Nat2N_inj_pow.
+  unfold twos_complement_inv.
   destruct (hd v); simpl bitValN.
-  - rewrite PeanoNat.Nat.mul_1_l, <- opp_sub_swap, <- Znat.Nat2Z.inj_sub.
+  - change (Npos xH) with (N.of_nat 1).
+    rewrite <- Nat2N.inj_mul, Znat.nat_N_Z.
+    rewrite PeanoNat.Nat.mul_1_l, <- opp_sub_swap, <- Znat.Nat2Z.inj_sub.
     2: { apply PeanoNat.Nat.lt_le_incl; assumption. }
     unfold twos_complement_inv.
     replace (ltb _ 0) with true.
     2: { symmetry; rewrite Z_ltb_lt, BinInt.Z.opp_neg_pos.
          change Z0 with (of_nat 0). apply Znat.inj_lt; lia. }
-    rewrite Znat.Nat2Z.inj_sub. 2: { lia. }
+    rewrite Znat.Nat2Z.inj_sub;[|lia].
     rewrite opp_sub_swap.
     rewrite <- BinInt.Z.sub_sub_distr, <- (opp_sub_swap (pow _ _) _).
     change (Zpos _) with (of_nat 2).
-    rewrite Z_inj_pow, <- Znat.Nat2Z.inj_sub. 2: { simpl; lia. }
-    replace (2 ^ S n - 2 ^ n) with (2 ^ n). 2: { simpl; lia. }
+    rewrite Z_inj_pow, <- Znat.Nat2Z.inj_sub;[|simpl; lia].
+    replace (2 ^ S n - 2 ^ n) with (2 ^ n);[|simpl; lia].
     rewrite BinInt.Z.sub_opp_r, <- Znat.Nat2Z.inj_add.
-    rewrite Znat.Nat2Z.id.
-    unfold nat_bitvector_big; f_equal.
+    rewrite <- Znat.nat_N_Z, Znat.N2Z.id, N_nat_bitvector_big;[|simpl; lia].
+    cbn; f_equal.
     + replace (_ / _) with 1; [ reflexivity | ].
       symmetry; apply div_bet_1; lia.
-    + fold nat_bitvector_big.
-      assert (2 ^ n <> 0).
+    + assert (2 ^ n <> 0).
       { apply PeanoNat.Nat.pow_nonzero; lia. }
-      rewrite <- PeanoNat.Nat.add_mod_idemp_r. 2: { assumption. }
-      rewrite PeanoNat.Nat.mod_same. 2: { assumption. }
-      rewrite add_0_r, mod_small. 2: { assumption. }
-      rewrite twos_complement_big. 
+      rewrite <- PeanoNat.Nat.add_mod_idemp_r;[|assumption].
+      rewrite PeanoNat.Nat.mod_same;[|assumption].
+      rewrite add_0_r, mod_small;[|assumption].
       apply bitvector_nat_big_inv.
   - simpl of_nat; rewrite BinInt.Z.sub_0_r.
-    unfold twos_complement_inv.
-    replace (ltb (of_nat (twos_complement' (tl v))) 0)
-       with false.
+    replace (ltb _ 0) with false.
     2: { symmetry; rewrite Z_nltb_ge. apply Znat.Nat2Z.is_nonneg. }
-    rewrite Znat.Nat2Z.id.
-    unfold nat_bitvector_big; fold nat_bitvector_big.
-    f_equal.
+    rewrite <- Znat.nat_N_Z, Znat.N2Z.id, N_nat_bitvector_big;[|simpl; lia].
+    cbn; f_equal.
     + replace (_ / _) with 0; [ reflexivity | ].
       symmetry; apply div_small; assumption.
-    + replace (_ mod _) with (twos_complement' (tl v)).
+    + replace (_ mod _) with (bitvector_nat_big (tl v)).
       2: { symmetry; apply mod_small; assumption. }
-      rewrite twos_complement_big.
       apply bitvector_nat_big_inv.
 Qed.
 
@@ -1570,14 +1527,28 @@ Proof.
   unfold twos_complement_inv.
   destruct (ltb z 0) eqn:ltz0.
   - rewrite Z_ltb_lt in ltz0.
-    assert (0 < to_nat (opp z)). { lia. }
+    assert (0 < to_nat (opp z));[lia|].
     rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
-    rewrite Znat.Z2Nat.inj_sub. 2: { lia. }
+    rewrite nat_N_bitvector_big.
+    2:{ rewrite N_len_max, Znat.Z_N_nat.
+        rewrite Znat.Z2Nat.inj_sub;[|lia].
+        rewrite Z2_inj_pow;[|lia|lia].
+        rewrite Znat.Nat2Z.id.
+        change (to_nat 2) with 2.
+        apply PeanoNat.Nat.sub_lt;[|lia].
+        rewrite opp_le_swap_l in lez.
+        assert (to_nat (opp z) <= 2 ^ n);[|simpl;lia].
+        rewrite Znat.Z2Nat.inj_le in lez;[|lia|lia].
+        rewrite Z2_inj_pow in lez;[|lia|lia].
+        rewrite Znat.Nat2Z.id in lez.
+        exact lez. }
+    rewrite Znat.Z_N_nat, Znat.Z2Nat.inj_sub;[|lia].
     rewrite Z2_inj_pow; try lia.
     change (to_nat _) with 2 at 1.
     rewrite Znat.Nat2Z.id.
     unfold nat_bitvector_big, twos_complement;
     fold nat_bitvector_big.
+    rewrite twos_complement_big, Znat.nat_N_Z. 
     assert ((to_nat (opp z)) <= 2 ^ n).
     { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_le; try lia;
       rewrite opp_le_swap_l, <- Z_inj_pow; exact lez. }
@@ -1588,14 +1559,20 @@ Proof.
          rewrite <- PeanoNat.Nat.add_mod_idemp_l, PeanoNat.Nat.mod_same.
          simpl. symmetry; apply mod_small; lia. assumption. assumption.
          simpl; lia. }
-    simpl; rewrite twos_complement_big, nat_bitvector_big_inv; lia.
+    rewrite nat_bitvector_big_inv;[|lia].
+    rewrite Znat.N2Z.inj_mul, Znat.N2Z.inj_pow, Znat.nat_N_Z.
+    simpl BinInt.Z.of_N.
+    rewrite Znat.Nat2Z.inj_sub;[|lia].
+    rewrite <- Z_inj_pow; lia.
   - rewrite Z_nltb_ge in ltz0.
-    assert (0 <= to_nat z). { lia. }
+    assert (0 <= to_nat z);[lia|].
     assert (to_nat z < 2 ^ n).
     { rewrite Znat.Z2Nat.inj_lt, Z2_inj_pow, Znat.Nat2Z.id in ltz; try lia.
       assumption. }
+    rewrite nat_N_bitvector_big.
+    2:{ rewrite N_len_max, Znat.Z_N_nat; simpl; lia. }
     unfold nat_bitvector_big; fold nat_bitvector_big.
-    rewrite mod_small, div_small; try assumption.
+    rewrite mod_small, div_small; try lia.
     simpl; rewrite twos_complement_big, nat_bitvector_big_inv; lia.
 Qed.
 
@@ -1608,21 +1585,27 @@ Proof.
   unfold twos_complement_inv.
   destruct (ltb z 0) eqn:ltz0; unfold nat_bitvector_big.
   - rewrite Z_ltb_lt in ltz0.
-    replace (_ / _) with 1; [ reflexivity | ].
-    rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
-    rewrite Znat.Z2Nat.inj_sub. 2: { lia. }
-    rewrite Z2_inj_pow; try lia.
-    change (to_nat _) with 2 at 1.
-    rewrite Znat.Nat2Z.id.
     assert ((to_nat (opp z)) <= 2 ^ n).
     { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_le; try lia;
       rewrite opp_le_swap_l, <- Z_inj_pow; lia. }
+    rewrite nat_N_bitvector_big.
+    2: { rewrite N_len_max, Znat.Z_N_nat.
+         change 2%Z with (of_nat 2); rewrite Z_inj_pow.
+         simpl; lia. }
+    rewrite Znat.Z_N_nat.
+    unfold nat_bitvector_big; replace (_ / _) with 1; [ reflexivity | ].
+    rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r.
+    rewrite Znat.Z2Nat.inj_sub;[|lia].
+    rewrite Z2_inj_pow; try lia.
+    change (to_nat _) with 2 at 1.
+    rewrite Znat.Nat2Z.id.
     symmetry; apply div_bet_1; simpl; lia.
   - rewrite Z_nltb_ge in ltz0.
-    replace (_ / _) with 0; [ reflexivity | ].
     assert (to_nat z < 2 ^ n).
     { rewrite Znat.Z2Nat.inj_lt, Z2_inj_pow, Znat.Nat2Z.id in zmax; try lia.
       assumption. }
+    rewrite nat_N_bitvector_big, Znat.Z_N_nat;[|rewrite N_len_max; simpl; lia].
+    unfold nat_bitvector_big; replace (_ / _) with 0; [ reflexivity | ].
     rewrite div_small; lia.
 Qed.
 
@@ -1633,25 +1616,27 @@ Proof.
   unfold twos_complement.
   assert (bitvector_nat_big (tl b) < 2 ^ n) as L1.
   { apply bitvector_nat_big_lt_2pow. }
-  rewrite twos_complement_big.
+  rewrite twos_complement_big, Znat.nat_N_Z.
   remember (tl b) as tlb; simpl in tlb; 
   remember (hd b) as hdb; simpl in hdb; 
   clear Heqhdb Heqtlb b.
   change 2%Z with (of_nat 2).
   rewrite BinInt.Z.eq_opp_l, opp_sub_swap.
   rewrite Z_inj_pow.
+  change 2%N with (N.of_nat 2).
+  rewrite <- Nat2N_inj_pow.
   split; intro H.
   - injection H; intros H0 H1; apply inj_pair2 in H0; clear H.
     rewrite H1; clear H1.
-    simpl bitValN; rewrite PeanoNat.Nat.mul_1_l.
-    rewrite <- Znat.Nat2Z.inj_sub. 2: { lia. } 
+    simpl bitValN; rewrite N.mul_1_l.
+    rewrite Znat.nat_N_Z, <- Znat.Nat2Z.inj_sub;[|lia]. 
     f_equal.
     rewrite bitvector_fin_big_0_const in H0; lia.
   - destruct hdb.
     + f_equal.
       rewrite bitvector_fin_big_0_const.
-      simpl in H; lia.
-    + simpl in H; lia.
+      rewrite N.mul_1_l, Znat.nat_N_Z in H; lia.
+    + rewrite N.mul_0_l in H; lia.
 Qed.
 
 Theorem twos_complement_nmin_1s : forall {n} (b : t bool (S n)),
@@ -1669,11 +1654,21 @@ Qed.
 
 (*Absolute value of signed vector*)
 Definition bv_abs {n} (v : t bool (S n)) : t bool n :=
-  nat_bitvector_big n (Z.abs_nat (twos_complement v)).
+  N_bitvector_big n (Z.abs_N (twos_complement v)).
 
 Theorem bv_abs_correct : forall {n} (v : t bool (S n)),
+  lt (opp (pow 2 (of_nat n))) (twos_complement v) ->
   bv_abs v = nat_bitvector_big n (Z.abs_nat (twos_complement v)).
-Proof. reflexivity. Qed.
+Proof.
+  intros.
+  unfold bv_abs.
+  rewrite <- N_nat_bitvector_big.
+  - rewrite Znat.Zabs_nat_N; reflexivity.
+  - assert (lt (twos_complement v) (pow 2 (of_nat n)));[apply twos_complement_max|].
+    assert (lt 0 (pow 2 (of_nat n)));[apply BinInt.Z.pow_pos_nonneg; lia|].
+    replace (2 ^ n) with (to_nat (pow 2 (of_nat n)));[lia|].
+    rewrite Z2_inj_pow, Znat.Nat2Z.id; try lia; auto.
+Qed.
 
 (*Negative of signed vector*)
 Definition bv_neg {n} (v : t bool (S n)) : t bool (S n) :=
@@ -1726,34 +1721,32 @@ Proof.
   remember (mul _ _) as m.
   unfold twos_complement_inv.
   destruct (ltb _ _) eqn:ltm.
-  - change 2%Z with (of_nat 2).
-    unfold nat_bitvector_big; change (hd (?x :: _)) with x.
-    rewrite Z_inj_pow, <- (BinInt.Z.opp_involutive m), BinInt.Z.add_opp_l,
-            Znat.Z2Nat.inj_sub, Znat.Nat2Z.id; try lia.
-    replace (_ / _) with 1; [ reflexivity | ].
-    assert (to_nat (opp m) <= 2 ^ (n + n)).
-    { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_le; try lia.
+  - rewrite BinInt.Z.ltb_lt in ltm.
+    change 2%Z with (of_nat 2).
+    rewrite BinInt.Z.add_comm, <- BinInt.Z.sub_opp_r, Z_inj_pow.
+    rewrite <- (Znat.Z2Nat.id (opp m));[|lia].
+    rewrite Znat.Z2N.inj_sub;[|lia].
+    do 2 rewrite <- Znat.nat_N_Z, Znat.N2Z.id.
+    assert (to_nat (opp m) < 2 ^ (n + n)).
+    { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_lt; try lia.
       rewrite <- Z_inj_pow, Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
-      rewrite <- BinInt.Z.pow_add_r, Heqm, opp_le_swap_l, BinInt.Z.pow_add_r; try lia.
-      apply le_opp_mul_mul; try lia; apply twos_complement_max. }
+      rewrite <- BinInt.Z.pow_add_r, Heqm, opp_lt_swap_l, BinInt.Z.pow_add_r; try lia.
+      apply lt_opp_mul_mul; try lia; apply twos_complement_max. }
+    rewrite <- Nat2N.inj_sub, N_nat_bitvector_big;[|simpl; lia].
+    unfold nat_bitvector_big; change (hd (?x :: _)) with x.
+    replace (_ / _) with 1; [ reflexivity | ].
     symmetry; apply div_bet_1; split; simpl; lia.
   - rewrite BinInt.Z.ltb_ge in ltm.
+    assert (to_nat m < 2 ^ (n + n)).
+    { rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_lt; try lia.
+      rewrite <- Z_inj_pow, Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      rewrite <- BinInt.Z.pow_add_r, Heqm, BinInt.Z.pow_add_r; try lia.
+      apply lt_mul_mul; try lia; apply twos_complement_max. }
+    assert (0 < 2 ^ (n + n));[apply zero2pow|].
+    rewrite nat_N_bitvector_big;[|rewrite N_len_max, Znat.Z_N_nat; simpl; lia].
     unfold nat_bitvector_big; change (hd (?x :: _)) with x.
     replace (_ / _) with 0; [ reflexivity | ].
-    symmetry; apply div_small.
-    rewrite <- Znat.Nat2Z.id, <- Znat.Z2Nat.inj_lt; try lia.
-    rewrite <- Z_inj_pow, Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
-    rewrite <- BinInt.Z.pow_add_r, Heqm, BinInt.Z.pow_add_r; try lia.
-    apply lt_mul_mul; try lia; apply twos_complement_max.
-Qed.
-
-Theorem smul_min : forall {n} (v1 v2 : t bool (S n)),
-  le (opp (pow 2 (of_nat (n + n)))) (mul (twos_complement v1) (twos_complement v2)).
-Proof.
-  intros n v1 v2.
-  rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
-  apply le_opp_mul_mul;
-  try apply twos_complement_min; apply twos_complement_max.
+    symmetry; apply div_small; lia.
 Qed.
 
 Theorem smul_max : forall {n} (v1 v2 : t bool (S n)),
@@ -1783,15 +1776,34 @@ Definition bv_smulh : forall {n} (v1 v2 : t bool (S n)),
   apply cons.
   - exact (ltb v12 Z0).
   - apply (fun (x : t bool (n + n)) => fst (splitat n x)), 
-          nat_bitvector_big, Z.abs_nat, v12.
+          N_bitvector_big, Z.abs_N, v12.
 Defined.
 
 Theorem bv_smulh_correct_value :
   forall {n} (v1 v2 : t bool (S n)), 
+  lt (opp (pow 2 (of_nat n))) (twos_complement v1) ->
+  lt (opp (pow 2 (of_nat n))) (twos_complement v2) ->
   tl (bv_smulh v1 v2) = 
     fst (splitat n (nat_bitvector_big (n + n) 
     (Z.abs_nat (mul (twos_complement v1) (twos_complement v2))))).
-Proof. reflexivity. Qed.
+Proof. 
+  intros.
+  unfold bv_smulh.
+  rewrite <- N_nat_bitvector_big.
+  - f_equal.
+    rewrite Znat.Zabs_nat_N; auto.
+  - assert (lt (twos_complement v1) (pow 2 (of_nat n)));[apply twos_complement_max|].
+    assert (lt (twos_complement v2) (pow 2 (of_nat n)));[apply twos_complement_max|].
+    assert (lt 0 (pow 2 (of_nat n)));[apply BinInt.Z.pow_pos_nonneg; lia|].
+    replace (2 ^ (n + n)) with (to_nat (mul (pow 2 (of_nat n)) (pow 2 (of_nat n)))).
+    2: { rewrite PeanoNat.Nat.pow_add_r. 
+         replace (2 ^ n) with (to_nat (pow 2 (of_nat n)));[lia|].
+         rewrite Z2_inj_pow, Znat.Nat2Z.id; try lia.
+         reflexivity. }
+    rewrite Znat.Zabs2Nat.abs_nat_spec, <- Znat.Z2Nat.inj_lt; try lia.
+    rewrite BinInt.Z.abs_mul.
+    apply lt_mul_mul; try lia.
+Qed.
 
 Theorem bv_smulh_correct_sign :
   forall {n} (v1 v2 : t bool (S n)), 
