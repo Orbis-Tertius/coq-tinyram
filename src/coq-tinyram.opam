@@ -1,7 +1,7 @@
 opam-version: "2.0"
 name: "coq-tinyram"
 version: "dev"
-maintainer: "Quinn Dougherty <quinn.dougherty@platonic.systems>"
+maintainer: "Anthony Hart <anthony.hart@platonic.systems>"
 synopsis: "https://www.scipr-lab.org/doc/TinyRAM-spec-2.000.pdf"
 
 homepage: "https://github.com/Orb-Labs/coq-tinyram"
@@ -22,7 +22,8 @@ depends: [
   "dune" {>= "2.6"}
 ]
 authors: [
-  "Quinn Dougherty <quinn.dougherty@platonic.systems"
+  "Anthony Hart <anthony.hart@platonic.systems>"
+  "Quinn Dougherty <quinn.dougherty@platonic.systems>"
 ]
 
 tags: "org:orbis"
