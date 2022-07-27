@@ -527,6 +527,59 @@ Proof.
   now repeat rewrite Nat2N.id.
 Qed.
 
+Theorem N2Nat_inj_lt:
+  forall n m : N, (n < m)%N <-> (N.to_nat n < N.to_nat m)%nat.
+Proof.
+ destruct n as [|p], m as [|p']; simpl.
+ - split.
+   + intro H.
+     apply (N.lt_irrefl _) in H.
+     contradiction.
+   + intro H.
+     apply (lt_irrefl _) in H.
+     contradiction.
+ - destruct (Pos2Nat.is_succ p') as (n,->).
+   split.
+   + intro H.
+     apply lt_0_succ.
+   + intro H.
+     now apply (N.ltb_lt 0 (N.pos p')).
+ - destruct (Pos2Nat.is_succ p) as (n,->).
+   split.
+   + intro H.
+     apply (N.ltb_lt (N.pos p) 0) in H.
+     inversion H.
+   + intro H.
+     apply (ltb_lt (S n) 0) in H.
+     inversion H.
+ - apply Pos2Nat.inj_lt.
+Qed.
+
+Theorem N2Nat_inj_le:
+  forall n m : N, (n <= m)%N <-> (N.to_nat n <= N.to_nat m)%nat.
+Proof.
+ destruct n as [|p], m as [|p']; simpl.
+ - split.
+   + intro H.
+     apply le_refl.
+   + intro H.
+     apply N.le_refl.
+ - destruct (Pos2Nat.is_succ p') as (n,->).
+   split.
+   + intro H.
+     apply le_0_l.
+   + intro H.
+     now apply (N.leb_le 0 (N.pos p')).
+ - destruct (Pos2Nat.is_succ p) as (n,->).
+   split.
+   + intro H.
+     apply (N.leb_le (N.pos p) 0) in H.
+     inversion H.
+   + intro H.
+     apply (leb_le (S n) 0) in H.
+     inversion H.
+ - apply Pos2Nat.inj_le.
+Qed.
 
 Theorem mod_2_div : forall k, k mod 2 = 0 -> k / 2 = S k / 2.
 Proof.
