@@ -13,3 +13,6 @@
 
 # Any nix code
 *.nix @MatthewCroughan @nixinator @DarthPJB
+
+# Any Coq code
+*.v @AHartNtkn

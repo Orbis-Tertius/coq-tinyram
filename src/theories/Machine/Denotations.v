@@ -139,7 +139,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           let resl := snd res in
           trigger (SetReg ri resl) ;;
           (*""" flag is set to 1 if [rj]u * [A]u ∈ U_W and to 0 otherwise. """*)
-          trigger (SetFlag (bv_eq resh (const b0 _))) ;;
+          trigger (SetFlag (negb (bv_eq resh (const b0 _)))) ;;
           trigger IncPC
 
         | umulhI ri rj =>
@@ -148,7 +148,7 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           let resh := fst (splitat _ (bv_mul regj A)) in
           trigger (SetReg ri resh) ;;
           (*""" flag is set to 1 if [rj]u * [A]u ∈ U_W and to 0 otherwise. """*)
-          trigger (SetFlag (bv_eq resh (const b0 _))) ;;
+          trigger (SetFlag (negb (bv_eq resh (const b0 _)))) ;;
           trigger IncPC
 
         | smulhI ri rj =>
@@ -161,8 +161,8 @@ Module TinyRAMDenotations (Params : TinyRAMParameters).
           let resh := fst (splitat _ (bv_abs sres)) in
           trigger (SetReg ri (wuncast (sign :: resh))) ;;
           (*""" flag is set to 1 if [rj]s x [A]s ∈ [...] {-2^(W-1), ..., 0, 1, ..., 2^(W-1) - 1} """ *)
-          trigger (SetFlag (andb (- 2 ^ (of_nat wordSize - 1) <=? mjA) 
-                                 (mjA <? 2 ^ (of_nat wordSize - 1)))%Z) ;;
+          trigger (SetFlag (negb (andb (- 2 ^ (of_nat wordSize - 1) <=? mjA) 
+                                 (mjA <? 2 ^ (of_nat wordSize - 1)))%Z)) ;;
           trigger IncPC
 
         | udivI ri rj =>
