@@ -345,7 +345,7 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
     (*"""
     compute [rj]u * [A]u and store least significant bits of result in ri
   
-    flag is set to 1 if [rj]u * [A]u ∈ U_W and to 0 otherwise.
+    flag is set to 1 if [rj]u * [A]u ∉ U_W and to 0 otherwise.
     """*)
     Definition pureOp_mull (ri rj : regId) (A : Word) :
       MachineState -> MachineState.
@@ -358,7 +358,7 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       (* Registers *)
       - exact (replace registers0 ri resl).
       (* Flag *)
-      - exact (bv_eq resh (const b0 _)).
+      - exact (negb (bv_eq resh (const b0 _))).
       (* Memory *)
       - exact memory0.
       (* Main Tape *)
@@ -383,11 +383,12 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
 
     Theorem pureOp_mull_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
       flag (pureOp_mull ri rj A m) = 
-      ((bitvector_nat_big (nth (registers m) rj)
-      * bitvector_nat_big A) <? 2 ^ wordSize).
+      negb ((bitvector_nat_big (nth (registers m) rj)
+            * bitvector_nat_big A) <? 2 ^ wordSize).
     Proof. 
       destruct m; unfold pureOp_mull.
       destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
+      f_equal.
       rewrite Bool.eq_iff_eq_true, bv_eq_equiv, ltb_lt, bv_mull_high_const0, sm.
       reflexivity.
     Qed.
@@ -411,7 +412,7 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
     (*"""
     compute [rj]u * [A]u and store most significant bits of result in ri
   
-    flag is set to 1 if [rj]u * [A]u ∈ U_W and to 0 otherwise.
+    flag is set to 1 if [rj]u * [A]u ∉ U_W and to 0 otherwise.
     """*)
     Definition pureOp_umulh (ri rj : regId) (A : Word) :
       MachineState -> MachineState.
@@ -424,7 +425,7 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       (* Registers *)
       - exact (replace registers0 ri resh).
       (* Flag *)
-      - exact (bv_eq resh (const b0 _)).
+      - exact (negb (bv_eq resh (const b0 _))).
       (* Memory *)
       - exact memory0.
       (* Main Tape *)
@@ -449,11 +450,12 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
 
     Theorem pureOp_umulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
       flag (pureOp_umulh ri rj A m) = 
-      ((bitvector_nat_big (nth (registers m) rj)
-      * bitvector_nat_big A) <? 2 ^ wordSize).
+      negb ((bitvector_nat_big (nth (registers m) rj)
+            * bitvector_nat_big A) <? 2 ^ wordSize).
     Proof. 
       destruct m; unfold pureOp_umulh.
       destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
+      f_equal.
       rewrite Bool.eq_iff_eq_true, bv_eq_equiv, ltb_lt, bv_mull_high_const0, sm.
       reflexivity.
     Qed.
@@ -510,12 +512,12 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
         exact (wuncast (sign :: resh)).
       (* Flag *)
       (*"""
-      flag is set to 1 if [rj]s x [A]s ∈ S_W and to 0 otherwise.
+      flag is set to 1 if [rj]s x [A]s ∉ S_W and to 0 otherwise.
       """ """
       S_W is the set of integers {-2^(W-1), ..., 0, 1, ..., 2^(W-1) - 1};
       """*)
-      - exact (andb (- 2 ^ (of_nat wordSize - 1) <=? mjA) 
-                    (mjA <? 2 ^ (of_nat wordSize - 1)))%Z.
+      - exact (negb (andb (- 2 ^ (of_nat wordSize - 1) <=? mjA) 
+                    (mjA <? 2 ^ (of_nat wordSize - 1)))%Z).
       (* Memory *)
       - exact memory0.
       (* Main Tape *)
@@ -577,6 +579,13 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
       apply le_opp_mul_mul; lia.
       rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
       apply lt_mul_mul; lia.
+      rewrite twos_complement_iso_2.
+      rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      apply lt_opp_mul_mul; lia.
+      rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      apply le_opp_mul_mul; lia.
+      rewrite Znat.Nat2Z.inj_add, BinInt.Z.pow_add_r; try lia.
+      apply lt_mul_mul; lia.
     Qed.
 
     Theorem pureOp_smulh_correct_sign (ri rj : regId) (A : Word) (m : MachineState) :
@@ -598,9 +607,9 @@ Module TinyRAMInstThm (Params : TinyRAMParameters).
 
     Theorem pureOp_smulh_correct_flag (ri rj : regId) (A : Word) (m : MachineState) :
       flag (pureOp_smulh ri rj A m) = 
-      (andb (- 2 ^ (of_nat wordSize - 1) <=? 
-            (twos_complement (wcast (nth (registers m) rj)) * twos_complement (wcast A)))
-            (twos_complement (wcast (nth (registers m) rj)) * twos_complement (wcast A) <? 2 ^ (of_nat wordSize - 1)))%Z.
+      negb (andb (- 2 ^ (of_nat wordSize - 1) <=? 
+                 (twos_complement (wcast (nth (registers m) rj)) * twos_complement (wcast A)))
+                 (twos_complement (wcast (nth (registers m) rj)) * twos_complement (wcast A) <? 2 ^ (of_nat wordSize - 1)))%Z.
     Proof. 
       destruct m; unfold pureOp_smulh.
       destruct (splitat _ _) as [mh ml] eqn:sm; simpl.
